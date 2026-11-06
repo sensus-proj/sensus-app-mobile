@@ -325,3 +325,25 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - Mantener esta memoria actualizada ante cambios de arquitectura, decisiones o hitos.
 - Toda decisión nueva se registra en la bitácora (§6) o en la sección 9.
 - Los gates de `scripts/` y el estado de `specs/` son la evidencia objetiva del avance.
+
+
+---
+
+## Bitácora - Entrega SE-015 a SE-018: Filtros, Distancias, Ruteo, Carrito y Moderación OpenAI
+
+- **Fecha:** 2026-11-06
+- **Historias implementadas:** SE-015, SE-016, SE-017, SE-018 y Moderación Multimodal Spec 017.
+- **Detalle de implementación:**
+  1. **SE-015 (Detalle expandido de oferta):** En `ProductDetailScreen`, se expusieron de forma clara las unidades de stock disponibles, fecha y hora de caducidad, límite de tiempo de recogida y un selector de cantidad interactivo (- [ Q ] +) respetando el límite de stock. Permite apartar directamente Q unidades generando un código QR directo sin necesidad del carrito.
+  2. **SE-016 (Cálculo de distancias en metros y ordenamiento):** En `BuyerHomeScreen`, se calcula dinámicamente la distancia real entre el GPS del usuario (`UserLocation`) y las coordenadas del comercio (`offer.latitude`, `offer.longitude`). Las ofertas se ordenan automáticamente de menor a mayor distancia por defecto, y se muestra un badge claramente visible con la distancia (`A 250 m` / `A 1.4 km`) tanto en `ProductOfferCard` como en `ProductDetailScreen`.
+  3. **SE-017 (Botón "Cómo llegar" y ruteo Maps):** En `ProductDetailScreen`, `ActiveApartadoScreen` y `RouteMapScreen` se integró el botón "Cómo llegar" que dispara un Intent explícito hacia Google Maps en Android con coordenadas destino (`NavigationIntentUtils`), con fallback transparente a navegador web y captura de excepciones. Se mantiene la navegación interna complementaria con OSMDroid.
+  4. **SE-018 (Filtros por categorías):** Chips interactivos de categorías (Abarrotes, Limpieza, Perecederos, Lácteos, Comida, Panadería, Bebidas, Mascotas, Farmacia) en `BuyerHomeScreen` y `BuyerMapScreen`. Filtrado instantáneo y capacidad de desmarcar el chip activo para volver a ver todas las ofertas.
+  5. **Carrito de compras multi-oferta por comercio y QR consolidado:**
+     - `CartManager`: almacena la bolsa de compras con restricción estricta de comercio único. Si el usuario intenta agregar una oferta de una tienda diferente, se muestra un diálogo de confirmación para conservar o vaciar la bolsa.
+     - `CartBottomSheet`: lista de ofertas, controles de cantidad, desglose de ahorro y botón para generar un único código QR consolidado (`ApartadoOrder.fromCart`).
+     - `ActiveApartadoScreen`: soporta tanto órdenes de múltiples ofertas como compras directas de N unidades de una sola oferta con un único código QR y temporizador.
+  6. **Moderación de imágenes con OpenAI Omni-Moderation (`omni-moderation-latest`):**
+     - Se creó `OpenAiModerationService` con consumo de `https://api.openai.com/v1/moderations` y modelo `omni-moderation-latest`.
+     - Integrado en `RetrofitProfileRepository.uploadProfilePhoto` y en `MerchantNewOfferScreen`.
+     - Si la imagen es señalada (`flagged == true`) o ante cualquier fallo fail-closed, se rechaza de inmediato con el mensaje exacto: *"No se pudo subir la imagen por políticas de seguridad."*
+- **Calidad y CI/CD:** Todas las pruebas unitarias y el análisis de SonarCloud (`SonarCloud Code Analysis`) pasaron exitosamente con 0.0% de duplicación.
