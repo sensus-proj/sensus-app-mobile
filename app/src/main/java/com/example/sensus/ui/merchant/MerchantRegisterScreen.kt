@@ -70,16 +70,12 @@ fun MerchantRegisterScreen(
     BackHandler { onNavigateBack() }
 
     var businessName by remember { mutableStateOf("") }
-    var rfc by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
+    var postalCode by remember { mutableStateOf("") }
 
     var businessNameError by remember { mutableStateOf<String?>(null) }
-    var rfcError by remember { mutableStateOf<String?>(null) }
-    var categoryError by remember { mutableStateOf<String?>(null) }
     var addressError by remember { mutableStateOf<String?>(null) }
-    var phoneError by remember { mutableStateOf<String?>(null) }
+    var postalCodeError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
 
     val scrollState = rememberScrollState()
@@ -89,53 +85,41 @@ fun MerchantRegisterScreen(
         generalError = null
 
         val cleanBusiness = businessName.trim()
-        if (cleanBusiness.length < 3) {
-            businessNameError = "Ingresa el nombre del negocio (mínimo 3 caracteres)"
+        if (cleanBusiness.length < 2) {
+            businessNameError = "El nombre comercial debe tener al menos 2 caracteres"
+            hasError = true
+        } else if (cleanBusiness.length > 150) {
+            businessNameError = "El nombre comercial no puede exceder 150 caracteres"
             hasError = true
         } else {
             businessNameError = null
         }
 
-        val cleanRfc = rfc.trim().uppercase()
-        val rfcRegex = Regex("^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$")
-        if (!rfcRegex.matches(cleanRfc)) {
-            rfcError = "Ingresa un RFC válido (12 caracteres personas morales o 13 personas físicas)"
-            hasError = true
-        } else {
-            rfcError = null
-        }
-
-        val cleanCat = category.trim()
-        if (cleanCat.isBlank()) {
-            categoryError = "Ingresa el giro o categoría del local"
-            hasError = true
-        } else {
-            categoryError = null
-        }
-
         val cleanAddr = address.trim()
         if (cleanAddr.length < 5) {
-            addressError = "Ingresa una dirección completa válida"
+            addressError = "La dirección debe contener al menos 5 caracteres"
+            hasError = true
+        } else if (cleanAddr.length > 250) {
+            addressError = "La dirección no puede exceder 250 caracteres"
             hasError = true
         } else {
             addressError = null
         }
 
-        val phoneDigits = phone.filter { it.isDigit() }
-        if (phoneDigits.length != 10) {
-            phoneError = "El teléfono del comercio debe contener exactamente 10 dígitos"
+        val cleanPostal = postalCode.trim()
+        val cpRegex = Regex("^[0-9a-zA-Z\\s\\-]{4,10}$")
+        if (cleanPostal.isBlank() || !cpRegex.matches(cleanPostal)) {
+            postalCodeError = "Ingresa un código postal válido (4 a 10 caracteres)"
             hasError = true
         } else {
-            phoneError = null
+            postalCodeError = null
         }
 
         if (!hasError) {
             val (success, err) = SensusAuthManager.activateMerchant(
                 businessName = cleanBusiness,
-                rfc = cleanRfc,
-                category = cleanCat,
                 address = cleanAddr,
-                phone = phoneDigits
+                postalCode = cleanPostal
             )
             if (success) {
                 Toast.makeText(context, "¡Comercio registrado con éxito!", Toast.LENGTH_SHORT).show()
@@ -297,73 +281,6 @@ fun MerchantRegisterScreen(
 
                     Column {
                         Text(
-                            text = "RFC de la empresa o persona física",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SensusTextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = rfc,
-                            onValueChange = { input ->
-                                val filtered = input.uppercase().filter { it.isLetterOrDigit() }
-                                if (filtered.length <= 13) {
-                                    rfc = filtered
-                                    if (rfcError != null) rfcError = null
-                                }
-                            },
-                            placeholder = { Text("XAXX010101000") },
-                            isError = rfcError != null,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            colors = sensusOutlinedTextFieldColors()
-                        )
-                        if (rfcError != null) {
-                            Text(
-                                text = rfcError!!,
-                                color = Color(0xFFDC2626),
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(start = 6.dp, top = 2.dp)
-                            )
-                        }
-                    }
-
-                    Column {
-                        Text(
-                            text = "Giro o Categoría principal",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SensusTextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = category,
-                            onValueChange = {
-                                category = it
-                                if (categoryError != null) categoryError = null
-                            },
-                            placeholder = { Text("Ej. Abarrotes, Panadería, Frutería, Limpieza") },
-                            isError = categoryError != null,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            colors = sensusOutlinedTextFieldColors()
-                        )
-                        if (categoryError != null) {
-                            Text(
-                                text = categoryError!!,
-                                color = Color(0xFFDC2626),
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(start = 6.dp, top = 2.dp)
-                            )
-                        }
-                    }
-
-                    Column {
-                        Text(
                             text = "Dirección completa del local",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -376,7 +293,7 @@ fun MerchantRegisterScreen(
                                 address = it
                                 if (addressError != null) addressError = null
                             },
-                            placeholder = { Text("Calle, número, colonia, código postal") },
+                            placeholder = { Text("Calle, número y colonia") },
                             isError = addressError != null,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -396,32 +313,32 @@ fun MerchantRegisterScreen(
 
                     Column {
                         Text(
-                            text = "Teléfono de contacto de la tienda",
+                            text = "Código postal",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SensusTextPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
-                            value = phone,
+                            value = postalCode,
                             onValueChange = { input ->
-                                val digits = input.filter { it.isDigit() }
-                                if (digits.length <= 10) {
-                                    phone = digits
-                                    if (phoneError != null) phoneError = null
+                                val filtered = input.filter { it.isLetterOrDigit() || it == '-' || it == ' ' }
+                                if (filtered.length <= 10) {
+                                    postalCode = filtered
+                                    if (postalCodeError != null) postalCodeError = null
                                 }
                             },
-                            placeholder = { Text("10 dígitos") },
-                            isError = phoneError != null,
+                            placeholder = { Text("Ej. 42800") },
+                            isError = postalCodeError != null,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                             colors = sensusOutlinedTextFieldColors()
                         )
-                        if (phoneError != null) {
+                        if (postalCodeError != null) {
                             Text(
-                                text = phoneError!!,
+                                text = postalCodeError!!,
                                 color = Color(0xFFDC2626),
                                 fontSize = 11.sp,
                                 modifier = Modifier.padding(start = 6.dp, top = 2.dp)

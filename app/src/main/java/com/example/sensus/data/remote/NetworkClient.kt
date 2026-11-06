@@ -2,6 +2,7 @@ package com.example.sensus.data.remote
 
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.remote.api.AuthApiService
+import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
@@ -51,4 +52,5 @@ class NetworkClient(
     val authApi: AuthApiService by lazy { retrofit.create(AuthApiService::class.java) }
     val profileApi: ProfileApiService by lazy { retrofit.create(ProfileApiService::class.java) }
     val merchantApi: MerchantApiService by lazy { retrofit.create(MerchantApiService::class.java) }
+    val mediaApi: MediaApiService by lazy { retrofit.create(MediaApiService::class.java) }
 }

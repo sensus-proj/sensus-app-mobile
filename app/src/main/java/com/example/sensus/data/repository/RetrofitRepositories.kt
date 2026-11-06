@@ -4,8 +4,8 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.SessionType
+import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.moderation.ModerationResult
-import com.example.sensus.data.moderation.OpenAiModerationService
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
@@ -183,7 +183,7 @@ class RetrofitAuthRepository(
 
 class RetrofitProfileRepository(
     private val profileApi: ProfileApiService,
-    private val moderationService: OpenAiModerationService = OpenAiModerationService()
+    private val moderationService: ImageModerationService = ImageModerationService()
 ) : ProfileRepository {
 
     private fun toUserProfile(dto: com.example.sensus.data.remote.dto.UserDto): UserProfile {
