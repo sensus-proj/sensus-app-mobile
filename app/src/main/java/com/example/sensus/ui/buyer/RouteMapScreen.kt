@@ -36,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,8 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.data.ProductOffer
 import com.example.sensus.data.di.SensusContainer
@@ -62,10 +59,8 @@ import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.ui.common.OsmMapUtils
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
@@ -90,20 +85,7 @@ fun RouteMapScreen(
         userLocation = loc
     }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            mapViewRef?.onDetach()
-        }
-    }
+    OsmMapUtils.BindMapLifecycle(mapViewRef, lifecycleOwner)
 
     Box(
         modifier = modifier
@@ -114,14 +96,7 @@ fun RouteMapScreen(
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                OsmMapUtils.initOsmDroid(ctx)
-                MapView(ctx).apply {
-                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                    setTileSource(OsmMapUtils.MAP_TILE_SOURCE)
-                    setMultiTouchControls(true)
-                    isTilesScaledToDpi = false
-                    zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-                    controller.setZoom(16.0)
+                OsmMapUtils.createDefaultMapView(ctx).apply {
                     mapViewRef = this
                 }
             },

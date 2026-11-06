@@ -8,10 +8,18 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.text.TextPaint
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.R
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.ITileSource
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.MapView
 import java.io.File
 
 object OsmMapUtils {
@@ -46,6 +54,46 @@ object OsmMapUtils {
             Configuration.getInstance().osmdroidTileCache = File(cacheDir, "tiles")
             Configuration.getInstance().userAgentValue = "${ctx.packageName}/1.2 (Android; Sensus Mobile Map)"
             isInitialized = true
+        }
+    }
+
+    /**
+     * Crea y preconfigura una instancia nativa de MapView con aceleración por hardware
+     * y sin controles de zoom intrusivos.
+     */
+    fun createDefaultMapView(context: Context): MapView {
+        initOsmDroid(context)
+        return MapView(context).apply {
+            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+            setTileSource(MAP_TILE_SOURCE)
+            setMultiTouchControls(true)
+            isTilesScaledToDpi = false
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+            controller.setZoom(16.0)
+        }
+    }
+
+    /**
+     * Sincroniza el ciclo de vida del MapView con la vista Compose contenedora.
+     */
+    @Composable
+    fun BindMapLifecycle(
+        mapView: MapView?,
+        lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
+    ) {
+        DisposableEffect(lifecycleOwner, mapView) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> mapView?.onResume()
+                    Lifecycle.Event.ON_PAUSE -> mapView?.onPause()
+                    else -> {}
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                mapView?.onDetach()
+            }
         }
     }
 

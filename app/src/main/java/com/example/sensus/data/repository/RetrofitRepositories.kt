@@ -7,6 +7,7 @@ import com.example.sensus.data.local.SessionType
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
+import com.example.sensus.data.remote.dto.AuthResponse
 import com.example.sensus.data.remote.dto.DeleteAccountRequest
 import com.example.sensus.data.remote.dto.HorarioDiaDto
 import com.example.sensus.data.remote.dto.LoginRequest
@@ -15,6 +16,7 @@ import com.example.sensus.data.remote.dto.RequestPasswordResetRequest
 import com.example.sensus.data.remote.dto.ResetPasswordRequest
 import com.example.sensus.data.remote.dto.UpdateMerchantProfileRequest
 import com.example.sensus.data.remote.dto.UpdateProfileRequest
+import com.example.sensus.data.remote.dto.UserDto
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.UserProfile
@@ -40,23 +42,26 @@ class RetrofitAuthRepository(
     private val securePreferences: SecurePreferences
 ) : AuthRepository {
 
+    private fun handleAuthSuccess(body: AuthResponse): Result<UserProfile> {
+        securePreferences.saveAuthToken(body.token)
+        securePreferences.saveSessionType(SessionType.REGISTERED)
+        val user = body.user
+        return Result.Success(
+            UserProfile(
+                id = user.id,
+                nombreCompleto = user.nombreCompleto,
+                correo = user.correo,
+                fotoPerfilUrl = user.fotoPerfilUrl,
+                roles = user.roles.ifEmpty { listOf("Consumidor") }
+            )
+        )
+    }
+
     override suspend fun login(correo: String, password: String): Result<UserProfile> = withContext(Dispatchers.IO) {
         try {
             val response = authApi.login(LoginRequest(correo = correo, password = password))
             if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                securePreferences.saveAuthToken(body.token)
-                securePreferences.saveSessionType(SessionType.REGISTERED)
-                val user = body.user
-                Result.Success(
-                    UserProfile(
-                        id = user.id,
-                        nombreCompleto = user.nombreCompleto,
-                        correo = user.correo,
-                        fotoPerfilUrl = user.fotoPerfilUrl,
-                        roles = user.roles.ifEmpty { listOf("Consumidor") }
-                    )
-                )
+                handleAuthSuccess(response.body()!!)
             } else {
                 mapHttpError(response)
             }
@@ -71,19 +76,7 @@ class RetrofitAuthRepository(
         try {
             val response = authApi.register(RegisterRequest(nombreCompleto = nombreCompleto, correo = correo, password = password))
             if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                securePreferences.saveAuthToken(body.token)
-                securePreferences.saveSessionType(SessionType.REGISTERED)
-                val user = body.user
-                Result.Success(
-                    UserProfile(
-                        id = user.id,
-                        nombreCompleto = user.nombreCompleto,
-                        correo = user.correo,
-                        fotoPerfilUrl = user.fotoPerfilUrl,
-                        roles = user.roles.ifEmpty { listOf("Consumidor") }
-                    )
-                )
+                handleAuthSuccess(response.body()!!)
             } else {
                 mapHttpError(response)
             }
@@ -190,20 +183,21 @@ class RetrofitProfileRepository(
     private val profileApi: ProfileApiService
 ) : ProfileRepository {
 
+    private fun toUserProfile(dto: com.example.sensus.data.remote.dto.UserDto): UserProfile {
+        return UserProfile(
+            id = dto.id,
+            nombreCompleto = dto.nombreCompleto,
+            correo = dto.correo,
+            fotoPerfilUrl = dto.fotoPerfilUrl,
+            roles = dto.roles.ifEmpty { listOf("Consumidor") }
+        )
+    }
+
     override suspend fun getProfile(): Result<UserProfile> = withContext(Dispatchers.IO) {
         try {
             val response = profileApi.getProfile()
             if (response.isSuccessful && response.body() != null) {
-                val dto = response.body()!!
-                Result.Success(
-                    UserProfile(
-                        id = dto.id,
-                        nombreCompleto = dto.nombreCompleto,
-                        correo = dto.correo,
-                        fotoPerfilUrl = dto.fotoPerfilUrl,
-                        roles = dto.roles.ifEmpty { listOf("Consumidor") }
-                    )
-                )
+                Result.Success(toUserProfile(response.body()!!))
             } else {
                 mapHttpError(response)
             }
@@ -223,16 +217,7 @@ class RetrofitProfileRepository(
                 )
             )
             if (response.isSuccessful && response.body() != null) {
-                val dto = response.body()!!
-                Result.Success(
-                    UserProfile(
-                        id = dto.id,
-                        nombreCompleto = dto.nombreCompleto,
-                        correo = dto.correo,
-                        fotoPerfilUrl = dto.fotoPerfilUrl,
-                        roles = dto.roles.ifEmpty { listOf("Consumidor") }
-                    )
-                )
+                Result.Success(toUserProfile(response.body()!!))
             } else {
                 mapHttpError(response)
             }
