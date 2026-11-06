@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.R
+import com.example.sensus.data.ApartadoOrder
 import com.example.sensus.data.MockDataProvider
 import com.example.sensus.data.ProductOffer
 import com.example.sensus.data.SensusAuthManager
@@ -85,6 +86,7 @@ import com.example.sensus.ui.buyer.ActiveApartadoScreen
 import com.example.sensus.ui.buyer.BuyerHomeScreen
 import com.example.sensus.ui.buyer.BuyerMapScreen
 import com.example.sensus.ui.buyer.BuyerProfileScreen
+import com.example.sensus.ui.buyer.CartBottomSheet
 import com.example.sensus.ui.buyer.CommunityScreen
 import com.example.sensus.ui.buyer.NotificationsScreen
 import com.example.sensus.ui.buyer.ProductDetailScreen
@@ -142,6 +144,8 @@ fun MainAppContainer(
     // Estados de pantallas superpuestas y modales
     var selectedProductForDetail by remember { mutableStateOf<ProductOffer?>(null) }
     var activeApartadoOffer by remember { mutableStateOf<ProductOffer?>(null) }
+    var activeApartadoOrder by remember { mutableStateOf<ApartadoOrder?>(null) }
+    var showCartSheet by remember { mutableStateOf(false) }
     var activeRouteOffer by remember { mutableStateOf<ProductOffer?>(null) }
     var showNotifications by remember { mutableStateOf(false) }
     var showMerchantRegister by remember { mutableStateOf(false) }
@@ -165,9 +169,11 @@ fun MainAppContainer(
             showConfirmDeleteAccount -> showConfirmDeleteAccount = false
             showOfflineDialog -> showOfflineDialog = false
             showGuestPrompt -> showGuestPrompt = false
+            showCartSheet -> showCartSheet = false
             isFamOpen -> isFamOpen = false
             showNotifications -> showNotifications = false
             activeRouteOffer != null -> activeRouteOffer = null
+            activeApartadoOrder != null -> activeApartadoOrder = null
             activeApartadoOffer != null -> activeApartadoOffer = null
             selectedProductForDetail != null -> selectedProductForDetail = null
             showMerchantRegister -> showMerchantRegister = false
@@ -253,6 +259,20 @@ fun MainAppContainer(
         return
     }
 
+    if (activeApartadoOrder != null) {
+        ActiveApartadoScreen(
+            order = activeApartadoOrder!!,
+            onNavigateBack = { activeApartadoOrder = null },
+            onNavigateToRoute = {
+                val firstOffer = activeApartadoOrder!!.items.first().offer
+                activeApartadoOrder = null
+                activeRouteOffer = firstOffer
+            },
+            onCancelApartado = { activeApartadoOrder = null }
+        )
+        return
+    }
+
     if (activeApartadoOffer != null) {
         ActiveApartadoScreen(
             offer = activeApartadoOffer!!,
@@ -276,8 +296,20 @@ fun MainAppContainer(
                     showGuestPrompt = true
                 } else {
                     selectedProductForDetail = null
-                    activeApartadoOffer = offer
+                    activeApartadoOrder = ApartadoOrder.fromSingleOffer(offer, 1)
                 }
+            },
+            onApartarDirect = { offer, quantity ->
+                if (isGuest) {
+                    showGuestPrompt = true
+                } else {
+                    selectedProductForDetail = null
+                    activeApartadoOrder = ApartadoOrder.fromSingleOffer(offer, quantity)
+                }
+            },
+            onNavigateToRoute = { offer ->
+                selectedProductForDetail = null
+                activeRouteOffer = offer
             }
         )
         return
@@ -313,12 +345,14 @@ fun MainAppContainer(
                     0 -> BuyerMapScreen(
                         onProductClick = { offer -> selectedProductForDetail = offer },
                         onRouteClick = { offer -> activeRouteOffer = offer },
-                        onListToggle = { buyerTabIndex = 1 }
+                        onListToggle = { buyerTabIndex = 1 },
+                        onOpenCart = { showCartSheet = true }
                     )
                     1 -> BuyerHomeScreen(
                         onProductClick = { offer -> selectedProductForDetail = offer },
                         onMapToggle = { buyerTabIndex = 0 },
-                        onNotificationsClick = { showNotifications = true }
+                        onNotificationsClick = { showNotifications = true },
+                        onOpenCart = { showCartSheet = true }
                     )
                     2 -> SensiChatScreen(
                         onApartarComboClick = {
@@ -527,6 +561,20 @@ fun MainAppContainer(
             if (showOfflineDialog) {
                 OfflineDialog(
                     onDismiss = { showOfflineDialog = false }
+                )
+            }
+
+            if (showCartSheet) {
+                CartBottomSheet(
+                    onDismiss = { showCartSheet = false },
+                    onCheckoutOrder = { order ->
+                        showCartSheet = false
+                        if (isGuest) {
+                            showGuestPrompt = true
+                        } else {
+                            activeApartadoOrder = order
+                        }
+                    }
                 )
             }
         }

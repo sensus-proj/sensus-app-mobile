@@ -1,7 +1,9 @@
 package com.example.sensus.ui.buyer
 
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Button
@@ -49,10 +52,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensus.data.ApartadoOrder
 import com.example.sensus.data.ProductOffer
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
@@ -60,16 +67,20 @@ import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.ui.common.NavigationIntentUtils
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 fun ActiveApartadoScreen(
-    offer: ProductOffer,
+    order: ApartadoOrder,
     onNavigateBack: () -> Unit,
     onNavigateToRoute: () -> Unit,
     onCancelApartado: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     var secondsLeft by remember { mutableIntStateOf(44 * 60 + 58) }
 
     LaunchedEffect(Unit) {
@@ -81,7 +92,7 @@ fun ActiveApartadoScreen(
 
     val minutes = secondsLeft / 60
     val seconds = secondsLeft % 60
-    val formattedTimer = String.format("%02d:%02d", minutes, seconds)
+    val formattedTimer = String.format(Locale.US, "%02d:%02d", minutes, seconds)
     val scrollState = rememberScrollState()
 
     Box(
@@ -124,7 +135,7 @@ fun ActiveApartadoScreen(
                         color = SensusTextPrimary
                     )
                     Text(
-                        text = "Tu ahorro te espera en ${offer.storeName}",
+                        text = "Tu ahorro te espera en ${order.storeName}",
                         fontSize = 12.sp,
                         color = SensusTextSecondary
                     )
@@ -170,7 +181,7 @@ fun ActiveApartadoScreen(
                             color = SensusPurple
                         )
                         Text(
-                            text = "Tienes hasta las 10:00 para acudir y pagar en caja",
+                            text = "Tienes hasta las 20:00 para acudir y pagar en caja",
                             fontSize = 12.sp,
                             color = SensusTextSecondary
                         )
@@ -180,7 +191,7 @@ fun ActiveApartadoScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tarjeta del Código QR
+            // Tarjeta del Código QR Consolidado
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -209,7 +220,7 @@ fun ActiveApartadoScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Código QR Activo",
+                                text = "Código QR Activo (${order.items.sumOf { it.quantity }} u.)",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = SensusSuccess
@@ -233,17 +244,21 @@ fun ActiveApartadoScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Código de texto alfanumérico
+                    // Código de texto alfanumérico con botón de copiar
                     Surface(
                         color = Color(0xFFF1F5F9),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.clickable {
+                            clipboardManager.setText(AnnotatedString(order.couponCode))
+                            Toast.makeText(context, "Código copiado: ${order.couponCode}", Toast.LENGTH_SHORT).show()
+                        }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = offer.couponCode,
+                                text = order.couponCode,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
@@ -262,7 +277,7 @@ fun ActiveApartadoScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = "Presenta este código al encargado para validar tu compra.",
+                        text = "Presenta este código al encargado para validar y pagar en caja.",
                         fontSize = 12.sp,
                         color = SensusTextSecondary
                     )
@@ -271,7 +286,7 @@ fun ActiveApartadoScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Resumen del producto
+            // Resumen detallado del apartado (soporta múltiples ofertas del mismo comercio)
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -286,27 +301,39 @@ fun ActiveApartadoScreen(
                         fontWeight = FontWeight.Bold,
                         color = SensusTextPrimary
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = offer.name,
-                            fontSize = 13.sp,
-                            color = SensusTextPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "$${String.format("%.2f", offer.discountPrice)} MXN",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusPurple
-                        )
+                    // Lista de productos incluidos en este apartado
+                    order.items.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "${item.quantity}x ${item.offer.name}",
+                                    fontSize = 13.sp,
+                                    color = SensusTextPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Precio unitario: $${String.format(Locale.US, "%.2f", item.offer.discountPrice)}",
+                                    fontSize = 11.sp,
+                                    color = SensusTextMuted
+                                )
+                            }
+                            Text(
+                                text = "$${String.format(Locale.US, "%.2f", item.totalDiscountPrice)} MXN",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SensusPurple
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider(color = SensusBackground, modifier = Modifier.padding(vertical = 8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -318,15 +345,32 @@ fun ActiveApartadoScreen(
                             color = SensusTextSecondary
                         )
                         Text(
-                            text = offer.storeName,
+                            text = order.storeName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = SensusTextPrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Dirección",
+                            fontSize = 12.sp,
+                            color = SensusTextSecondary
+                        )
+                        Text(
+                            text = order.address,
                             fontSize = 12.sp,
                             color = SensusTextSecondary
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider(color = SensusBackground)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = SensusBackground, modifier = Modifier.padding(vertical = 8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -339,10 +383,30 @@ fun ActiveApartadoScreen(
                             color = SensusSuccess
                         )
                         Text(
-                            text = "$${String.format("%.2f", offer.savedAmount)} MXN",
+                            text = "$${String.format(Locale.US, "%.2f", order.totalSavedAmount)} MXN",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = SensusSuccess
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Total a pagar en caja:",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = SensusTextPrimary
+                        )
+                        Text(
+                            text = "$${String.format(Locale.US, "%.2f", order.totalDiscountPrice)} MXN",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = SensusPurple
                         )
                     }
                 }
@@ -350,9 +414,16 @@ fun ActiveApartadoScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Botones de acción principales
+            // SE-017: Botón "Cómo llegar" para abrir navegación en Google Maps
             Button(
-                onClick = onNavigateToRoute,
+                onClick = {
+                    NavigationIntentUtils.launchGoogleMapsDirections(
+                        context = context,
+                        latitude = order.latitude,
+                        longitude = order.longitude,
+                        destinationName = order.storeName
+                    )
+                },
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier.fillMaxWidth(),
@@ -366,10 +437,34 @@ fun ActiveApartadoScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Abrir en GPS / Cómo llegar",
+                    text = "Cómo llegar con Google Maps",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Botón para ver la ruta interna con OSMDroid
+            OutlinedButton(
+                onClick = onNavigateToRoute,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Map,
+                    contentDescription = null,
+                    tint = SensusPurple,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Ver ruta en mapa Sensus",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SensusPurple
                 )
             }
 
@@ -391,6 +486,26 @@ fun ActiveApartadoScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+/**
+ * Sobrecarga compatible con ProductOffer individual
+ */
+@Composable
+fun ActiveApartadoScreen(
+    offer: ProductOffer,
+    onNavigateBack: () -> Unit,
+    onNavigateToRoute: () -> Unit,
+    onCancelApartado: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ActiveApartadoScreen(
+        order = ApartadoOrder.fromSingleOffer(offer, 1),
+        onNavigateBack = onNavigateBack,
+        onNavigateToRoute = onNavigateToRoute,
+        onCancelApartado = onCancelApartado,
+        modifier = modifier
+    )
 }
 
 @Composable

@@ -2,7 +2,7 @@ package com.example.sensus.data
 
 object MockDataProvider {
 
-    val sampleOffers = listOf(
+    private val _sampleOffers = mutableListOf(
         ProductOffer(
             id = "off_1",
             name = "Detergente - 1 L",
@@ -19,7 +19,9 @@ object MockDataProvider {
             address = "Av. Juárez 120, Centro, Tula de Allende, Hgo.",
             couponCode = "SNS-A7K9-24",
             latitude = 20.0558,
-            longitude = -99.3418
+            longitude = -99.3418,
+            description = "Detergente biodegradable multiusos en empaque sellado de fábrica. Rescate de merma garantizado.",
+            expirationDate = "Hoy 21:00 hrs"
         ),
         ProductOffer(
             id = "off_2",
@@ -37,7 +39,9 @@ object MockDataProvider {
             address = "Calle Morelos 45, Col. Centro",
             couponCode = "SNS-ARR-50",
             latitude = 20.0520,
-            longitude = -99.3452
+            longitude = -99.3452,
+            description = "Arroz de grano largo calidad suprema en bolsa intacta de 1 kg.",
+            expirationDate = "Hoy 20:00 hrs"
         ),
         ProductOffer(
             id = "off_3",
@@ -55,7 +59,9 @@ object MockDataProvider {
             address = "Av. Hidalgo 12, Centro",
             couponCode = "SNS-PAN-30",
             latitude = 20.0548,
-            longitude = -99.3458
+            longitude = -99.3458,
+            description = "Pan dulce recién horneado del turno matutino, ideal para la merienda.",
+            expirationDate = "Hoy 19:30 hrs"
         ),
         ProductOffer(
             id = "off_4",
@@ -73,7 +79,9 @@ object MockDataProvider {
             address = "Calle Zaragoza 88, Centro",
             couponCode = "SNS-PET-40",
             latitude = 20.0512,
-            longitude = -99.3422
+            longitude = -99.3422,
+            description = "Alimento premium balanceado para perros adultos de raza mediana.",
+            expirationDate = "Hoy 22:00 hrs"
         ),
         ProductOffer(
             id = "off_5",
@@ -91,7 +99,9 @@ object MockDataProvider {
             address = "Calle Morelos 45, Col. Centro",
             couponCode = "SNS-JUG-24",
             latitude = 20.0565,
-            longitude = -99.3440
+            longitude = -99.3440,
+            description = "Jugo 100% natural pasteurizado sin azúcar añadida en botella sellada.",
+            expirationDate = "Hoy 20:30 hrs"
         ),
         ProductOffer(
             id = "off_6",
@@ -109,9 +119,58 @@ object MockDataProvider {
             address = "Av. Juárez 120, Centro",
             couponCode = "SNS-REF-18",
             latitude = 20.0528,
-            longitude = -99.3475
+            longitude = -99.3475,
+            description = "Refresco familiar de 2 litros con gas y sabor original garantizado.",
+            expirationDate = "Hoy 21:00 hrs"
+        ),
+        ProductOffer(
+            id = "off_7",
+            name = "Leche Entera - 1 L",
+            storeName = "Abarrotes Don Luis",
+            category = "Lácteos",
+            originalPrice = 34.0,
+            discountPrice = 17.0,
+            discountPercent = 50,
+            unitsLeft = 12,
+            distanceMeters = 250,
+            timeToCollectMinutes = 50,
+            rating = 4.6,
+            reviewCount = 85,
+            address = "Calle Morelos 45, Col. Centro",
+            couponCode = "SNS-LECH-17",
+            latitude = 20.0520,
+            longitude = -99.3452,
+            description = "Leche entera ultrapasteurizada adicionada con vitaminas A y D.",
+            expirationDate = "Hoy 21:00 hrs"
+        ),
+        ProductOffer(
+            id = "off_8",
+            name = "Manzanas Gala - 1 kg",
+            storeName = "Bodega A. - Centro",
+            category = "Perecederos",
+            originalPrice = 50.0,
+            discountPrice = 25.0,
+            discountPercent = 50,
+            unitsLeft = 8,
+            distanceMeters = 350,
+            timeToCollectMinutes = 45,
+            rating = 4.8,
+            reviewCount = 120,
+            address = "Av. Juárez 120, Centro, Tula de Allende, Hgo.",
+            couponCode = "SNS-MANZ-25",
+            latitude = 20.0558,
+            longitude = -99.3418,
+            description = "Manzanas frescas seleccionadas de excedente de huerto en bolsa de 1 kg.",
+            expirationDate = "Hoy 20:00 hrs"
         )
     )
+
+    val sampleOffers: List<ProductOffer>
+        get() = _sampleOffers.toList()
+
+    fun addOffer(offer: ProductOffer) {
+        _sampleOffers.add(0, offer)
+    }
 
     val sampleStore = MerchantStore()
 

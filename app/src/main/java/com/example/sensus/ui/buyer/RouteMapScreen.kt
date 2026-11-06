@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TurnRight
@@ -33,8 +34,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.sensus.ui.common.NavigationIntentUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -311,6 +314,37 @@ fun RouteMapScreen(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // SE-017: Botón para abrir Google Maps externo
+            OutlinedButton(
+                onClick = {
+                    NavigationIntentUtils.launchGoogleMapsDirections(
+                        context = context,
+                        latitude = offer.latitude,
+                        longitude = offer.longitude,
+                        destinationName = offer.storeName
+                    )
+                },
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Navigation,
+                    contentDescription = null,
+                    tint = SensusPurple,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Cómo llegar con Google Maps",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusPurple
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Botón "Ya llegué - Mostrar QR"
             Button(

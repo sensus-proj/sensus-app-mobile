@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
@@ -46,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +66,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.data.MockDataProvider
 import com.example.sensus.data.ProductOffer
+import com.example.sensus.data.cart.CartManager
 import com.example.sensus.data.SensusAuthManager
 import com.example.sensus.data.StoreCategory
 import com.example.sensus.data.di.SensusContainer
@@ -88,7 +91,8 @@ fun BuyerMapScreen(
     modifier: Modifier = Modifier,
     onProductClick: (ProductOffer) -> Unit,
     onRouteClick: (ProductOffer) -> Unit,
-    onListToggle: () -> Unit
+    onListToggle: () -> Unit,
+    onOpenCart: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -148,8 +152,18 @@ fun BuyerMapScreen(
     // Filtrar ofertas según búsqueda y categoría
     val rawFilteredOffers = remember(searchQuery, selectedCategory) {
         MockDataProvider.sampleOffers.filter { offer ->
-            val matchesCategory = selectedCategory == StoreCategory.ALL ||
-                    offer.category.contains(selectedCategory.displayName, ignoreCase = true)
+            val matchesCategory = when (selectedCategory) {
+                StoreCategory.ALL -> true
+                StoreCategory.GROCERY -> offer.category.contains("Abarrotes", ignoreCase = true)
+                StoreCategory.CLEANING -> offer.category.contains("Limpieza", ignoreCase = true)
+                StoreCategory.PERISHABLES -> offer.category.contains("Perecederos", ignoreCase = true)
+                StoreCategory.DAIRY -> offer.category.contains("Lácteos", ignoreCase = true)
+                StoreCategory.FOOD -> offer.category.contains("Comida", ignoreCase = true)
+                StoreCategory.BAKERY -> offer.category.contains("Panadería", ignoreCase = true)
+                StoreCategory.BEVERAGES -> offer.category.contains("Bebidas", ignoreCase = true)
+                StoreCategory.PETS -> offer.category.contains("Mascotas", ignoreCase = true)
+                StoreCategory.PHARMACY -> offer.category.contains("Farmacia", ignoreCase = true)
+            }
             val matchesSearch = searchQuery.isBlank() ||
                     offer.name.contains(searchQuery, ignoreCase = true) ||
                     offer.storeName.contains(searchQuery, ignoreCase = true)
@@ -350,13 +364,16 @@ fun BuyerMapScreen(
                     }
                 }
 
-                StoreCategory.values().take(5).forEach { cat ->
+                StoreCategory.values().forEach { cat ->
                     val isSelected = selectedCategory == cat
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = if (isSelected) SensusPurple else Color.White,
                         shadowElevation = 2.dp,
-                        modifier = Modifier.clickable { selectedCategory = cat }
+                        modifier = Modifier.clickable {
+                            // SE-018: Permitir desmarcar el filtro para volver a ver todas las ofertas
+                            selectedCategory = if (selectedCategory == cat) StoreCategory.ALL else cat
+                        }
                     ) {
                         Text(
                             text = cat.displayName,
@@ -580,6 +597,39 @@ fun BuyerMapScreen(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+                }
+            }
+        }
+
+        // Píldora flotante de acceso a la bolsa de compras
+        val cart by CartManager.cart.collectAsState()
+        if (cart.totalItemsCount > 0) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = SensusPurple,
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 230.dp)
+                    .clickable { onOpenCart?.invoke() }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingBag,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Bolsa (${cart.totalItemsCount})",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
