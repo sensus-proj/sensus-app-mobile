@@ -2,8 +2,8 @@ package com.example.sensus.data
 
 import com.example.sensus.data.cart.AddToCartResult
 import com.example.sensus.data.cart.CartManager
+import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.moderation.ModerationResult
-import com.example.sensus.data.moderation.OpenAiModerationService
 import kotlinx.coroutines.test.runTest
 import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
@@ -155,32 +155,28 @@ class CartAndModerationTest {
     }
 
     // ==========================================
-    // OpenAI Moderation Tests
+    // Image Moderation (Backend Integration) Tests
     // ==========================================
 
     @Test
     fun moderationService_shouldReject_emptyBytes() = runTest {
-        val service = OpenAiModerationService(apiKeyProvider = { "fake-key" })
+        val service = ImageModerationService()
         val res = service.moderateImage(ByteArray(0))
         assertTrue(res is ModerationResult.Rejected)
     }
 
     @Test
-    fun moderationService_shouldApprove_whenNoApiKeyConfigured() = runTest {
-        val service = OpenAiModerationService(apiKeyProvider = { null })
+    fun moderationService_shouldApprove_whenNoBackendConfigured() = runTest {
+        val service = ImageModerationService(mediaApi = null)
         val res = service.moderateImage(byteArrayOf(1, 2, 3))
         assertTrue(res is ModerationResult.Approved)
     }
 
     @Test
     fun moderationService_shouldHandlePolicyMessage_whenFlagged() = runTest {
-        val service = OpenAiModerationService(
-            apiKeyProvider = { "test-api-key" }
-        )
-        // Probamos el mensaje exacto exigido por política
         assertEquals(
             "No se pudo subir la imagen por políticas de seguridad.",
-            OpenAiModerationService.SECURITY_POLICY_MESSAGE
+            ImageModerationService.SECURITY_POLICY_MESSAGE
         )
     }
 }

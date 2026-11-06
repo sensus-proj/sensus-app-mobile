@@ -34,6 +34,7 @@ data class ProductOffer(
     val isVerified: Boolean = true,
     val latitude: Double = 20.0545,
     val longitude: Double = -99.3420,
+    val postalCode: String = "",
     val description: String = "Excedente de inventario en perfecto estado con empaque sellado de fábrica. Rescate de merma garantizado.",
     val expirationDate: String = "Hoy 20:00 hrs",
     val imageUrl: String? = null
@@ -152,7 +153,8 @@ data class MerchantStore(
     val schedule: String = "Horarios: Lun - Sáb 09:00 - 20:00",
     val phone: String = "+52 55 1234 5678",
     val latitude: Double = 20.0545,
-    val longitude: Double = -99.3420
+    val longitude: Double = -99.3420,
+    val postalCode: String = ""
 )
 
 data class ChatMessage(

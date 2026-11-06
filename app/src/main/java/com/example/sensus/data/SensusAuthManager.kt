@@ -244,38 +244,33 @@ object SensusAuthManager {
 
     fun activateMerchant(
         businessName: String,
-        rfc: String,
-        category: String,
         address: String,
-        phone: String
+        postalCode: String
     ): Pair<Boolean, String?> {
         val cleanBusiness = businessName.trim()
-        val cleanRfc = rfc.trim().uppercase()
-        val cleanCat = category.trim()
         val cleanAddr = address.trim()
-        val cleanPhone = phone.trim()
+        val cleanPostalCode = postalCode.trim()
 
-        if (cleanBusiness.length < 3) {
-            return Pair(false, "El nombre del negocio debe tener al menos 3 caracteres")
+        if (cleanBusiness.length < 2) {
+            return Pair(false, "El nombre comercial debe tener al menos 2 caracteres")
         }
-        val rfcRegex = Regex("^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$")
-        if (!rfcRegex.matches(cleanRfc)) {
-            return Pair(false, "El RFC debe tener formato válido SAT de 12 (empresa) o 13 caracteres (persona física)")
-        }
-        if (cleanCat.isBlank()) {
-            return Pair(false, "Selecciona o ingresa la categoría del local")
+        if (cleanBusiness.length > 150) {
+            return Pair(false, "El nombre comercial no puede exceder 150 caracteres")
         }
         if (cleanAddr.length < 5) {
-            return Pair(false, "Ingresa una dirección completa válida")
+            return Pair(false, "La dirección del comercio debe contener al menos 5 caracteres")
         }
-        val phoneDigits = cleanPhone.filter { it.isDigit() }
-        if (phoneDigits.length != 10) {
-            return Pair(false, "El teléfono del comercio debe contener 10 dígitos")
+        if (cleanAddr.length > 250) {
+            return Pair(false, "La dirección no puede exceder 250 caracteres")
+        }
+        val cpRegex = Regex("^[0-9a-zA-Z\\s\\-]{4,10}$")
+        if (!cpRegex.matches(cleanPostalCode)) {
+            return Pair(false, "El código postal no tiene un formato válido (entre 4 y 10 caracteres)")
         }
 
         val newStore = MerchantStore(
             name = cleanBusiness,
-            category = cleanCat,
+            category = "Comercio Local",
             isOpen = true,
             rating = 5.0,
             reviewCount = 1,
@@ -284,14 +279,15 @@ object SensusAuthManager {
             redeemedTodayCount = 0,
             address = cleanAddr,
             schedule = "Lun - Sáb 09:00 - 20:00",
-            phone = cleanPhone
+            phone = "",
+            postalCode = cleanPostalCode
         )
 
         val updatedUser = (currentUser ?: UserAccount(
             id = "user_${System.currentTimeMillis()}",
             name = cleanBusiness,
             email = "comercio@sensus.app",
-            phone = cleanPhone,
+            phone = "",
             password = "••••••••"
         )).copy(
             isMerchant = true,
@@ -310,6 +306,15 @@ object SensusAuthManager {
 
         return Pair(true, null)
     }
+
+    @Deprecated("Usar activateMerchant(businessName, address, postalCode) alineado a SE-003")
+    fun activateMerchant(
+        businessName: String,
+        rfc: String,
+        category: String,
+        address: String,
+        phone: String
+    ): Pair<Boolean, String?> = activateMerchant(businessName, address, "42800")
 
     private fun serializeUser(user: UserAccount): String {
         val storeData = if (user.merchantStore != null) {

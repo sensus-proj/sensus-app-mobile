@@ -3,7 +3,7 @@ package com.example.sensus.data.di
 import android.content.Context
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.location.FusedLocationRepository
-import com.example.sensus.data.moderation.OpenAiModerationService
+import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
@@ -36,8 +36,8 @@ class SensusContainer(
         RetrofitAuthRepository(networkClient.authApi, securePreferences)
     }
 
-    val moderationService: OpenAiModerationService by lazy {
-        OpenAiModerationService()
+    val moderationService: ImageModerationService by lazy {
+        ImageModerationService(networkClient.mediaApi)
     }
 
     val profileRepository: ProfileRepository by lazy {
