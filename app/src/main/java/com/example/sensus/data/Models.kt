@@ -28,7 +28,9 @@ data class ProductOffer(
     val reviewCount: Int = 120,
     val address: String = "Av. Juárez 120, Centro",
     val couponCode: String = "SNS-A7K9-24",
-    val isVerified: Boolean = true
+    val isVerified: Boolean = true,
+    val latitude: Double = 20.0545,
+    val longitude: Double = -99.3420
 ) {
     val formattedDistance: String
         get() = if (distanceMeters < 1000) "${distanceMeters} m" else String.format("%.1f km", distanceMeters / 1000.0)
@@ -48,7 +50,9 @@ data class MerchantStore(
     val redeemedTodayCount: Int = 12,
     val address: String = "Dirección: Av. Universidad 412, Tula de Allende, Hgo.",
     val schedule: String = "Horarios: Lun - Sáb 09:00 - 20:00",
-    val phone: String = "+52 55 1234 5678"
+    val phone: String = "+52 55 1234 5678",
+    val latitude: Double = 20.0545,
+    val longitude: Double = -99.3420
 )
 
 data class ChatMessage(

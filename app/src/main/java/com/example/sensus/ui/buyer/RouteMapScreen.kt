@@ -1,6 +1,6 @@
 package com.example.sensus.ui.buyer
 
-import androidx.compose.foundation.Canvas
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +36,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,17 +45,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.data.ProductOffer
+import com.example.sensus.data.di.SensusContainer
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.ui.common.OsmMapUtils
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 
 @Composable
 fun RouteMapScreen(
@@ -62,68 +77,113 @@ fun RouteMapScreen(
     onShowQrClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val container = remember { SensusContainer.getInstance(context) }
+
+    var userLocation by remember { mutableStateOf(UserLocation()) }
     var selectedTravelMode by remember { mutableStateOf("walk") } // "walk", "bike", "car"
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
+    LaunchedEffect(Unit) {
+        val loc = container.getUserLocationUseCase()
+        userLocation = loc
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapViewRef?.onDetach()
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFE5E7EB))
     ) {
-        // Lienzo de mapa interactivo con la ruta trazada
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
+        // SE-011: Renderizado nativo del mapa real interactivo con OSMDroid
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                OsmMapUtils.initOsmDroid(ctx)
+                MapView(ctx).apply {
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                    setTileSource(OsmMapUtils.MAP_TILE_SOURCE)
+                    setMultiTouchControls(true)
+                    isTilesScaledToDpi = false
+                    zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+                    controller.setZoom(16.0)
+                    mapViewRef = this
+                }
+            },
+            update = { mapView ->
+                mapView.overlays.clear()
 
-            // Fondo mapa
-            drawRect(Color(0xFFF1F5F9))
+                val userGeo = GeoPoint(userLocation.latitude, userLocation.longitude)
+                val storeGeo = GeoPoint(offer.latitude, offer.longitude)
 
-            // Calles
-            drawLine(
-                color = Color.White,
-                start = Offset(0f, h * 0.45f),
-                end = Offset(w, h * 0.45f),
-                strokeWidth = 40f
-            )
-            drawLine(
-                color = Color.White,
-                start = Offset(w * 0.35f, 0f),
-                end = Offset(w * 0.35f, h),
-                strokeWidth = 40f
-            )
-            drawLine(
-                color = Color.White,
-                start = Offset(w * 0.75f, 0f),
-                end = Offset(w * 0.75f, h),
-                strokeWidth = 40f
-            )
+                // 1. Trazado de ruta (Polyline) con estilo morado Sensus
+                val routeLine = Polyline(mapView).apply {
+                    outlinePaint.color = android.graphics.Color.parseColor("#6E4DDB")
+                    outlinePaint.strokeWidth = 10f
+                    addPoint(userGeo)
+                    // Punto intermedio para simular trazo de calles real
+                    val midLat = (userGeo.latitude + storeGeo.latitude) / 2
+                    addPoint(GeoPoint(midLat, userGeo.longitude))
+                    addPoint(GeoPoint(midLat, storeGeo.longitude))
+                    addPoint(storeGeo)
+                }
+                mapView.overlays.add(routeLine)
 
-            // Ruta de navegación (Línea morada continua con flechas)
-            val pathPoints = listOf(
-                Offset(w * 0.35f, h * 0.65f), // Usuario inicio
-                Offset(w * 0.35f, h * 0.45f), // Esquina giro
-                Offset(w * 0.75f, h * 0.45f), // Tramo recto
-                Offset(w * 0.75f, h * 0.35f)  // Tienda destino
-            )
+                // 2. Marcador de destino: Tienda
+                val storeMarker = Marker(mapView).apply {
+                    position = storeGeo
+                    val storePin = OsmMapUtils.createStorePinBitmap(
+                        context = context,
+                        storeName = offer.storeName,
+                        price = "$${offer.discountPrice.toInt()}",
+                        isSelected = true
+                    )
+                    icon = BitmapDrawable(context.resources, storePin)
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    title = offer.storeName
+                    snippet = offer.address
+                }
+                mapView.overlays.add(storeMarker)
 
-            for (i in 0 until pathPoints.size - 1) {
-                drawLine(
-                    color = SensusPurple,
-                    start = pathPoints[i],
-                    end = pathPoints[i + 1],
-                    strokeWidth = 10f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f), 0f)
-                )
+                // 3. Marcador de origen: Gatito Sensus del usuario
+                val catMarker = Marker(mapView).apply {
+                    position = userGeo
+                    val catBitmap = OsmMapUtils.createCatMarkerBitmap(context)
+                    icon = BitmapDrawable(context.resources, catBitmap)
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    title = "Tu ubicación actual"
+                    snippet = "Gatito Sensus"
+                }
+                mapView.overlays.add(catMarker)
+
+                // Encuadrar la vista entre el usuario y la tienda
+                val north = maxOf(userGeo.latitude, storeGeo.latitude) + 0.002
+                val south = minOf(userGeo.latitude, storeGeo.latitude) - 0.002
+                val east = maxOf(userGeo.longitude, storeGeo.longitude) + 0.002
+                val west = minOf(userGeo.longitude, storeGeo.longitude) - 0.002
+                val box = BoundingBox(north, east, south, west)
+                mapView.post {
+                    mapView.zoomToBoundingBox(box, true, 180)
+                }
+
+                mapView.invalidate()
             }
-
-            // Punto de origen: Usuario (azul)
-            drawCircle(Color(0xFF3B82F6).copy(alpha = 0.3f), radius = 24f, center = pathPoints.first())
-            drawCircle(Color(0xFF2563EB), radius = 10f, center = pathPoints.first())
-            drawCircle(Color.White, radius = 4f, center = pathPoints.first())
-
-            // Punto de destino: Tienda (morado)
-            drawCircle(SensusPurple.copy(alpha = 0.2f), radius = 28f, center = pathPoints.last())
-            drawCircle(SensusPurple, radius = 14f, center = pathPoints.last())
-        }
+        )
 
         // Encabezado superior con botón volver y modos de viaje
         Column(
@@ -226,7 +286,6 @@ fun RouteMapScreen(
                 .padding(16.dp)
                 .align(Alignment.BottomCenter)
         ) {
-            // Instrucción paso a paso
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),

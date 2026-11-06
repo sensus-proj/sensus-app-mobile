@@ -53,7 +53,7 @@ val availableRadiusOptions = listOf(
 )
 
 fun formatRadiusText(radiusKm: Float): String {
-    return if (radiusKm == 0.5f) "500 m" else "${String.format("%.1f", radiusKm).replace(".0", "")} km"
+    return if (radiusKm == 0.5f) "500 m" else "${String.format(java.util.Locale.US, "%.1f", radiusKm).replace(".0", "")} km"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

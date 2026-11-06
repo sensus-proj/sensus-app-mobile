@@ -1,27 +1,21 @@
 package com.example.sensus.ui.buyer
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import android.Manifest
+import android.graphics.drawable.BitmapDrawable
+import android.view.View
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -32,9 +26,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
@@ -46,38 +42,50 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.sensus.R
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.data.MockDataProvider
 import com.example.sensus.data.ProductOffer
+import com.example.sensus.data.SensusAuthManager
 import com.example.sensus.data.StoreCategory
-import com.example.sensus.theme.SensusCardBorder
+import com.example.sensus.data.di.SensusContainer
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import com.example.sensus.ui.common.OsmMapUtils
 import com.example.sensus.ui.common.RadiusSelectorBottomSheet
 import com.example.sensus.ui.common.formatRadiusText
+import kotlinx.coroutines.launch
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 
 @Composable
 fun BuyerMapScreen(
@@ -86,184 +94,201 @@ fun BuyerMapScreen(
     onRouteClick: (ProductOffer) -> Unit,
     onListToggle: () -> Unit
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    val container = remember { SensusContainer.getInstance(context) }
+
+    var userLocation by remember { mutableStateOf(UserLocation()) }
+    var hasGpsPermission by remember { mutableStateOf(container.locationRepository.hasLocationPermission()) }
+
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(StoreCategory.ALL) }
-    var selectedOffer by remember { mutableStateOf(MockDataProvider.sampleOffers.first()) }
     var selectedRadiusKm by remember { mutableFloatStateOf(2.0f) }
     var showRadiusSheet by remember { mutableStateOf(false) }
 
-    // Animación suave de halo para el gatito sentado en el mapa
-    val infiniteTransition = rememberInfiniteTransition(label = "CatMarkerPulse")
-    val haloScale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "haloScale"
-    )
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
 
-    BoxWithConstraints(
+    // SE-010: Solicitud de permisos de GPS en runtime al entrar a la pantalla
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val granted = (perms[Manifest.permission.ACCESS_FINE_LOCATION] == true) ||
+                (perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true)
+        hasGpsPermission = granted
+        if (granted) {
+            SensusAuthManager.setLocationPermissionGranted(true)
+            scope.launch {
+                val loc = container.getUserLocationUseCase()
+                userLocation = loc
+                mapViewRef?.let { map ->
+                    map.controller.setZoom(16.0)
+                    map.controller.animateTo(GeoPoint(loc.latitude, loc.longitude))
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasGpsPermission) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        } else {
+            scope.launch {
+                val loc = container.getUserLocationUseCase()
+                userLocation = loc
+                mapViewRef?.let { map ->
+                    map.controller.setZoom(16.0)
+                    map.controller.animateTo(GeoPoint(loc.latitude, loc.longitude))
+                }
+            }
+        }
+    }
+
+    // Filtrar ofertas según búsqueda y categoría
+    val rawFilteredOffers = remember(searchQuery, selectedCategory) {
+        MockDataProvider.sampleOffers.filter { offer ->
+            val matchesCategory = selectedCategory == StoreCategory.ALL ||
+                    offer.category.contains(selectedCategory.displayName, ignoreCase = true)
+            val matchesSearch = searchQuery.isBlank() ||
+                    offer.name.contains(searchQuery, ignoreCase = true) ||
+                    offer.storeName.contains(searchQuery, ignoreCase = true)
+            matchesCategory && matchesSearch
+        }
+    }
+
+    // Posicionamiento dinámico de las ofertas alrededor de la ubicación real del usuario
+    val localizedOffers = remember(userLocation, rawFilteredOffers) {
+        rawFilteredOffers.mapIndexed { index, offer ->
+            val latOffset = when (index % 6) {
+                0 -> 0.0022
+                1 -> -0.0018
+                2 -> 0.0015
+                3 -> -0.0025
+                4 -> 0.0031
+                else -> -0.0012
+            }
+            val lngOffset = when (index % 6) {
+                0 -> 0.0019
+                1 -> -0.0024
+                2 -> -0.0029
+                3 -> 0.0016
+                4 -> -0.0015
+                else -> 0.0026
+            }
+            offer.copy(
+                latitude = userLocation.latitude + latOffset,
+                longitude = userLocation.longitude + lngOffset
+            )
+        }
+    }
+
+    var selectedOffer by remember(localizedOffers) {
+        mutableStateOf(localizedOffers.firstOrNull() ?: MockDataProvider.sampleOffers.first())
+    }
+
+    // Centrar mapa automáticamente cuando la ubicación GPS se resuelva
+    LaunchedEffect(userLocation) {
+        mapViewRef?.let { map ->
+            map.controller.setZoom(16.0)
+            map.controller.animateTo(GeoPoint(userLocation.latitude, userLocation.longitude))
+        }
+    }
+
+    // Ciclo de vida para MapView de OSMDroid
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapViewRef?.onDetach()
+        }
+    }
+
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFE5E7EB))
     ) {
-        val screenHeight = maxHeight
-        val screenWidth = maxWidth
-
-        // Lienzo del mapa interactivo con carreteras y cuadrículas vectoriales
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-
-            // Fondo de manzana / mapa
-            drawRect(color = Color(0xFFF3F4F6))
-
-            // Calles simuladas
-            val roadColor = Color.White
-            val roadLine = Color(0xFFE2E8F0)
-
-            // Avenidas principales
-            drawLine(
-                color = roadColor,
-                start = Offset(0f, canvasHeight * 0.35f),
-                end = Offset(canvasWidth, canvasHeight * 0.38f),
-                strokeWidth = 36f
-            )
-            drawLine(
-                color = roadColor,
-                start = Offset(canvasWidth * 0.45f, 0f),
-                end = Offset(canvasWidth * 0.40f, canvasHeight),
-                strokeWidth = 42f
-            )
-            drawLine(
-                color = roadColor,
-                start = Offset(0f, canvasHeight * 0.65f),
-                end = Offset(canvasWidth, canvasHeight * 0.70f),
-                strokeWidth = 32f
-            )
-
-            // Calles secundarias
-            drawLine(
-                color = roadLine,
-                start = Offset(canvasWidth * 0.15f, 0f),
-                end = Offset(canvasWidth * 0.20f, canvasHeight),
-                strokeWidth = 14f
-            )
-            drawLine(
-                color = roadLine,
-                start = Offset(canvasWidth * 0.80f, 0f),
-                end = Offset(canvasWidth * 0.75f, canvasHeight),
-                strokeWidth = 14f
-            )
-
-            // Círculo de radio dinámico seleccionado (0.5 km a 5.0 km)
-            val visualRadius = (selectedRadiusKm / 2.0f) * 280f
-            drawCircle(
-                color = SensusPurple.copy(alpha = 0.08f),
-                radius = visualRadius,
-                center = Offset(canvasWidth * 0.45f, canvasHeight * 0.50f)
-            )
-            drawCircle(
-                color = SensusPurple.copy(alpha = 0.25f),
-                radius = visualRadius,
-                center = Offset(canvasWidth * 0.45f, canvasHeight * 0.50f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
-            )
-        }
-
-        // Elementos superpuestos en el mapa: Pines de tiendas y Gatito sentado del usuario
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Pin 1: Bodega A.
-            MapPinItem(
-                title = "Bodega A.",
-                price = "$90",
-                isSelected = selectedOffer.id == "off_1",
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = (-90).dp, y = (-70).dp),
-                onClick = {
-                    selectedOffer = MockDataProvider.sampleOffers.firstOrNull { it.id == "off_1" }
-                        ?: MockDataProvider.sampleOffers.first()
+        // SE-011: Renderizado nativo del mapa real interactivo con OpenStreetMap
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                OsmMapUtils.initOsmDroid(ctx)
+                MapView(ctx).apply {
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    setTileSource(OsmMapUtils.MAP_TILE_SOURCE)
+                    setMultiTouchControls(true)
+                    isTilesScaledToDpi = false // Previene el efecto borroso/pixelado
+                    zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+                    controller.setZoom(16.0)
+                    controller.setCenter(GeoPoint(userLocation.latitude, userLocation.longitude))
+                    mapViewRef = this
                 }
-            )
+            },
+            update = { mapView ->
+                mapView.overlays.clear()
 
-            // Pin 2: Don Luis
-            MapPinItem(
-                title = "Don Luis",
-                price = "$24",
-                isSelected = selectedOffer.id == "off_2",
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = 100.dp, y = 70.dp),
-                onClick = {
-                    selectedOffer = MockDataProvider.sampleOffers.firstOrNull { it.id == "off_2" }
-                        ?: MockDataProvider.sampleOffers.first()
+                val userGeoPoint = GeoPoint(userLocation.latitude, userLocation.longitude)
+
+                // 1. Círculo de Radio de búsqueda (0.5 a 5 km) centrado en el usuario
+                val radiusCircle = Polygon(mapView).apply {
+                    points = Polygon.pointsAsCircle(userGeoPoint, (selectedRadiusKm * 1000).toDouble())
+                    fillPaint.color = android.graphics.Color.argb(20, 110, 77, 219)
+                    outlinePaint.color = android.graphics.Color.argb(90, 110, 77, 219)
+                    outlinePaint.strokeWidth = 2.5f * context.resources.displayMetrics.density
                 }
-            )
+                mapView.overlays.add(radiusCircle)
 
-            // Pin 3: Panadería La Espiga
-            MapPinItem(
-                title = "La Espiga",
-                price = "$30",
-                isSelected = selectedOffer.id == "off_3",
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = 60.dp, y = (-140).dp),
-                onClick = {
-                    selectedOffer = MockDataProvider.sampleOffers.firstOrNull { it.id == "off_3" }
-                        ?: MockDataProvider.sampleOffers.first()
-                }
-            )
+                // 2. Pines interactivos de los Comercios (en calles cercanas al usuario)
+                localizedOffers.forEach { offer ->
+                    val storeMarker = Marker(mapView).apply {
+                        position = GeoPoint(offer.latitude, offer.longitude)
+                        val isSelected = offer.id == selectedOffer.id
+                        val pinBitmap = OsmMapUtils.createStorePinBitmap(
+                            context = context,
+                            storeName = offer.storeName,
+                            price = "$${offer.discountPrice.toInt()}",
+                            isSelected = isSelected
+                        )
+                        icon = BitmapDrawable(context.resources, pinBitmap)
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        title = offer.storeName
+                        snippet = offer.name
 
-            // Marcador del Usuario: Gatito Sentado de Sensus en su posición GPS
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = (-16).dp, y = 0.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(64.dp)
-                ) {
-                    // Halo de pulso morado
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .scale(haloScale)
-                            .clip(CircleShape)
-                            .background(SensusPurple.copy(alpha = 0.22f))
-                    )
-
-                    // Figura del Gatito Sensus oficial como pin de ubicación
-                    Image(
-                        painter = painterResource(id = R.drawable.sensus_cat),
-                        contentDescription = "Tú estás aquí (Gatito Sensus)",
-                        modifier = Modifier.size(54.dp)
-                    )
+                        setOnMarkerClickListener { _, _ ->
+                            selectedOffer = offer
+                            mapView.controller.animateTo(position)
+                            true
+                        }
+                    }
+                    mapView.overlays.add(storeMarker)
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SensusPurple,
-                    shadowElevation = 4.dp
-                ) {
-                    Text(
-                        text = "Tú estás aquí",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
+                // 3. Marcador distintivo del Gatito Sensus en la posición GPS del usuario (sin el punto azul clásico)
+                val catMarker = Marker(mapView).apply {
+                    position = userGeoPoint
+                    val catBitmap = OsmMapUtils.createCatMarkerBitmap(context)
+                    icon = BitmapDrawable(context.resources, catBitmap)
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    title = "Tú estás aquí"
+                    snippet = "Gatito Sensus (GPS)"
                 }
+                mapView.overlays.add(catMarker)
+
+                mapView.invalidate()
             }
-        }
+        )
 
         // Barra superior de búsqueda, selector funcional de radio y categorías
         Column(
@@ -369,9 +394,69 @@ fun BuyerMapScreen(
             }
         }
 
-        // Botón flotante para recentrar GPS (ubicado sobre la tarjeta de detalle)
+        // Botones de control de Zoom (+ / -) flotantes en el lado derecho
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable { mapViewRef?.controller?.zoomIn() }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Acercar mapa",
+                        tint = SensusPurple,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable { mapViewRef?.controller?.zoomOut() }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Alejar mapa",
+                        tint = SensusPurple,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // Botón flotante para recentrar GPS en el Gatito
         IconButton(
-            onClick = { /* Recentrar GPS en usuario */ },
+            onClick = {
+                if (!hasGpsPermission) {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                } else {
+                    scope.launch {
+                        val loc = container.getUserLocationUseCase()
+                        userLocation = loc
+                        mapViewRef?.controller?.setZoom(16.5)
+                        mapViewRef?.controller?.animateTo(GeoPoint(loc.latitude, loc.longitude))
+                    }
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 260.dp, end = 16.dp)
@@ -381,13 +466,12 @@ fun BuyerMapScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.MyLocation,
-                contentDescription = "Mi ubicación",
+                contentDescription = "Centrar en mi ubicación",
                 tint = SensusPurple
             )
         }
 
         // Tarjeta flotante inferior de la tienda/oferta seleccionada
-        // Con espacio inferior adecuado para no obstruir el Floating Action Menu
         Card(
             shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -395,12 +479,11 @@ fun BuyerMapScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 76.dp) // Espacio para el Floating Action Menu
+                .padding(bottom = 76.dp)
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                // Indicador de arrastre / Handle
                 Box(
                     modifier = Modifier
                         .size(width = 36.dp, height = 4.dp)
@@ -532,50 +615,6 @@ fun BuyerMapScreen(
                 onRadiusSelected = { selectedRadiusKm = it },
                 onDismiss = { showRadiusSheet = false }
             )
-        }
-    }
-}
-
-@Composable
-private fun MapPinItem(
-    title: String,
-    price: String,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) SensusPurple else Color.White,
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, if (isSelected) SensusPurple else Color(0xFFE2E8F0)),
-        modifier = modifier.clickable { onClick() }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Storefront,
-                contentDescription = null,
-                tint = if (isSelected) Color.White else SensusPurple,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) Color.White else SensusTextPrimary
-                )
-                Text(
-                    text = price,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (isSelected) Color.White else SensusPurple
-                )
-            }
         }
     }
 }

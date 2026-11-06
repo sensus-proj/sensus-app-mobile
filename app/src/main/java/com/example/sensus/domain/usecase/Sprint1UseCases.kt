@@ -6,8 +6,10 @@ import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.PasswordPolicy
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.AuthRepository
+import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 
@@ -99,5 +101,11 @@ class DeleteAccountUseCase(
             securePreferences.clearAll()
         }
         return result
+    }
+}
+
+class GetUserLocationUseCase(private val locationRepository: LocationRepository) {
+    suspend operator fun invoke(): UserLocation {
+        return locationRepository.getCurrentLocation()
     }
 }

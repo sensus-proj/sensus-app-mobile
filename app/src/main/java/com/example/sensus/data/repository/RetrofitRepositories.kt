@@ -157,15 +157,31 @@ class RetrofitAuthRepository(
         }
     }
 
+    private fun parseErrorMessage(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        return try {
+            val json = Json.parseToJsonElement(raw).jsonObject
+            json["detail"]?.jsonPrimitive?.content
+                ?: json["message"]?.jsonPrimitive?.content
+                ?: json["error"]?.jsonPrimitive?.content
+                ?: json["title"]?.jsonPrimitive?.content
+                ?: raw
+        } catch (_: Exception) {
+            raw
+        }
+    }
+
     private fun <T> mapHttpError(response: Response<T>): Result<Nothing> {
-        val errorMsg = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
+        val rawError = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
+        val parsedMsg = parseErrorMessage(rawError)
         return when (response.code()) {
-            400 -> Result.Failure(AppError.Validation(errorMsg ?: "Datos de entrada inválidos."))
-            401 -> Result.Failure(AppError.Unauthorized(errorMsg ?: "No autorizado."))
-            403 -> Result.Failure(AppError.Forbidden(errorMsg ?: "Acceso restringido."))
-            404 -> Result.Failure(AppError.NotFound(errorMsg ?: "No encontrado."))
+            400 -> Result.Failure(AppError.Validation(parsedMsg ?: "Datos de entrada inválidos."))
+            401 -> Result.Failure(AppError.Unauthorized(parsedMsg ?: "Correo electrónico o contraseña incorrectos."))
+            403 -> Result.Failure(AppError.Forbidden(parsedMsg ?: "Acceso restringido."))
+            404 -> Result.Failure(AppError.NotFound(parsedMsg ?: "No existe una cuenta registrada con este correo."))
             429 -> Result.Failure(AppError.Unprocessable("Límite de peticiones alcanzado. Intenta de nuevo en unos minutos."))
-            else -> Result.Failure(AppError.Generic("Error del servidor HTTP ${response.code()}."))
+            500 -> Result.Failure(AppError.Generic(parsedMsg ?: "Error interno en el servidor."))
+            else -> Result.Failure(AppError.Generic(parsedMsg ?: "Error del servidor HTTP ${response.code()}."))
         }
     }
 }

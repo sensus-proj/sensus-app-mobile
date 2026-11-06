@@ -2,14 +2,17 @@ package com.example.sensus.data.di
 
 import android.content.Context
 import com.example.sensus.data.local.SecurePreferences
+import com.example.sensus.data.location.FusedLocationRepository
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.data.repository.RetrofitProfileRepository
 import com.example.sensus.domain.repository.AuthRepository
+import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
+import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.RequestPasswordResetUseCase
 import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
@@ -40,6 +43,10 @@ class SensusContainer(
         RetrofitMerchantRepository(networkClient.merchantApi)
     }
 
+    val locationRepository: LocationRepository by lazy {
+        FusedLocationRepository(context.applicationContext)
+    }
+
     // Sprint 1 Use Cases
     val requestPasswordResetUseCase by lazy { RequestPasswordResetUseCase(authRepository) }
     val resetPasswordUseCase by lazy { ResetPasswordUseCase(authRepository) }
@@ -47,6 +54,7 @@ class SensusContainer(
     val deleteAccountUseCase by lazy { DeleteAccountUseCase(authRepository, securePreferences) }
     val updateProfileUseCase by lazy { UpdateProfileUseCase(profileRepository) }
     val updateMerchantProfileUseCase by lazy { UpdateMerchantProfileUseCase(merchantRepository) }
+    val getUserLocationUseCase by lazy { GetUserLocationUseCase(locationRepository) }
 
     companion object {
         @Volatile

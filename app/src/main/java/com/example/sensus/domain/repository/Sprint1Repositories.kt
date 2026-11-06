@@ -3,6 +3,7 @@ package com.example.sensus.domain.repository
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.model.UserProfile
 
 interface AuthRepository {
@@ -29,4 +30,9 @@ interface MerchantRepository {
         codigoPostal: String,
         horarios: List<HorarioDia>
     ): Result<MerchantProfile>
+}
+
+interface LocationRepository {
+    suspend fun getCurrentLocation(): UserLocation
+    fun hasLocationPermission(): Boolean
 }

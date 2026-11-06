@@ -1,5 +1,10 @@
 package com.example.sensus.domain.model
 
+data class UserLocation(
+    val latitude: Double = 20.0536,
+    val longitude: Double = -99.3436
+)
+
 data class UserProfile(
     val id: String = "",
     val nombreCompleto: String,

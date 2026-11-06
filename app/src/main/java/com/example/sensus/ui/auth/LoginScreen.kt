@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -190,16 +191,17 @@ fun LoginScreen(
                         // Input Correo / Teléfono
                         OutlinedTextField(
                             value = emailOrPhone,
-                            onValueChange = { emailOrPhone = it },
+                            onValueChange = { emailOrPhone = it; if (loginErrorMessage != null) loginErrorMessage = null },
                             label = { Text("Correo o Teléfono") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Email,
                                     contentDescription = null,
-                                    tint = SensusPurple
+                                    tint = if (loginErrorMessage != null) SensusRed else SensusPurple
                                 )
                             },
                             singleLine = true,
+                            isError = loginErrorMessage != null,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
@@ -208,7 +210,9 @@ fun LoginScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SensusPurple,
                                 unfocusedBorderColor = SensusCardBorder,
-                                focusedLabelColor = SensusPurple
+                                focusedLabelColor = SensusPurple,
+                                errorBorderColor = SensusRed,
+                                errorLabelColor = SensusRed
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -218,13 +222,13 @@ fun LoginScreen(
                         // Input Contraseña
                         OutlinedTextField(
                             value = password,
-                            onValueChange = { password = it },
+                            onValueChange = { password = it; if (loginErrorMessage != null) loginErrorMessage = null },
                             label = { Text("Contraseña") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = SensusPurple
+                                    tint = if (loginErrorMessage != null) SensusRed else SensusPurple
                                 )
                             },
                             trailingIcon = {
@@ -238,6 +242,7 @@ fun LoginScreen(
                             },
                             visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             singleLine = true,
+                            isError = loginErrorMessage != null,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done
@@ -246,7 +251,9 @@ fun LoginScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = SensusPurple,
                                 unfocusedBorderColor = SensusCardBorder,
-                                focusedLabelColor = SensusPurple
+                                focusedLabelColor = SensusPurple,
+                                errorBorderColor = SensusRed,
+                                errorLabelColor = SensusRed
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -276,17 +283,56 @@ fun LoginScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        // Banner visible de error con feedback claro
+                        if (!loginErrorMessage.isNullOrBlank()) {
+                            Surface(
+                                color = SensusRed.copy(alpha = 0.08f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, SensusRed.copy(alpha = 0.4f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Error",
+                                        tint = SensusRed,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = loginErrorMessage!!,
+                                        color = SensusRed,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        lineHeight = 18.sp
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
                         // Botón principal
                         Button(
                             onClick = {
                                 val cleanEmail = emailOrPhone.trim()
                                 val cleanPass = password.trim()
+                                val isPhone = cleanEmail.all { it.isDigit() } && cleanEmail.length in 8..15
+                                val isEmail = cleanEmail.contains("@") && cleanEmail.contains(".") && !cleanEmail.contains(" ")
+
                                 if (cleanEmail.isBlank()) {
                                     loginErrorMessage = "Ingresa tu correo o teléfono."
+                                } else if (!isPhone && !isEmail) {
+                                    loginErrorMessage = "El correo electrónico o teléfono no es válido."
                                 } else if (cleanPass.isBlank()) {
                                     loginErrorMessage = "Ingresa tu contraseña."
+                                } else if (cleanPass.length < 4) {
+                                    loginErrorMessage = "La contraseña debe tener al menos 4 caracteres."
                                 } else {
                                     scope.launch {
                                         isLoginLoading = true
@@ -298,7 +344,12 @@ fun LoginScreen(
                                             }
                                             is Result.Failure -> {
                                                 isLoginLoading = false
-                                                loginErrorMessage = result.error.message
+                                                loginErrorMessage = when (result.error) {
+                                                    is com.example.sensus.common.AppError.Network ->
+                                                        "No se pudo conectar con el servidor. Revisa tu conexión a internet."
+                                                    else ->
+                                                        "Correo electrónico o contraseña incorrectos, o esa cuenta no existe."
+                                                }
                                             }
                                         }
                                     }

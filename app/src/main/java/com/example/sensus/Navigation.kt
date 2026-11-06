@@ -100,9 +100,11 @@ fun MainNavigation(
             AppScreen.ONBOARDING -> {
                 OnboardingLocationScreen(
                     onPermissionGranted = {
+                        SensusAuthManager.setLocationPermissionGranted(true)
                         currentScreen = AppScreen.LOGIN
                     },
                     onManualLocationSelected = {
+                        SensusAuthManager.setLocationPermissionGranted(false)
                         currentScreen = AppScreen.LOGIN
                     }
                 )

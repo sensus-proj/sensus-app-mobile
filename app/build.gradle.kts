@@ -90,6 +90,7 @@ dependencies {
   implementation(libs.play.services.location)
   implementation(libs.androidx.security.crypto)
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.osmdroid.android)
 
   // Networking (Retrofit 2 & OkHttp)
   implementation(libs.retrofit.core)

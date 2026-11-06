@@ -17,7 +17,9 @@ object MockDataProvider {
             rating = 4.8,
             reviewCount = 120,
             address = "Av. Juárez 120, Centro, Tula de Allende, Hgo.",
-            couponCode = "SNS-A7K9-24"
+            couponCode = "SNS-A7K9-24",
+            latitude = 20.0558,
+            longitude = -99.3418
         ),
         ProductOffer(
             id = "off_2",
@@ -33,7 +35,9 @@ object MockDataProvider {
             rating = 4.6,
             reviewCount = 85,
             address = "Calle Morelos 45, Col. Centro",
-            couponCode = "SNS-ARR-50"
+            couponCode = "SNS-ARR-50",
+            latitude = 20.0520,
+            longitude = -99.3452
         ),
         ProductOffer(
             id = "off_3",
@@ -49,7 +53,9 @@ object MockDataProvider {
             rating = 4.9,
             reviewCount = 210,
             address = "Av. Hidalgo 12, Centro",
-            couponCode = "SNS-PAN-30"
+            couponCode = "SNS-PAN-30",
+            latitude = 20.0548,
+            longitude = -99.3458
         ),
         ProductOffer(
             id = "off_4",
@@ -65,7 +71,9 @@ object MockDataProvider {
             rating = 4.7,
             reviewCount = 64,
             address = "Calle Zaragoza 88, Centro",
-            couponCode = "SNS-PET-40"
+            couponCode = "SNS-PET-40",
+            latitude = 20.0512,
+            longitude = -99.3422
         ),
         ProductOffer(
             id = "off_5",
@@ -81,7 +89,9 @@ object MockDataProvider {
             rating = 4.6,
             reviewCount = 85,
             address = "Calle Morelos 45, Col. Centro",
-            couponCode = "SNS-JUG-24"
+            couponCode = "SNS-JUG-24",
+            latitude = 20.0565,
+            longitude = -99.3440
         ),
         ProductOffer(
             id = "off_6",
@@ -97,7 +107,9 @@ object MockDataProvider {
             rating = 4.8,
             reviewCount = 120,
             address = "Av. Juárez 120, Centro",
-            couponCode = "SNS-REF-18"
+            couponCode = "SNS-REF-18",
+            latitude = 20.0528,
+            longitude = -99.3475
         )
     )
 
