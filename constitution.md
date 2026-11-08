@@ -67,7 +67,7 @@ methodology: SDD
 4. **TLS 1.3** para todo tráfico en tránsito; certificate pinning recomendado para endpoints críticos.
 5. **Moderación previa al guardado:** textos vía OpenAI `omni-moderation-latest`, imágenes vía Sightengine. Bloqueo inmediato en UI si hay infracción.
 6. **No generar APKs** salvo instrucción explícita del usuario; verificar integridad con `compileDebugKotlin`.
-7. **Cumplimiento estricto de DevSecOps (Prohibición absoluta de elusión):** Ningún proceso de validación de seguridad de la aplicación, ni de escaneo de código (SAST, DAST, dependencias, detección de secretos, linters, cobertura Kover ni gates de calidad) se debe saltar, skipear, ignorar, falsear, brincar o burlar bajo ninguna circunstancia. Toda excepción o bypass está terminantemente prohibido, garantizando trazabilidad y seguridad continua.
+7. **Cumplimiento estricto de DevSecOps (Prohibición absoluta de elusión):** Ningún proceso de validación de seguridad de la aplicación, ni de escaneo de código (SAST, DAST, dependencias, detección de secretos, linters, cobertura Kover ni gates de calidad) se debe saltar, skipear, ignorar, falsear, brincar o burlar bajo ninguna circunstancia. Toda excepción o bypass está terminantemente prohibido, garantizando trazabilidad y seguridad continua. La suite completa de CI y DevSecOps (compuertas SDD, escaneo de secretos, SAST, linters, pruebas unitarias con Kover >= 80% y validación de compilación) es mandatoria y debe ejecutarse en todas las ramas y pull requests sin excepción.
 
 ---
 

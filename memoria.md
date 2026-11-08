@@ -37,7 +37,7 @@
 9. **Persistencia Local Cifrada (Room + SQLCipher AES-256):** Base de datos SensusDatabase protegida mediante SQLCipher con frase de paso criptográfica de 256 bits derivada de Android Keystore (DatabaseKeyManager). Entidades (OfferEntity, UserSessionEntity, PendingSyncEntity) y DAOs con interoperabilidad completa y transaccionalidad.
 10. **Testing Local Ratificado:** JUnit 4 (junit:4.13.2) + MockK (1.13.16) + Turbine (1.2.0) + Coroutines Test. Conciliado formalmente entre especificación y suite de pruebas.
 11. **Cobertura Bloqueante Kover (>= 80%):** Kover integrado en Gradle (	estDebugUnitTest koverXmlReportDebug). Reporte activo y medido contra umbral del 80% bloqueante sin elusiones.
-12. **Gobernanza DevSecOps Estricta (Prohibición absoluta de elusión):** Ningún escaneo de seguridad (SAST, secretos, linters, pruebas o gates de calidad) puede ser saltado, omitido, simulado o ignorado bajo ninguna circunstancia.
+12. **Gobernanza DevSecOps Estricta (Prohibición de elusión y ejecución universal):** Ningún escaneo de seguridad (SAST, secretos, linters, pruebas o gates de calidad) puede ser saltado, omitido, simulado o ignorado. La suite completa de CI y DevSecOps debe ejecutarse obligatoriamente en todas las ramas y pull requests del repositorio.
 
 ---
 

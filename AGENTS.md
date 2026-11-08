@@ -112,7 +112,7 @@ El CI compila sin generar APK.
 11. **No tocar** `keys.properties`, `local.properties`, `*.jks`, `*.keystore`, `SIGNING_*`, `KEYSTORE_*`.
 12. **Un PR = una slice = una feature.** Sin `CHECKLIST_PR.md` verde no hay merge.
 13. **Cobertura obligatoria (>= 80%):** Todo código nuevo DEBE ir integrado con un mínimo del 80% de cobertura en pruebas unitarias, de integración y de extremo a extremo (E2E). Merge bloqueado si no se alcanza el umbral.
-14. **DevSecOps inquebrantable (Prohibición absoluta de elusión):** Queda terminantemente prohibido saltar, skipear, brincar, desactivar o burlar cualquier proceso de validación de seguridad, escaneo de vulnerabilidades o gate de calidad de código (SAST, análisis de secretos, cobertura Kover, linters ni suites de pruebas). Todo análisis debe ejecutarse y validarse de forma íntegra y bloqueante conforme a DevSecOps.
+14. **DevSecOps inquebrantable (Prohibición absoluta de elusión):** Queda terminantemente prohibido saltar, skipear, brincar, desactivar o burlar cualquier proceso de validación de seguridad, escaneo de vulnerabilidades o gate de calidad de código (SAST, análisis de secretos, cobertura Kover, linters ni suites de pruebas). La suite completa de CI y DevSecOps debe ejecutarse obligatoriamente en todas las ramas y pull requests del repositorio. Todo análisis debe ejecutarse y validarse de forma íntegra y bloqueante conforme a DevSecOps.
 
 ---
 
