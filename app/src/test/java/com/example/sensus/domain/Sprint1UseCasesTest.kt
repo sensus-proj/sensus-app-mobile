@@ -11,6 +11,11 @@ import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
+import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.domain.repository.LocationRepository
+import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.LoginUseCase
+import com.example.sensus.domain.usecase.RegisterUseCase
 import com.example.sensus.domain.usecase.RequestPasswordResetUseCase
 import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
@@ -220,5 +225,74 @@ class Sprint1UseCasesTest {
         assertTrue(result is Result.Success)
         coVerify(exactly = 1) { authRepository.deleteAccount("ValidPassword123#") }
         verify(exactly = 1) { securePreferences.clearAll() }
+    }
+
+    // ==========================================
+    // SE-004: Login & Register UseCases
+    // ==========================================
+
+    @Test
+    fun login_shouldFail_whenEmailOrPasswordInvalid() = runTest {
+        val useCase = LoginUseCase(authRepository)
+        val res1 = useCase("", "pass")
+        assertTrue(res1 is Result.Failure)
+
+        val res2 = useCase("invalid-email", "pass")
+        assertTrue(res2 is Result.Failure)
+
+        val res3 = useCase("test@example.com", "")
+        assertTrue(res3 is Result.Failure)
+    }
+
+    @Test
+    fun login_shouldDelegateToRepository_whenInputValid() = runTest {
+        val dummyProfile = UserProfile(id = "u1", nombreCompleto = "Test User", correo = "test@example.com")
+        coEvery { authRepository.login("test@example.com", "Password123#") } returns Result.Success(dummyProfile)
+
+        val useCase = LoginUseCase(authRepository)
+        val res = useCase("test@example.com", "Password123#")
+
+        assertTrue(res is Result.Success)
+        assertEquals(dummyProfile, (res as Result.Success).data)
+        coVerify(exactly = 1) { authRepository.login("test@example.com", "Password123#") }
+    }
+
+    @Test
+    fun register_shouldValidateNameEmailAndPassword() = runTest {
+        val useCase = RegisterUseCase(authRepository)
+        val res1 = useCase("A", "test@example.com", "Password123#")
+        assertTrue(res1 is Result.Failure)
+
+        val res2 = useCase("Name", "notanemail", "Password123#")
+        assertTrue(res2 is Result.Failure)
+
+        val res3 = useCase("Name", "test@example.com", "short")
+        assertTrue(res3 is Result.Failure)
+    }
+
+    @Test
+    fun register_shouldSucceed_whenDataMeetsPolicy() = runTest {
+        val dummyProfile = UserProfile(id = "u2", nombreCompleto = "Valid User", correo = "valid@example.com")
+        coEvery { authRepository.register("Valid User", "valid@example.com", "Password123#") } returns Result.Success(dummyProfile)
+
+        val useCase = RegisterUseCase(authRepository)
+        val res = useCase("Valid User", "valid@example.com", "Password123#")
+
+        assertTrue(res is Result.Success)
+        assertEquals(dummyProfile, (res as Result.Success).data)
+        coVerify(exactly = 1) { authRepository.register("Valid User", "valid@example.com", "Password123#") }
+    }
+
+    @Test
+    fun getUserLocation_shouldReturnLocationFromRepository() = runTest {
+        val locationRepo = mockk<LocationRepository>()
+        val dummyLocation = UserLocation(19.4326, -99.1332)
+        coEvery { locationRepo.getCurrentLocation() } returns dummyLocation
+
+        val useCase = GetUserLocationUseCase(locationRepo)
+        val res = useCase()
+
+        assertEquals(dummyLocation, res)
+        coVerify(exactly = 1) { locationRepo.getCurrentLocation() }
     }
 }

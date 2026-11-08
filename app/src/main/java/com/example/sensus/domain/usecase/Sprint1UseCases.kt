@@ -13,6 +13,38 @@ import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 
+class LoginUseCase(private val authRepository: AuthRepository) {
+    suspend operator fun invoke(correo: String, password: String): Result<UserProfile> {
+        val trimmedCorreo = correo.trim()
+        if (trimmedCorreo.isBlank() || !trimmedCorreo.contains("@")) {
+            return Result.Failure(AppError.Validation("Ingresa un correo electrónico válido."))
+        }
+        if (password.isBlank()) {
+            return Result.Failure(AppError.Validation("Ingresa tu contraseña."))
+        }
+        return authRepository.login(trimmedCorreo, password)
+    }
+}
+
+class RegisterUseCase(private val authRepository: AuthRepository) {
+    suspend operator fun invoke(nombre: String, correo: String, password: String): Result<UserProfile> {
+        val trimmedNombre = nombre.trim()
+        val trimmedCorreo = correo.trim()
+        if (trimmedNombre.length !in 2..100) {
+            return Result.Failure(AppError.Validation("El nombre debe tener entre 2 y 100 caracteres."))
+        }
+        if (trimmedCorreo.isBlank() || !trimmedCorreo.contains("@")) {
+            return Result.Failure(AppError.Validation("Ingresa un correo electrónico válido."))
+        }
+        if (!PasswordPolicy.isValid(password)) {
+            return Result.Failure(
+                AppError.Validation("La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.")
+            )
+        }
+        return authRepository.register(trimmedNombre, trimmedCorreo, password)
+    }
+}
+
 class RequestPasswordResetUseCase(private val authRepository: AuthRepository) {
     suspend operator fun invoke(email: String): Result<Unit> {
         val trimmed = email.trim()

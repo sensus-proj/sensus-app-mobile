@@ -32,7 +32,7 @@ El repositorio compila hoy con un unico modulo `app/` cuyo codigo vive en `com.e
 - **Build:** sin generar APK/AAB; el gate es `compileDebugKotlin`.
 - **Calidad:** complejidad ≤10 por metodo, ≤15 por clase, `max_line_length=160`.
 - **Reproducibilidad:** wrapper validado en CI; cache de Gradle por hash de `libs.versions.toml`.
-- **Drift declarado:** la constitucion §1/§3 declara Kotlin 2.4.21; `libs.versions.toml` usa 2.3.20. Se registra en `Memoria.md` y se concilia con aprobacion del equipo; **no se modifica la constitucion**.
+- **Drift conciliado:** la constitución §1/§3 y el build han sido homologados oficialmente en Kotlin 2.3.20 (v1.2.1 de la constitución). Registrado en `Memoria.md` §6.
 - **Trazabilidad:** cada cambio queda registrado en `Memoria.md` §6.
 
 ## 4. Arquitectura y contratos internos
@@ -103,7 +103,7 @@ Regla de dependencias: `presentation -> domain <- data`. `domain/` no importa `a
 ## 7. Riesgos, limites y deuda
 
 - Mover paquetes puede romper imports masivos; migrar por compilacion verde en cada paso.
-- El drift de Kotlin 2.4.21 vs 2.3.20 puede bloquear Hilt/KSP si se fuerza la version constitucional; requiere ratificacion.
+- El drift de Kotlin ha sido resuelto: se ratificó el uso oficial de 2.3.20 homologando la constitución.
 - `MainScreenViewModel.kt` y sus tests son legacy; su reescritura se completa en FT-04.
 - Detekt/ktlint/Kover estan documentados pero no cableados: esta feature los cablea con el umbral constitucional del 80%.
 - No se toca `app/src/main/java/com/example/sensus/ui/` en esta fase salvo imports de `theme`.

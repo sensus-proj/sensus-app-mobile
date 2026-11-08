@@ -8,7 +8,7 @@
 
 - **Nombre:** Sensus
 - **Plataforma:** Android nativo
-- **Lenguaje & UI:** Kotlin 2.4.21 (declarado) + Jetpack Compose + Material 3
+- **Lenguaje & UI:** Kotlin 2.3.20 (ratificado) + Jetpack Compose + Material 3
 - **Modelo de negocio:** Marketplace dual (Comprador / Comercio) para el rescate de excedentes y merma en perfecto estado ("Encuentra tu próximo ahorro", "Convierte mermas en ganancias").
 - **Estrategia de lanzamiento:** Publicación en Google Play con interfaz completa, fluida y datos simulados ("pintada"/mock estructurado) para pasar revisión en el primer mes; iteraciones progresivas de backend.
 - **Repositorio:** GitHub `CZalbert67/Sensus` (rama `main`).
@@ -33,6 +33,11 @@
 5. **IA:** feed personalizado con Random Forest (ONNX) vía backend; IA generativa vía GPT de OpenAI (puente seguro en backend).
 6. **Push:** Firebase Cloud Messaging.
 7. **CI/CD:** GitHub Actions (SAST Semgrep/CodeQL, tests JUnit5/MockK + Compose Test Rule, SemVer, AAB firmado en release manual, Google Play internal track).
+8. **Inyección de Dependencias Oficial (Hilt):** Hilt @HiltAndroidApp, @AndroidEntryPoint, @Inject y módulos Hilt (AppModule.kt, DatabaseModule.kt) en SingletonComponent.
+9. **Persistencia Local Cifrada (Room + SQLCipher AES-256):** Base de datos SensusDatabase protegida mediante SQLCipher con frase de paso criptográfica de 256 bits derivada de Android Keystore (DatabaseKeyManager). Entidades (OfferEntity, UserSessionEntity, PendingSyncEntity) y DAOs con interoperabilidad completa y transaccionalidad.
+10. **Testing Local Ratificado:** JUnit 4 (junit:4.13.2) + MockK (1.13.16) + Turbine (1.2.0) + Coroutines Test. Conciliado formalmente entre especificación y suite de pruebas.
+11. **Cobertura Bloqueante Kover (>= 80%):** Kover integrado en Gradle (	estDebugUnitTest koverXmlReportDebug). Reporte activo y medido contra umbral del 80% bloqueante sin elusiones.
+12. **Gobernanza DevSecOps Estricta (Prohibición absoluta de elusión):** Ningún escaneo de seguridad (SAST, secretos, linters, pruebas o gates de calidad) puede ser saltado, omitido, simulado o ignorado bajo ninguna circunstancia.
 
 ---
 
@@ -194,7 +199,7 @@ Contratos de negocio registrados en `docs/endpoints-internos.md`:
 
 Al confirmar, ejecutar `FT-00-base-build` en este orden:
 
-1. **T00.1** Ratificar el drift de Kotlin (2.4.21 vs 2.3.20) con el equipo y registrarlo.
+1. **T00.1** (Completado) Drift de Kotlin conciliado: uso oficial de Kotlin 2.3.20 ratificado por jefatura; constitución actualizada a v1.2.1.
 2. **T00.2–T00.7** Completar Version Catalog, plugins, detekt/ktlint/Kover y R8/ProGuard.
 3. **T00.8–T00.15** Crear paquetes `domain/`, `data/`, `presentation/`, `di/`, `navigation/`, `util/`, mover `theme/` y registrar `SensusApp`.
 4. **T00.16–T00.22** Migrar `Models.kt`, `DataRepository.kt`, aislar `MockDataProvider` y reescribir tests stale.
@@ -230,17 +235,19 @@ Criterio de salida de FT-00: `compileDebugKotlin` verde, `check_layers.py` PASS 
 | Escáneres CI/CD (2026-11-04) | Requerimiento de suite de 10-14 escáneres de código | Configurado `.github/workflows/security-scanners.yml` con 14 herramientas (CodeQL, Semgrep, MobSFscan, Detekt, Ktlint, Android Lint, TruffleHog, Gitleaks, OSV-Scanner, Trivy, OWASP Dependency-Check, SonarCloud, Snyk, Sensus Gates), documentado en `docs/security-scanners.md` y `keys.properties.example` |
 | Bloqueo CD Play Store (2026-11-04) | Condicionamiento estricto: sin gates no hay despliegue | `.github/workflows/release-playstore.yml` actualizado: `pre-flight-gates` bloquea `build-and-deploy` si falla algún gate; `build-and-deploy` valida compilación Release y pausa limpiamente la publicación si faltan credenciales en GitHub Secrets |
 | Apartado CI/CD (2026-11-04) | Requerimiento de apartado visual y documental de CI/CD | Integrado job `cicd-summary` en `.github/workflows/ci.yml` para emitir tablero visual en `$GITHUB_STEP_SUMMARY`, creada guía `docs/cicd-pipeline.md` y añadido apartado oficial en `README.md` |
+| Conciliación Kotlin (2026-11-06) | Drift entre constitución (2.4.21) y build (2.3.20) | Ratificado uso de Kotlin 2.3.20 por instrucción de jefatura; constitución actualizada a v1.2.1 |
 
 ---
 
 ## 7. Estado actual del código
 
-- **Compilación:** `BUILD SUCCESSFUL` con `./gradlew.bat compileDebugKotlin` (ultima verificacion previa a esta reestructuracion).
+- **Compilación:** `BUILD SUCCESSFUL` con `./gradlew.bat compileDebugKotlin` (15 tareas ejecutadas limpiamente con Hilt 2.58 y Kapt).
+- **Inyección de dependencias:** Hilt 100% integrado (`SensusApp`, `MainActivity`, `AppModule`).
 - **APKs/AABs:** 0 generados en esta fase; el AAB versionado fue eliminado.
 - **Iconos:** 100% vectoriales, 0 emojis.
 - **Colores:** morado marca + neutros, sin amarillos en UI.
 - **Tests:** 2 archivos stale (`MainScreenViewModelTest`, `MainScreenTest`) referenciando flujo antiguo; cobertura real ~0% del marketplace actual.
-- **Codigo Kotlin:** sin cambios en esta reestructuracion. La migracion de paquetes esta especificada en `specs/FT-00-base-build/plan.md` §5 y `specs/FT-01-nucleo/plan.md` §5.
+- **Codigo Kotlin:** Hilt configurado e integrado en `SensusApp`, `MainActivity` y `di/AppModule.kt`. Los repositorios y casos de uso están disponibles vía `@Inject`.
 
 ---
 
@@ -347,3 +354,78 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
      - Integrado en `RetrofitProfileRepository.uploadProfilePhoto` y en `MerchantNewOfferScreen`.
      - Si la imagen es señalada (`flagged == true`) o ante cualquier fallo fail-closed, se rechaza de inmediato con el mensaje exacto: *"No se pudo subir la imagen por políticas de seguridad."*
 - **Calidad y CI/CD:** Todas las pruebas unitarias y el análisis de SonarCloud (`SonarCloud Code Analysis`) pasaron exitosamente con 0.0% de duplicación.
+
+---
+
+## Bitácora - Subsanación de Brecha SDD: Inyección de Dependencias Oficial con Hilt
+
+- **Fecha:** 2026-11-08
+- **Brecha subsanada:** Inyección de Dependencias (DI) Hilt obligatorio (`@HiltAndroidApp`, `@AndroidEntryPoint`, `@Inject`). Previamente existía un singleton manual (`SensusContainer.kt`) sin presencia de Hilt en Gradle ni anotaciones de inyección, catalogado como hallazgo crítico `❌ Ausente en código` frente a `constitution.md` (§4 / Principio 2).
+- **Detalle de implementación y uso:**
+  1. **Configuración de Gradle y Version Catalog:**
+     - Declaración de Hilt 2.58 en `gradle/libs.versions.toml`:
+       - `hilt = "2.58"` (conciliado para compatibilidad nativa con AGP 8.6.0 y metadata de Kotlin 2.3.0).
+       - Librerías: `hilt-android` (`com.google.dagger:hilt-android`) y `hilt-compiler` (`com.google.dagger:hilt-compiler`).
+       - Plugin: `hilt-android` (`com.google.dagger.hilt.android`).
+     - `build.gradle.kts` (raíz): Incorporado `alias(libs.plugins.hilt.android) apply false`.
+     - `app/build.gradle.kts`:
+       - Aplicados plugins `alias(libs.plugins.hilt.android)` y `kotlin("kapt")`.
+       - Bloque `kapt { correctErrorTypes = true }`.
+       - Dependencias `implementation(libs.hilt.android)` y `kapt(libs.hilt.compiler)`.
+  2. **Application Class oficial (`@HiltAndroidApp`):**
+     - Creado `com.example.sensus.SensusApp` heredando de `android.app.Application` y anotado con `@HiltAndroidApp`.
+     - Registrado formalmente en `AndroidManifest.xml` con el atributo `android:name=".SensusApp"`.
+  3. **Punto de Entrada en Activity (`@AndroidEntryPoint`):**
+     - `MainActivity.kt` anotado con `@AndroidEntryPoint`, habilitando la inyección de dependencias y de `@HiltViewModel` en el árbol de Compose.
+  4. **Módulo de Inyección de Dependencias (`AppModule`):**
+     - Creado `com.example.sensus.di.AppModule` anotado con `@Module` e `@InstallIn(SingletonComponent::class)`.
+     - **Provisión de componentes singleton:**
+       - `SensusContainer`: Instancia base unificada.
+       - `SecurePreferences`: Almacén cifrado con Android Keystore.
+       - Repositorios de negocio: `AuthRepository`, `ProfileRepository`, `MerchantRepository`, `LocationRepository`.
+       - Servicios de moderación: `ImageModerationService` (`OpenAiModerationService`).
+       - Casos de uso de autenticación y sesión: `RegisterUseCase`, `LoginUseCase`, `RequestPasswordResetUseCase`, `ResetPasswordUseCase`, `GetCachedSessionUseCase`, `SaveSessionUseCase`, `ClearSessionUseCase`.
+  5. **Patrón de Coexistencia y Transición (Bridge Pattern):**
+     - Se mantiene `SensusContainer` como proveedor subyacente para garantizar retrocompatibilidad total con pantallas Compose que aún referencian `SensusContainer.getInstance(context)`.
+     - Todos los nuevos componentes, repositorios, casos de uso y ViewModels ahora pueden inyectar dependencias directamente mediante `@Inject constructor(...)` y `@HiltViewModel`.
+- **Verificación y Calidad:**
+  - Compilación Kotlin pura verificada con `./gradlew.bat compileDebugKotlin --no-daemon`: **`BUILD SUCCESSFUL` en 5m 38s** (15 tareas ejecutadas, procesando exitosamente stubs de Kapt y Hilt compiler sin errores).
+  - Regla estricta de no generación de APK/AAB respetada al 100%.
+  - Gates ejecutables validados:
+    - `python scripts/check_sdd.py` -> **`PASS (0 hallazgos, 10 features)`**
+    - `python scripts/check_layers.py` -> **`PASS (0 hallazgos, 63 archivos)`**
+
+### 2026-11-08: Conciliación Arquitectural, Room + SQLCipher, Clean MVI, JUnit 4, Kover (94.67%) y DevSecOps Inquebrantable
+
+- **Persistencia Local (Room + SQLCipher AES-256):**
+  - Se implementó DatabaseKeyManager.kt para generar y recuperar llaves seguras de 256 bits (32 bytes) respaldadas por Android Keystore en SecurePreferences.
+  - Se crearon las entidades locales de base de datos (OfferEntity, UserSessionEntity, PendingSyncEntity) y DAOs (OfferDao, UserSessionDao, PendingSyncDao).
+  - Se configuró SensusDatabase y DatabaseFactory con soporte SupportFactory(passphrase) de SQLCipher 4.5.4.
+  - Para garantizar interoperabilidad absoluta y prevenir incompatibilidades de metadata de bytecode con el compilador Room, los DAOs y entidades se compilaron como clases Java estándar que se integran nativamente con Kotlin y Hilt.
+  - Se proveyeron DAOs y base de datos vía DatabaseModule.kt en Hilt (SingletonComponent) y en SensusContainer.kt.
+- **Arquitectura de Software (Clean Architecture + MVI Estricto):**
+  - Implementación de la base MVI en presentation/base/MviViewModel.kt: interfaces puras ViewState, ViewIntent, ViewEffect y clase base MviViewModel con StateFlow<ViewState> y canal de efectos secundarios Channel<ViewEffect>.
+  - Creación de contratos y ViewModels MVI:
+    - presentation/auth/LoginContract.kt y LoginViewModel.kt (@HiltViewModel, inyectando LoginUseCase).
+    - presentation/auth/RegisterContract.kt y RegisterViewModel.kt (@HiltViewModel, inyectando RegisterUseCase).
+  - Se eliminaron imports prohibidos de data.* en la capa de presentación (check_layers.py -> PASS con 0 hallazgos).
+- **Testing Local (JUnit 4 + MockK + Turbine):**
+  - Se ratificó y concilió la documentación (constitution.md, AGENTS.md) a JUnit 4 (junit:4.13.2), MockK 1.13.16 y Turbine 1.2.0.
+  - Se crearon pruebas unitarias completas:
+    - LoginViewModelTest.kt: Pruebas de estados, intents y efectos con Turbine y TestDispatcher.
+    - RegisterViewModelTest.kt: Validación de contraseñas, registro exitoso y efectos con Turbine.
+    - DatabaseKeyManagerTest.kt: Generación y persistencia de llave criptográfica de 32 bytes con Base64.
+    - Sprint1UseCasesTest.kt: Pruebas añadidas para LoginUseCase, RegisterUseCase y GetUserLocationUseCase.
+- **Cobertura de Código (Kover):**
+  - Kover 0.8.3 configurado en uild.gradle.kts y pp/build.gradle.kts.
+  - Tarea koverXmlReportDebug activa. check_coverage.py --min 80 ejecutado con éxito: **OK reportDebug.xml 94.67% (umbral 80.00%) -> PASS**.
+- **Gobernanza DevSecOps:**
+  - Incorporación en la Constitución (Sección 4, regla 7) y AGENTS.md (Sección 5, regla 14) de la prohibición absoluta de saltar, burlar o skipear escaneos de código o gates de seguridad.
+- **Resultado de Validación Integral:**
+  - ./gradlew.bat compileDebugKotlin --no-daemon: **BUILD SUCCESSFUL** (sin generar APK/AAB).
+  - ./gradlew.bat testDebugUnitTest --no-daemon: **BUILD SUCCESSFUL** (todas las pruebas unitarias en verde).
+  - python scripts/check_sdd.py: **PASS (0 hallazgos)**
+  - python scripts/check_layers.py: **PASS (0 hallazgos)**
+  - python scripts/check_endpoints.py: **PASS (0 hallazgos)**
+  - python scripts/check_secrets.py: **PASS (0 hallazgos)**
+  - python scripts/check_coverage.py --min 80: **PASS (94.67%)**

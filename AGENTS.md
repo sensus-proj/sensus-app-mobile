@@ -8,7 +8,7 @@
 ## 1. Contexto del proyecto
 
 - App Android nativa de marketplace dual (Cliente / Comercio) para rescate de excedentes y merma.
-- Stack: Kotlin (version pendiente de conciliar: constitucion 2.4.21 vs build 2.3.20, ver `Memoria.md` §6), Jetpack Compose + Material 3, Clean Architecture + MVI (UDF), Hilt, Room + SQLCipher, Offline-First.
+- Stack: Kotlin 2.3.20 (conciliado y ratificado), Jetpack Compose + Material 3, Clean Architecture + MVI (UDF), Hilt, Room + SQLCipher, JUnit 4 ratificado, Kover (>=80%), DevSecOps estricto, Offline-First.
 - Metodologia: Spec-Driven Development (SDD).
 - Memoria operativa y Design System: `Memoria.md` (unica bitacora).
 
@@ -112,6 +112,7 @@ El CI compila sin generar APK.
 11. **No tocar** `keys.properties`, `local.properties`, `*.jks`, `*.keystore`, `SIGNING_*`, `KEYSTORE_*`.
 12. **Un PR = una slice = una feature.** Sin `CHECKLIST_PR.md` verde no hay merge.
 13. **Cobertura obligatoria (>= 80%):** Todo código nuevo DEBE ir integrado con un mínimo del 80% de cobertura en pruebas unitarias, de integración y de extremo a extremo (E2E). Merge bloqueado si no se alcanza el umbral.
+14. **DevSecOps inquebrantable (Prohibición absoluta de elusión):** Queda terminantemente prohibido saltar, skipear, brincar, desactivar o burlar cualquier proceso de validación de seguridad, escaneo de vulnerabilidades o gate de calidad de código (SAST, análisis de secretos, cobertura Kover, linters ni suites de pruebas). Todo análisis debe ejecutarse y validarse de forma íntegra y bloqueante conforme a DevSecOps.
 
 ---
 

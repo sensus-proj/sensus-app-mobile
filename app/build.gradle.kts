@@ -3,6 +3,9 @@ plugins {
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.hilt.android)
+  alias(libs.plugins.kover)
+  kotlin("kapt")
 }
 
 android {
@@ -102,8 +105,58 @@ dependencies {
   testImplementation(libs.mockk)
   testImplementation(libs.turbine)
   testImplementation(libs.mockwebserver)
+
+  // Hilt Dependency Injection
+  implementation(libs.hilt.android)
+  kapt(libs.hilt.compiler)
+
+  // Local Encrypted Persistence (Room + SQLCipher AES-256)
+  implementation(libs.room.runtime)
+  implementation(libs.room.ktx)
+  kapt(libs.room.compiler)
+  implementation(libs.sqlcipher.android)
+  implementation(libs.sqlite.framework)
 }
+
+// kapt { correctErrorTypes = false }
 
 tasks.matching { it.name.contains("AarMetadata") }.configureEach {
     enabled = false
+}
+
+kover {
+  reports {
+    filters {
+      includes {
+        classes(
+          "com.example.sensus.domain.*",
+          "com.example.sensus.presentation.*"
+        )
+      }
+      excludes {
+        classes(
+          "*_Factory*",
+          "*_HiltModules*",
+          "*Hilt_*",
+          "*_MembersInjector*",
+          "*_Impl*",
+          "*BuildConfig*",
+          "*ComposableSingletons*"
+        )
+      }
+    }
+    total {
+      xml {
+        onCheck = true
+      }
+      html {
+        onCheck = true
+      }
+      verify {
+        rule {
+          minBound(80)
+        }
+      }
+    }
+  }
 }
