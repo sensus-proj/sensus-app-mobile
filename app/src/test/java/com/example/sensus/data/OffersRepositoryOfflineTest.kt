@@ -2,10 +2,14 @@ package com.example.sensus.data
 
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.db.dao.OfferDao
+import com.example.sensus.data.local.db.dao.PendingSyncDao
+import com.example.sensus.data.local.db.dao.UserSessionDao
 import com.example.sensus.data.local.db.entity.OfferEntity
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
 import com.example.sensus.data.repository.OffersRepositoryImpl
+import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.domain.model.ProductOffer
+import kotlinx.coroutines.test.runTest
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -140,5 +144,27 @@ class OffersRepositoryOfflineTest {
         verify(exactly = 1) { prefs.clearAll() }
 
         server.shutdown()
+    }
+
+    @Test
+    fun `SessionRepositoryImpl clearSession purges SecurePreferences and SQLCipher DAOs (FT-08 T08_6)`() = runTest {
+        val prefs = mockk<SecurePreferences>(relaxed = true)
+        val userSessionDao = mockk<UserSessionDao>(relaxed = true)
+        val pendingSyncDao = mockk<PendingSyncDao>(relaxed = true)
+        val offerDao = mockk<OfferDao>(relaxed = true)
+
+        val sessionRepo = SessionRepositoryImpl(
+            securePreferences = prefs,
+            userSessionDao = userSessionDao,
+            pendingSyncDao = pendingSyncDao,
+            offerDao = offerDao
+        )
+
+        sessionRepo.clearSession()
+
+        verify(exactly = 1) { prefs.clearAll() }
+        verify(exactly = 1) { userSessionDao.clearSession() }
+        verify(exactly = 1) { pendingSyncDao.clearAll() }
+        verify(exactly = 1) { offerDao.clearOffers() }
     }
 }

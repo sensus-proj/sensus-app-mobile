@@ -25,7 +25,18 @@ from pathlib import Path
 REQUIRED_FILES = ("spec.md", "plan.md", "tasks.md", "checklists/checklist.md")
 LEGACY_ROOT_FILES = ("spec.md", "plan.md", "task.md")
 SPEC_SECTIONS = tuple(f"## {i}." for i in range(1, 8))
-CLOSED_SLICE_PREFIXES = ("FT-00-", "FT-01-", "FT-02-", "FT-03-", "FT-09-")
+CLOSED_SLICE_PREFIXES = (
+    "FT-00-",
+    "FT-01-",
+    "FT-02-",
+    "FT-03-",
+    "FT-04-",
+    "FT-05-",
+    "FT-06-",
+    "FT-07-",
+    "FT-08-",
+    "FT-09-",
+)
 
 
 def read(path: Path) -> str:

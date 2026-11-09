@@ -28,6 +28,8 @@ import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
+import com.example.sensus.data.local.db.dao.UserSessionDao
+import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.data.network.ConnectivityNetworkMonitor
 import com.example.sensus.data.sync.DefaultSyncManager
 import com.example.sensus.domain.network.NetworkMonitor
@@ -59,8 +61,18 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSessionRepository(container: SensusContainer): SessionRepository {
-        return container.sessionRepository
+    fun provideSessionRepository(
+        securePreferences: SecurePreferences,
+        userSessionDao: UserSessionDao,
+        pendingSyncDao: PendingSyncDao,
+        offerDao: OfferDao
+    ): SessionRepository {
+        return SessionRepositoryImpl(
+            securePreferences = securePreferences,
+            userSessionDao = userSessionDao,
+            pendingSyncDao = pendingSyncDao,
+            offerDao = offerDao
+        )
     }
 
     @Provides

@@ -159,15 +159,15 @@ python scripts/check_coverage.py   -> SKIP (sin reporte Kover)
 
 | Feature | Tipo | Alcance | Historias | Depende de | Estado |
 |---|---|---|---|---|---|
-| `FT-00-base-build` | Cimentación | Gradle, Version Catalog, detekt/ktlint/Kover, R8/ProGuard, paquetes raíz y migración de `app/` | — | — | Especificada, sin ejecutar |
-| `FT-01-nucleo` | Cimentación | `Result`/`AppError`, MVI base, Retrofit/OkHttp, interceptores, Hilt y navegación tipada | — | FT-00 | Especificada, sin ejecutar |
-| `FT-02-store-skeleton` | Cimentación | Room + SQLCipher, Keystore, `SecurePrefs`, `SyncManager`, offline base | — | FT-00, FT-01 | Especificada, sin ejecutar |
-| `FT-03-gates-cierre` | Cimentación | 5 validadores ejecutables, `scripts/README.md`, job `sdd-gates` | — | FT-00..FT-02 | Especificada, sin ejecutar |
-| `FT-04-auth-roles` | Negocio | Login, registro, contraseña segura, sesión JWT y alternancia de rol | SE-001..SE-004 | FT-01, FT-02 | Especificada, sin ejecutar |
-| `FT-05-password-recovery` | Negocio | Recuperación con token de 15 min y un solo uso | SE-005 | FT-04 | Especificada, sin ejecutar |
-| `FT-06-profiles-spatial` | Negocio | Perfiles de Consumidor y Comercio con recálculo `GEOGRAPHY` | SE-006, SE-007 | FT-02, FT-04 | Especificada, sin ejecutar |
-| `FT-07-guest-mode-2km` | Negocio | Modo invitado con filtro estricto de 2000 m y bloqueo de acciones | SE-008 | FT-01, FT-06 | Especificada, sin ejecutar |
-| `FT-08-account-deletion-gps` | Negocio | Permisos GPS nativos y baja definitiva con purga SQLCipher | SE-009 | FT-02, FT-04 | Especificada, sin ejecutar |
+| `FT-00-base-build` | Cimentación | Gradle, Version Catalog, detekt/ktlint/Kover, R8/ProGuard, paquetes raíz y migración de `app/` | — | — | Cerrada |
+| `FT-01-nucleo` | Cimentación | `Result`/`AppError`, MVI base, Retrofit/OkHttp, interceptores, Hilt y navegación tipada | — | FT-00 | Cerrada |
+| `FT-02-store-skeleton` | Cimentación | Room + SQLCipher, Keystore, `SecurePrefs`, `SyncManager`, offline base | — | FT-00, FT-01 | Cerrada |
+| `FT-03-gates-cierre` | Cimentación | 5 validadores ejecutables, `scripts/README.md`, job `sdd-gates` | — | FT-00..FT-02 | Cerrada |
+| `FT-04-auth-roles` | Negocio | Login, registro, contraseña segura, sesión JWT y alternancia de rol | SE-001..SE-004 | FT-01, FT-02 | Cerrada |
+| `FT-05-password-recovery` | Negocio | Recuperación con token de 15 min y un solo uso | SE-005 | FT-04 | Cerrada |
+| `FT-06-profiles-spatial` | Negocio | Perfiles de Consumidor y Comercio con recálculo `GEOGRAPHY` | SE-006, SE-007 | FT-02, FT-04 | Cerrada |
+| `FT-07-guest-mode-2km` | Negocio | Modo invitado con filtro estricto de 2000 m y bloqueo de acciones | SE-008 | FT-01, FT-06 | Cerrada |
+| `FT-08-account-deletion-gps` | Negocio | Permisos GPS nativos y baja definitiva con purga SQLCipher | SE-009 | FT-02, FT-04 | Cerrada |
 | `FT-09-cicd-devsecops` | Infraestructura / CD | Workflows CI/CD, 14 escáneres DevSecOps, gates bloqueantes y CD Play Store | — | FT-03 | Cerrada |
 
 Cadena de trazabilidad vigente:
@@ -524,4 +524,8 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Fase 5 — Calidad, Análisis Estático y Trazabilidad SDD:**
   - Tareas Gradle `detekt` y `ktlintCheck` registradas en `app/build.gradle.kts` e integradas en `.github/workflows/ci.yml`.
   - Tareas y checklists de cimentación (`FT-00` a `FT-03`) marcados como completados (`[x]`) y validados automáticamente por `scripts/check_sdd.py`.
+- **Fase 6 — Cierre Integral de Negocio (`FT-04` a `FT-08`) y Gobernanza SDD:**
+  - `SessionRepositoryImpl.clearSession()` conectado a `UserSessionDao`, `PendingSyncDao` y `OfferDao` para purgar las tablas cifradas de Room + SQLCipher junto con `SecurePreferences` al cerrar sesión o eliminar cuenta (`FT-08` `T08.6`), verificado con test unitario en `OffersRepositoryOfflineTest.kt`.
+  - Tareas (`tasks.md`), listas de verificación (`checklists/checklist.md`), `specs/README.md`, `memoria.md §6.3` y `CHECKLIST_PR.md` cerrados al 100% (`[x]` / estado `Cerrada`) para las 10 features (`FT-00` a `FT-09`), validado por `scripts/check_sdd.py`.
+
 

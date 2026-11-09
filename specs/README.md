@@ -19,15 +19,15 @@ specs/FT-XX-<slug>/
 
 | Feature | Tipo | Historias | Depende de | Estado | Evidencia |
 |---|---|---|---|---|---|
-| `FT-00-base-build` | Cimentacion | — | — | Especificada, sin ejecutar | `spec.md` |
-| `FT-01-nucleo` | Cimentacion | — | FT-00 | Especificada, sin ejecutar | `spec.md` |
-| `FT-02-store-skeleton` | Cimentacion | — | FT-00, FT-01 | Especificada, sin ejecutar | `spec.md` |
-| `FT-03-gates-cierre` | Cimentacion | — | FT-00..FT-02 | Especificada, sin ejecutar | `spec.md` |
-| `FT-04-auth-roles` | Negocio | SE-001..SE-004 | FT-01, FT-02 | Especificada, sin ejecutar | `spec.md` |
-| `FT-05-password-recovery` | Negocio | SE-005 | FT-04 | Especificada, sin ejecutar | `spec.md` |
-| `FT-06-profiles-spatial` | Negocio | SE-006, SE-007 | FT-02, FT-04 | Especificada, sin ejecutar | `spec.md` |
-| `FT-07-guest-mode-2km` | Negocio | SE-008 | FT-01, FT-06 | Especificada, sin ejecutar | `spec.md` |
-| `FT-08-account-deletion-gps` | Negocio | SE-009 | FT-02, FT-04 | Especificada, sin ejecutar | `spec.md` |
+| `FT-00-base-build` | Cimentacion | — | — | Cerrada | `spec.md`, `app/build.gradle.kts`, `SensusApp.kt` |
+| `FT-01-nucleo` | Cimentacion | — | FT-00 | Cerrada | `spec.md`, `MviViewModel.kt`, `AppModule.kt`, `NetworkClient.kt` |
+| `FT-02-store-skeleton` | Cimentacion | — | FT-00, FT-01 | Cerrada | `spec.md`, `SensusDatabase.java`, `DatabaseKeyManager.kt`, `DefaultSyncManager.kt` |
+| `FT-03-gates-cierre` | Cimentacion | — | FT-00..FT-02 | Cerrada | `spec.md`, `scripts/check_*.py` (5 gates en PASS) |
+| `FT-04-auth-roles` | Negocio | SE-001..SE-004 | FT-01, FT-02 | Cerrada | `spec.md`, `LoginUseCase.kt`, `RegisterUseCase.kt`, `LoginViewModel.kt` |
+| `FT-05-password-recovery` | Negocio | SE-005 | FT-04 | Cerrada | `spec.md`, `RequestPasswordResetUseCase.kt`, `ResetPasswordUseCase.kt`, `ForgotPasswordViewModel.kt` |
+| `FT-06-profiles-spatial` | Negocio | SE-006, SE-007 | FT-02, FT-04 | Cerrada | `spec.md`, `UpdateProfileUseCase.kt`, `UpdateMerchantProfileUseCase.kt`, `MerchantMapper.kt` |
+| `FT-07-guest-mode-2km` | Negocio | SE-008 | FT-01, FT-06 | Cerrada | `spec.md`, `StartGuestSessionUseCase.kt`, `GuestRadiusPolicy`, `RadiusSelectorModal.kt` |
+| `FT-08-account-deletion-gps` | Negocio | SE-009 | FT-02, FT-04 | Cerrada | `spec.md`, `DeleteAccountUseCase.kt`, `GetUserLocationUseCase.kt`, `SessionRepositoryImpl.kt` |
 | `FT-09-cicd-devsecops` | Infraestructura / CD | — | FT-03 | Cerrada | `spec.md`, `ci.yml`, `security-scanners.yml`, `release-playstore.yml` |
 
 Estados permitidos: `Borrador`, `Especificada, sin ejecutar`, `En implementacion`, `En revision`, `Cerrada`.
