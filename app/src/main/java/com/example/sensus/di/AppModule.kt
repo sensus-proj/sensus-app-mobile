@@ -26,6 +26,11 @@ import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
+import com.example.sensus.data.local.db.dao.PendingSyncDao
+import com.example.sensus.data.network.ConnectivityNetworkMonitor
+import com.example.sensus.data.sync.DefaultSyncManager
+import com.example.sensus.domain.network.NetworkMonitor
+import com.example.sensus.domain.sync.SyncManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -163,5 +168,22 @@ object AppModule {
     @Singleton
     fun provideGetUserLocationUseCase(container: SensusContainer): GetUserLocationUseCase {
         return container.getUserLocationUseCase
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkMonitor(
+        @ApplicationContext context: Context
+    ): NetworkMonitor {
+        return ConnectivityNetworkMonitor(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncManager(
+        pendingSyncDao: PendingSyncDao,
+        networkMonitor: NetworkMonitor
+    ): SyncManager {
+        return DefaultSyncManager(pendingSyncDao, networkMonitor)
     }
 }

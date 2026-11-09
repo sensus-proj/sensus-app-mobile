@@ -491,3 +491,19 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   1. En cuanto el backend libere el endpoint `GET /api/v1/offers/nearby` (Spec 007 / FT-07), `OffersRepositoryImpl` se conectará directamente al cliente Retrofit y sincronizará con la base de datos cifrada SQLite Room (`OfferDao`).
   2. En ese momento, **el archivo `MockDataProvider.kt` y cualquier referencia residual a mocks en `app/src/main` DEBEN SER ELIMINADOS de forma definitiva**.
   3. Ningún dato simulado o hardcoded podrá persistir en código de producción; los mocks quedarán estrictamente confinados a `app/src/test` y `androidTest`.
+
+
+### Cierre Oficial de la Fase 1 al 100%: NetworkMonitor y SyncManager (Offline-First)
+
+- **Componentes Implementados:**
+  - `domain/network/NetworkMonitor.kt`: Interfaz pura de monitoreo de red reactivo (`val isOnline: Flow<Boolean>`).
+  - `domain/sync/SyncManager.kt`: Interfaz pura para encolar y procesar sincronizaciones pendientes con modelo `SyncResult`.
+  - `data/network/ConnectivityNetworkMonitor.kt`: Implementación con `ConnectivityManager.registerDefaultNetworkCallback` y `callbackFlow`, emitiendo estado inicial y cambios en tiempo real.
+  - `data/sync/DefaultSyncManager.kt`: Implementación conectada a `PendingSyncDao` (Room + SQLCipher) y con auto-sincronización reactiva en cuanto el dispositivo recupera conectividad.
+  - `di/AppModule.kt`: Provisión Singleton de `NetworkMonitor` y `SyncManager`.
+- **Pruebas y Verificación:**
+  - `ConnectivityNetworkMonitorTest.kt`: Pruebas de conectividad nula, con red activa y sin internet (100% en verde).
+  - `DefaultSyncManagerTest.kt`: Pruebas de encolado, sincronización, eliminación de tareas y auto-sincronización reactiva (100% en verde).
+  - Suite completa: **80 tests unitarios superados al 100%**.
+  - `check_coverage.py`: **`92.53%`** de cobertura Kover (superando el umbral de 80%).
+  - `check_layers.py`: **`PASS (0 hallazgos, 112 archivos)`**.
