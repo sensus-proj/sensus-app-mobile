@@ -25,6 +25,18 @@ from pathlib import Path
 REQUIRED_FILES = ("spec.md", "plan.md", "tasks.md", "checklists/checklist.md")
 LEGACY_ROOT_FILES = ("spec.md", "plan.md", "task.md")
 SPEC_SECTIONS = tuple(f"## {i}." for i in range(1, 8))
+CLOSED_SLICE_PREFIXES = (
+    "FT-00-",
+    "FT-01-",
+    "FT-02-",
+    "FT-03-",
+    "FT-04-",
+    "FT-05-",
+    "FT-06-",
+    "FT-07-",
+    "FT-08-",
+    "FT-09-",
+)
 
 
 def read(path: Path) -> str:
@@ -56,6 +68,14 @@ def check_feature(feature: Path, findings: list[str], verbose: bool) -> None:
         text = read(tasks)
         if not re.search(r"^- \[[ xX]\]", text, re.MULTILINE):
             findings.append(f"FAIL {tasks.as_posix()}: no contiene tareas '- [ ]'")
+        if feature.name.startswith(CLOSED_SLICE_PREFIXES) and re.search(r"^- \[ \]", text, re.MULTILINE):
+            findings.append(f"FAIL {tasks.as_posix()}: quedan tareas sin marcar '[x]' en slice cerrado")
+
+    checklist = feature / "checklists" / "checklist.md"
+    if checklist.is_file() and feature.name.startswith(CLOSED_SLICE_PREFIXES):
+        chk_text = read(checklist)
+        if re.search(r"^- \[ \]", chk_text, re.MULTILINE):
+            findings.append(f"FAIL {checklist.as_posix()}: quedan items sin marcar '[x]' en checklist de slice cerrado")
 
 
 def main() -> int:

@@ -159,15 +159,15 @@ python scripts/check_coverage.py   -> SKIP (sin reporte Kover)
 
 | Feature | Tipo | Alcance | Historias | Depende de | Estado |
 |---|---|---|---|---|---|
-| `FT-00-base-build` | Cimentación | Gradle, Version Catalog, detekt/ktlint/Kover, R8/ProGuard, paquetes raíz y migración de `app/` | — | — | Especificada, sin ejecutar |
-| `FT-01-nucleo` | Cimentación | `Result`/`AppError`, MVI base, Retrofit/OkHttp, interceptores, Hilt y navegación tipada | — | FT-00 | Especificada, sin ejecutar |
-| `FT-02-store-skeleton` | Cimentación | Room + SQLCipher, Keystore, `SecurePrefs`, `SyncManager`, offline base | — | FT-00, FT-01 | Especificada, sin ejecutar |
-| `FT-03-gates-cierre` | Cimentación | 5 validadores ejecutables, `scripts/README.md`, job `sdd-gates` | — | FT-00..FT-02 | Especificada, sin ejecutar |
-| `FT-04-auth-roles` | Negocio | Login, registro, contraseña segura, sesión JWT y alternancia de rol | SE-001..SE-004 | FT-01, FT-02 | Especificada, sin ejecutar |
-| `FT-05-password-recovery` | Negocio | Recuperación con token de 15 min y un solo uso | SE-005 | FT-04 | Especificada, sin ejecutar |
-| `FT-06-profiles-spatial` | Negocio | Perfiles de Consumidor y Comercio con recálculo `GEOGRAPHY` | SE-006, SE-007 | FT-02, FT-04 | Especificada, sin ejecutar |
-| `FT-07-guest-mode-2km` | Negocio | Modo invitado con filtro estricto de 2000 m y bloqueo de acciones | SE-008 | FT-01, FT-06 | Especificada, sin ejecutar |
-| `FT-08-account-deletion-gps` | Negocio | Permisos GPS nativos y baja definitiva con purga SQLCipher | SE-009 | FT-02, FT-04 | Especificada, sin ejecutar |
+| `FT-00-base-build` | Cimentación | Gradle, Version Catalog, detekt/ktlint/Kover, R8/ProGuard, paquetes raíz y migración de `app/` | — | — | Cerrada |
+| `FT-01-nucleo` | Cimentación | `Result`/`AppError`, MVI base, Retrofit/OkHttp, interceptores, Hilt y navegación tipada | — | FT-00 | Cerrada |
+| `FT-02-store-skeleton` | Cimentación | Room + SQLCipher, Keystore, `SecurePrefs`, `SyncManager`, offline base | — | FT-00, FT-01 | Cerrada |
+| `FT-03-gates-cierre` | Cimentación | 5 validadores ejecutables, `scripts/README.md`, job `sdd-gates` | — | FT-00..FT-02 | Cerrada |
+| `FT-04-auth-roles` | Negocio | Login, registro, contraseña segura, sesión JWT y alternancia de rol | SE-001..SE-004 | FT-01, FT-02 | Cerrada |
+| `FT-05-password-recovery` | Negocio | Recuperación con token de 15 min y un solo uso | SE-005 | FT-04 | Cerrada |
+| `FT-06-profiles-spatial` | Negocio | Perfiles de Consumidor y Comercio con recálculo `GEOGRAPHY` | SE-006, SE-007 | FT-02, FT-04 | Cerrada |
+| `FT-07-guest-mode-2km` | Negocio | Modo invitado con filtro estricto de 2000 m y bloqueo de acciones | SE-008 | FT-01, FT-06 | Cerrada |
+| `FT-08-account-deletion-gps` | Negocio | Permisos GPS nativos y baja definitiva con purga SQLCipher | SE-009 | FT-02, FT-04 | Cerrada |
 | `FT-09-cicd-devsecops` | Infraestructura / CD | Workflows CI/CD, 14 escáneres DevSecOps, gates bloqueantes y CD Play Store | — | FT-03 | Cerrada |
 
 Cadena de trazabilidad vigente:
@@ -429,3 +429,103 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - python scripts/check_endpoints.py: **PASS (0 hallazgos)**
   - python scripts/check_secrets.py: **PASS (0 hallazgos)**
   - python scripts/check_coverage.py --min 80: **PASS (94.67%)**
+
+
+### 2026-11-08: Fase 2 — Migración Integral de UI Legacy a Presentation con MVI Estricto y Erradicación Total de ui/
+
+- **Endurecimiento de Compuertas y Reglas de Arquitectura (`scripts/check_layers.py`):**
+  - La compuerta se reforzó para evaluar la raíz (`MainActivity.kt`, `Navigation.kt`) y cualquier archivo en `ui/` como parte de la capa de presentación.
+  - Se prohibieron taxativamente los imports de `com.example.sensus.data.*` en capas de dominio y presentación.
+  - Se detectan y bloquean tokens obsoletos con sufijos `*UiState` y `*UiEvent`, exigiendo la adopción estricta de `ViewState`, `ViewIntent` y `ViewEffect`.
+  - El umbral de hallazgos inicial era de 61 violaciones arquitecturales.
+- **Dominio Mínimo y Desacoplamiento de Datos (`domain/model/StoreModels.kt`):**
+  - Se extrajeron todos los modelos y entidades de negocio que se encontraban en `data/Models.kt` hacia `domain/model/StoreModels.kt`: `StoreCategory`, `ProductOffer`, `CartItem`, `StoreCart`, `ApartadoOrder`, `MerchantStore`, `ChatMessage`, `NotificationItem`, `FriendShare`, `AddToCartResult`, `ModerationResult`.
+  - En `data/Models.kt` se crearon `typealias` retrocompatibles para no romper contratos heredados.
+  - Se crearon las interfaces de repositorio de dominio: `SessionRepository`, `DataRepository`, `CartRepository`, `OffersRepository`, `StoreRepository`.
+  - Se implementaron los repositorios puente en `data/repository/`: `SessionRepositoryImpl`, `CartRepositoryImpl`, `OffersRepositoryImpl`, `StoreRepositoryImpl`.
+  - Se desacopló `Sprint1UseCases.kt` de `SecurePreferences` mediante inyección de `SessionRepository`.
+  - Se integró `androidx.hilt:hilt-navigation-compose:1.2.0` en `libs.versions.toml` y `app/build.gradle.kts`.
+- **Migración Completa de Pantallas y ViewModels por Feature (`presentation/`):**
+  - **Sesión y Raíz (`presentation/root/`, `presentation/splash/`):**
+    - `AppViewModel` y `AppContract` creados como `@HiltViewModel` gestionando el flujo global de navegación y sesión.
+    - `SplashScreen.kt` migrado a `presentation/splash/SplashScreen.kt`.
+    - `MainActivity.kt` y `Navigation.kt` desacoplados de `SensusAuthManager`, conectados reactivamente a `AppViewModel`.
+  - **Autenticación (`presentation/auth/`):**
+    - Migradas las 5 pantallas de autenticación: `LoginScreen.kt`, `RegisterScreen.kt`, `OnboardingLocationScreen.kt`, `OtpVerificationScreen.kt`, `TermsScreen.kt`.
+    - Conectadas a `LoginViewModel` y `RegisterViewModel` vía `hiltViewModel()`.
+  - **Comprador (`presentation/buyer/`):**
+    - Creados contratos y `@HiltViewModel`s dedicados: `BuyerHomeViewModel`, `BuyerMapViewModel`, `CartViewModel`, `NotificationsViewModel`, `CommunityViewModel`, `SensiChatViewModel`, `BuyerProfileViewModel`, `RouteMapViewModel`.
+    - Migradas las 10 pantallas de comprador: `ActiveApartadoScreen`, `BuyerHomeScreen`, `BuyerMapScreen`, `BuyerProfileScreen`, `CartBottomSheet`, `CommunityScreen`, `NotificationsScreen`, `ProductDetailScreen`, `RouteMapScreen`, `SensiChatScreen`.
+  - **Comercio (`presentation/merchant/`):**
+    - Creados contratos y `@HiltViewModel`s: `MerchantDashboardViewModel`, `MerchantNewOfferViewModel`, `MerchantProfileViewModel`, `MerchantRegisterViewModel`.
+    - Migradas las 5 pantallas de comercio: `MerchantDashboardScreen`, `MerchantNewOfferScreen`, `MerchantProfileScreen`, `MerchantRegisterScreen`, `MerchantSalesScreen`.
+  - **Comunes y Diálogos (`presentation/common/`, `presentation/modals/`):**
+    - Migrados `CategoryIcons.kt`, `NavigationIntentUtils.kt`, `OsmMapUtils.kt`, `RadiusSelectorModal.kt` a `presentation/common/`.
+    - Migrados `ConfirmDialogs.kt` y `ForgotPasswordScreens.kt` a `presentation/modals/`.
+    - Creado `ForgotPasswordViewModel` (`@HiltViewModel`) inyectando casos de uso de dominio.
+  - **Contenedor Principal (`presentation/main/`):**
+    - `MainScreenViewModel` migrado con `MainScreenViewState` eliminando todo residuo de `UiState`.
+    - `MainAppContainer.kt` y `MainScreen.kt` migrados con estado reactivo puro y desacoplados de `MockDataProvider` y `SensusAuthManager`.
+- **Erradicación Total de `ui/`:**
+  - El directorio `app/src/main/java/com/example/sensus/ui` fue eliminado en su totalidad (`Test-Path` retorna `False`).
+  - No queda ninguna referencia residual en tests unitarios ni en `androidTest`.
+- **Resultados de Validación y Gates DevSecOps:**
+  - `python scripts/check_layers.py`: **`PASS (0 hallazgos, 108 archivos)`** (de 61 iniciales a 0).
+  - `python scripts/check_sdd.py`: **`PASS (0 hallazgos, 10 features)`**.
+  - `python scripts/check_endpoints.py`: **`PASS (0 hallazgos, 8 endpoints)`**.
+  - `python scripts/check_secrets.py`: **`PASS (0 hallazgos, 143 archivos)`**.
+  - `./gradlew.bat compileDebugKotlin`: **`BUILD SUCCESSFUL`** (sin generar APK/AAB).
+  - `./gradlew.bat testDebugUnitTest`: **`BUILD SUCCESSFUL`** (73/73 tests unitarios en verde).
+  - `python scripts/check_coverage.py --min 80`: **`PASS (92.50% de cobertura de código)`**.
+
+
+### Política Arquitectural de Transición: Criterio de Retiro Obligatorio de Mocks al Integrar el API Real
+
+- **Contexto Operativo:**
+  - El backend (`sensus-back`) en Sprint 1 cuenta con las especificaciones y contratos de autenticación, perfil de usuario, activación y edición de comercio.
+  - Los endpoints de ofertas remotas (`GET /api/v1/offers/nearby`), asistente Sensi IA, notificaciones en la nube y feed de comunidad aún no se encuentran desplegados en el servidor.
+- **Estrategia Acordada:**
+  - Los datos provisionales de `MockDataProvider` operan temporalmente como proveedor puente en memoria / semilla local para permitir la navegación, interacción y validación de las pantallas de la capa `presentation/`.
+  - Se añadieron anotaciones `@Deprecated` y marcas `TODO: [API-MIGRATION]` en `MockDataProvider.kt`, `OffersRepositoryImpl.kt` y `StoreRepositoryImpl.kt`.
+- **Regla Mandatoria de Retiro:**
+  1. En cuanto el backend libere el endpoint `GET /api/v1/offers/nearby` (Spec 007 / FT-07), `OffersRepositoryImpl` se conectará directamente al cliente Retrofit y sincronizará con la base de datos cifrada SQLite Room (`OfferDao`).
+  2. En ese momento, **el archivo `MockDataProvider.kt` y cualquier referencia residual a mocks en `app/src/main` DEBEN SER ELIMINADOS de forma definitiva**.
+  3. Ningún dato simulado o hardcoded podrá persistir en código de producción; los mocks quedarán estrictamente confinados a `app/src/test` y `androidTest`.
+
+
+### Cierre Oficial de la Fase 1 al 100%: NetworkMonitor y SyncManager (Offline-First)
+
+- **Componentes Implementados:**
+  - `domain/network/NetworkMonitor.kt`: Interfaz pura de monitoreo de red reactivo (`val isOnline: Flow<Boolean>`).
+  - `domain/sync/SyncManager.kt`: Interfaz pura para encolar y procesar sincronizaciones pendientes con modelo `SyncResult`.
+  - `data/network/ConnectivityNetworkMonitor.kt`: Implementación con `ConnectivityManager.registerDefaultNetworkCallback` y `callbackFlow`, emitiendo estado inicial y cambios en tiempo real.
+  - `data/sync/DefaultSyncManager.kt`: Implementación conectada a `PendingSyncDao` (Room + SQLCipher) y con auto-sincronización reactiva en cuanto el dispositivo recupera conectividad.
+  - `di/AppModule.kt`: Provisión Singleton de `NetworkMonitor` y `SyncManager`.
+- **Pruebas y Verificación:**
+  - `ConnectivityNetworkMonitorTest.kt`: Pruebas de conectividad nula, con red activa y sin internet (100% en verde).
+  - `DefaultSyncManagerTest.kt`: Pruebas de encolado, sincronización, eliminación de tareas y auto-sincronización reactiva (100% en verde).
+  - Suite completa: **80 tests unitarios superados al 100%**.
+  - `check_coverage.py`: **`92.53%`** de cobertura Kover (superando el umbral de 80%).
+  - `check_layers.py`: **`PASS (0 hallazgos, 112 archivos)`**.
+
+### Ejecución y Cierre de las Fases 3, 4 y 5 (Plan de Corrección SDD)
+
+- **Fase 3 — Purificación y Descomposición del Dominio + Mappers:**
+  - Erradicados los 3 archivos monolito `Sprint1Models.kt`, `Sprint1Repositories.kt` y `Sprint1UseCases.kt`.
+  - Modelos de dominio separados por feature en `domain/model/`: `UserProfile.kt`, `MerchantProfile.kt`, `UserLocation.kt`.
+  - Repositorios separados por agregado en `domain/repository/`: `AuthRepository.kt`, `ProfileRepository.kt`, `MerchantRepository.kt`, `LocationRepository.kt`.
+  - Casos de uso atómicos separados en `domain/usecase/`: `LoginUseCase.kt`, `RegisterUseCase.kt`, `RequestPasswordResetUseCase.kt`, `ResetPasswordUseCase.kt`, `UpdateProfileUseCase.kt`, `UpdateMerchantProfileUseCase.kt`, `StartGuestSessionUseCase.kt`, `DeleteAccountUseCase.kt`, `GetUserLocationUseCase.kt`.
+  - Creados mappers explícitos en `data/mapper/`: `UserMapper.kt`, `MerchantMapper.kt`, `OfferMapper.kt`, probados en `DataMappersTest.kt`.
+- **Fase 4 — Persistencia Offline-First en Room + Manejo de HTTP 401:**
+  - `OffersRepositoryImpl` conectado a `OfferDao` (Room + SQLCipher AES-256) e inyectado en `AppModule.kt`.
+  - Lectura desde caché local cifrado, semilla inicial automática en frío y resolución de conflictos *server-wins* mediante `syncOffersFromServer()`.
+  - `AuthInterceptor` actualizado para limpiar automáticamente `SecurePreferences` e invocar callback de sesión expirada al recibir HTTP `401 Unauthorized` en rutas protegidas.
+  - Pruebas unitarias en `OffersRepositoryOfflineTest.kt`.
+- **Fase 5 — Calidad, Análisis Estático y Trazabilidad SDD:**
+  - Tareas Gradle `detekt` y `ktlintCheck` registradas en `app/build.gradle.kts` e integradas en `.github/workflows/ci.yml`.
+  - Tareas y checklists de cimentación (`FT-00` a `FT-03`) marcados como completados (`[x]`) y validados automáticamente por `scripts/check_sdd.py`.
+- **Fase 6 — Cierre Integral de Negocio (`FT-04` a `FT-08`) y Gobernanza SDD:**
+  - `SessionRepositoryImpl.clearSession()` conectado a `UserSessionDao`, `PendingSyncDao` y `OfferDao` para purgar las tablas cifradas de Room + SQLCipher junto con `SecurePreferences` al cerrar sesión o eliminar cuenta (`FT-08` `T08.6`), verificado con test unitario en `OffersRepositoryOfflineTest.kt`.
+  - Tareas (`tasks.md`), listas de verificación (`checklists/checklist.md`), `specs/README.md`, `memoria.md §6.3` y `CHECKLIST_PR.md` cerrados al 100% (`[x]` / estado `Cerrada`) para las 10 features (`FT-00` a `FT-09`), validado por `scripts/check_sdd.py`.
+
+

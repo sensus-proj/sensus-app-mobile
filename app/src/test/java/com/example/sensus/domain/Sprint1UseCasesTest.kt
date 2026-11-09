@@ -2,7 +2,7 @@ package com.example.sensus.domain
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
-import com.example.sensus.data.local.SecurePreferences
+import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.data.local.SessionType
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
@@ -37,14 +37,14 @@ class Sprint1UseCasesTest {
     private lateinit var authRepository: AuthRepository
     private lateinit var profileRepository: ProfileRepository
     private lateinit var merchantRepository: MerchantRepository
-    private lateinit var securePreferences: SecurePreferences
+    private lateinit var sessionRepository: SessionRepository
 
     @Before
     fun setUp() {
         authRepository = mockk(relaxed = true)
         profileRepository = mockk(relaxed = true)
         merchantRepository = mockk(relaxed = true)
-        securePreferences = mockk(relaxed = true)
+        sessionRepository = mockk(relaxed = true)
     }
 
     // ==========================================
@@ -193,12 +193,12 @@ class Sprint1UseCasesTest {
     fun startGuestSession_shouldSucceed_andSaveGuestSessionInPreferences() = runTest {
         coEvery { authRepository.createGuestSession() } returns Result.Success("guest-jwt-token")
 
-        val useCase = StartGuestSessionUseCase(authRepository, securePreferences)
+        val useCase = StartGuestSessionUseCase(authRepository, sessionRepository)
         val result = useCase()
 
         assertTrue(result is Result.Success)
         assertEquals("guest-jwt-token", (result as Result.Success).data)
-        verify(exactly = 1) { securePreferences.saveGuestSession("guest-jwt-token", 2000) }
+        coVerify(exactly = 1) { sessionRepository.saveGuestSession("guest-jwt-token", 2000) }
     }
 
     // ==========================================
@@ -207,7 +207,7 @@ class Sprint1UseCasesTest {
 
     @Test
     fun deleteAccount_shouldFail_whenPasswordIsBlank() = runTest {
-        val useCase = DeleteAccountUseCase(authRepository, securePreferences)
+        val useCase = DeleteAccountUseCase(authRepository, sessionRepository)
         val result = useCase("   ")
 
         assertTrue(result is Result.Failure)
@@ -219,12 +219,12 @@ class Sprint1UseCasesTest {
     fun deleteAccount_shouldPurgePreferences_whenPasswordIsCorrect() = runTest {
         coEvery { authRepository.deleteAccount("ValidPassword123#") } returns Result.Success(Unit)
 
-        val useCase = DeleteAccountUseCase(authRepository, securePreferences)
+        val useCase = DeleteAccountUseCase(authRepository, sessionRepository)
         val result = useCase("ValidPassword123#")
 
         assertTrue(result is Result.Success)
         coVerify(exactly = 1) { authRepository.deleteAccount("ValidPassword123#") }
-        verify(exactly = 1) { securePreferences.clearAll() }
+        coVerify(exactly = 1) { sessionRepository.clearSession() }
     }
 
     // ==========================================

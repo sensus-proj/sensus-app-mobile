@@ -3,10 +3,11 @@
 
 Reglas:
   RF-03-04  domain/ no importa android.*, androidx.*, retrofit2.*, okhttp3.*,
-            kotlinx.serialization.* ni org.json.*.
-  RF-03-05  presentation/ no importa data.* directamente.
-  RF-03-06  data/ no importa presentation.*.
-  RF-03-07  No hay MVVM legacy, UiState, UiEvent ni Koin en el codigo.
+            kotlinx.serialization.*, org.json.* ni data.*, ui.*, presentation.*.
+  RF-03-05  presentation/ (y ui/ o raiz de paquete) no importa data.* directamente.
+  RF-03-06  data/ no importa presentation.* ni ui.*.
+  RF-03-07  No hay MVVM legacy, UiState/UiEvent (*UiState, *UiEvent) ni Koin en el codigo.
+  RF-03-08  presentation/ debe existir como carpeta de arquitectura Clean.
 
 Uso:
     python scripts/check_layers.py [--root .] [--verbose]
@@ -34,15 +35,23 @@ FORBIDDEN_BY_LAYER = {
         "import okhttp3.",
         "import kotlinx.serialization.",
         "import org.json.",
+        "import com.example.sensus.data.",
+        "import com.example.sensus.ui.",
+        "import com.example.sensus.presentation.",
     ),
-    "presentation": ("import com.example.sensus.data.",),
-    "data": ("import com.example.sensus.presentation.",),
+    "presentation": (
+        "import com.example.sensus.data.",
+    ),
+    "data": (
+        "import com.example.sensus.presentation.",
+        "import com.example.sensus.ui.",
+    ),
 }
 
 # Tokens legacy prohibidos en todo el codigo Kotlin del proyecto.
 FORBIDDEN_TOKENS = (
-    (re.compile(r"\bUiState\b"), "UiState legacy (usar ViewState)"),
-    (re.compile(r"\bUiEvent\b"), "UiEvent legacy (usar ViewIntent)"),
+    (re.compile(r"\b\w*UiState\b"), "UiState legacy (usar ViewState)"),
+    (re.compile(r"\b\w*UiEvent\b"), "UiEvent legacy (usar ViewIntent)"),
     (re.compile(r"\borg\.koin\b"), "Koin prohibido (usar Hilt)"),
     (re.compile(r"\bkoin\s*\("), "Koin prohibido (usar Hilt)"),
 )
@@ -64,7 +73,13 @@ def check_file(path: Path, findings: list[str]) -> None:
     except ValueError:
         index = -1
 
-    layer = rel_parts[index] if index != -1 and index < len(rel_parts) else ""
+    raw_layer = rel_parts[index] if index != -1 and index < len(rel_parts) else ""
+    # Tratar ui/ o archivos en la raiz del paquete (MainActivity, Navigation) como capa de presentacion
+    if raw_layer == "ui" or raw_layer.endswith(".kt") or raw_layer == "":
+        layer = "presentation"
+    else:
+        layer = raw_layer
+
     rules = FORBIDDEN_BY_LAYER.get(layer, ())
 
     text = path.read_text(encoding="utf-8", errors="replace")
@@ -75,7 +90,7 @@ def check_file(path: Path, findings: list[str]) -> None:
             for forbidden in rules:
                 if imported.startswith(forbidden.removeprefix("import ")):
                     findings.append(
-                        f"FAIL {path.as_posix()}:{number}: import prohibido en {layer}/ -> {imported}"
+                        f"FAIL {path.as_posix()}:{number}: import prohibido en {raw_layer or 'raiz'}/ -> {imported}"
                     )
         for pattern, reason in FORBIDDEN_TOKENS:
             if pattern.search(line):
@@ -99,6 +114,9 @@ def main() -> int:
     if not (base / "domain").is_dir():
         print("PASS (sin capas aun)")
         return 0
+
+    if not (base / "presentation").is_dir():
+        findings.append("FAIL estructura: falta app/src/main/java/com/example/sensus/presentation/")
 
     files = list(iter_kotlin_files(base))
     for path in files:

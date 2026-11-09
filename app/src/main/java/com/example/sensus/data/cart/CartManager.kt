@@ -7,10 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-sealed interface AddToCartResult {
-    data object Success : AddToCartResult
-    data class StoreConflict(val currentStoreName: String, val newStoreName: String) : AddToCartResult
-}
+import com.example.sensus.domain.model.AddToCartResult
 
 object CartManager {
     private val _cart = MutableStateFlow(StoreCart())

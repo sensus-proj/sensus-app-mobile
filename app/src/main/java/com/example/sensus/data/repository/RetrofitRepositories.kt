@@ -4,8 +4,11 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.SessionType
+import com.example.sensus.data.mapper.MerchantMapper.toDomain
+import com.example.sensus.data.mapper.MerchantMapper.toDto
+import com.example.sensus.data.mapper.UserMapper.toDomain
 import com.example.sensus.data.moderation.ImageModerationService
-import com.example.sensus.data.moderation.ModerationResult
+import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
@@ -47,16 +50,7 @@ class RetrofitAuthRepository(
     private fun handleAuthSuccess(body: AuthResponse): Result<UserProfile> {
         securePreferences.saveAuthToken(body.token)
         securePreferences.saveSessionType(SessionType.REGISTERED)
-        val user = body.user
-        return Result.Success(
-            UserProfile(
-                id = user.id,
-                nombreCompleto = user.nombreCompleto,
-                correo = user.correo,
-                fotoPerfilUrl = user.fotoPerfilUrl,
-                roles = user.roles.ifEmpty { listOf("Consumidor") }
-            )
-        )
+        return Result.Success(body.user.toDomain())
     }
 
     override suspend fun login(correo: String, password: String): Result<UserProfile> = withContext(Dispatchers.IO) {
@@ -187,13 +181,7 @@ class RetrofitProfileRepository(
 ) : ProfileRepository {
 
     private fun toUserProfile(dto: com.example.sensus.data.remote.dto.UserDto): UserProfile {
-        return UserProfile(
-            id = dto.id,
-            nombreCompleto = dto.nombreCompleto,
-            correo = dto.correo,
-            fotoPerfilUrl = dto.fotoPerfilUrl,
-            roles = dto.roles.ifEmpty { listOf("Consumidor") }
-        )
+        return dto.toDomain()
     }
 
     override suspend fun getProfile(): Result<UserProfile> = withContext(Dispatchers.IO) {
@@ -331,14 +319,7 @@ class RetrofitMerchantRepository(
         horarios: List<HorarioDia>
     ): Result<MerchantProfile> = withContext(Dispatchers.IO) {
         try {
-            val horariosDto = horarios.map { h ->
-                HorarioDiaDto(
-                    dia = mapDiaToDayOfWeekInt(h.dia),
-                    horaApertura = h.horaApertura,
-                    horaCierre = h.horaCierre,
-                    estaCerrado = h.estaCerrado
-                )
-            }
+            val horariosDto = horarios.map { it.toDto() }
 
             val request = UpdateMerchantProfileRequest(
                 nombreComercial = nombreComercial,
@@ -349,28 +330,7 @@ class RetrofitMerchantRepository(
 
             val response = merchantApi.updateMerchantProfile(request)
             if (response.isSuccessful && response.body() != null) {
-                val dto = response.body()!!
-                val mappedHorarios = dto.horarios?.map { hd ->
-                    HorarioDia(
-                        dia = mapDayOfWeekIntToDia(hd.dia),
-                        horaApertura = hd.horaApertura,
-                        horaCierre = hd.horaCierre,
-                        estaCerrado = hd.estaCerrado
-                    )
-                } ?: horarios
-
-                Result.Success(
-                    MerchantProfile(
-                        id = dto.id,
-                        usuarioId = dto.usuarioId,
-                        nombreComercial = dto.nombreComercial,
-                        direccion = dto.direccion,
-                        codigoPostal = dto.codigoPostal,
-                        latitud = dto.latitud,
-                        longitud = dto.longitud,
-                        horarios = mappedHorarios
-                    )
-                )
+                Result.Success(response.body()!!.toDomain(fallbackHorarios = horarios))
             } else {
                 val errorMsg = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
                 when (response.code()) {
@@ -386,32 +346,6 @@ class RetrofitMerchantRepository(
             Result.Failure(AppError.Network("No se pudo conectar con el servidor: ${e.localizedMessage}"))
         } catch (e: Exception) {
             Result.Failure(AppError.Generic(e.localizedMessage ?: "Error al actualizar comercio."))
-        }
-    }
-
-    private fun mapDiaToDayOfWeekInt(dia: String): Int {
-        return when (dia.lowercase().trim()) {
-            "domingo" -> 0
-            "lunes" -> 1
-            "martes" -> 2
-            "miércoles", "miercoles" -> 3
-            "jueves" -> 4
-            "viernes" -> 5
-            "sábado", "sabado" -> 6
-            else -> 1
-        }
-    }
-
-    private fun mapDayOfWeekIntToDia(diaInt: Int): String {
-        return when (diaInt) {
-            0 -> "Domingo"
-            1 -> "Lunes"
-            2 -> "Martes"
-            3 -> "Miércoles"
-            4 -> "Jueves"
-            5 -> "Viernes"
-            6 -> "Sábado"
-            else -> "Lunes"
         }
     }
 }

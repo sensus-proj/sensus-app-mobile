@@ -13,7 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.sensus.data.SensusAuthManager
 import com.example.sensus.theme.SensusTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -26,7 +25,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        SensusAuthManager.init(this)
         enableEdgeToEdge()
 
         deepLinkResetToken = parseResetToken(intent)
