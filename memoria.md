@@ -507,3 +507,21 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - Suite completa: **80 tests unitarios superados al 100%**.
   - `check_coverage.py`: **`92.53%`** de cobertura Kover (superando el umbral de 80%).
   - `check_layers.py`: **`PASS (0 hallazgos, 112 archivos)`**.
+
+### Ejecución y Cierre de las Fases 3, 4 y 5 (Plan de Corrección SDD)
+
+- **Fase 3 — Purificación y Descomposición del Dominio + Mappers:**
+  - Erradicados los 3 archivos monolito `Sprint1Models.kt`, `Sprint1Repositories.kt` y `Sprint1UseCases.kt`.
+  - Modelos de dominio separados por feature en `domain/model/`: `UserProfile.kt`, `MerchantProfile.kt`, `UserLocation.kt`.
+  - Repositorios separados por agregado en `domain/repository/`: `AuthRepository.kt`, `ProfileRepository.kt`, `MerchantRepository.kt`, `LocationRepository.kt`.
+  - Casos de uso atómicos separados en `domain/usecase/`: `LoginUseCase.kt`, `RegisterUseCase.kt`, `RequestPasswordResetUseCase.kt`, `ResetPasswordUseCase.kt`, `UpdateProfileUseCase.kt`, `UpdateMerchantProfileUseCase.kt`, `StartGuestSessionUseCase.kt`, `DeleteAccountUseCase.kt`, `GetUserLocationUseCase.kt`.
+  - Creados mappers explícitos en `data/mapper/`: `UserMapper.kt`, `MerchantMapper.kt`, `OfferMapper.kt`, probados en `DataMappersTest.kt`.
+- **Fase 4 — Persistencia Offline-First en Room + Manejo de HTTP 401:**
+  - `OffersRepositoryImpl` conectado a `OfferDao` (Room + SQLCipher AES-256) e inyectado en `AppModule.kt`.
+  - Lectura desde caché local cifrado, semilla inicial automática en frío y resolución de conflictos *server-wins* mediante `syncOffersFromServer()`.
+  - `AuthInterceptor` actualizado para limpiar automáticamente `SecurePreferences` e invocar callback de sesión expirada al recibir HTTP `401 Unauthorized` en rutas protegidas.
+  - Pruebas unitarias en `OffersRepositoryOfflineTest.kt`.
+- **Fase 5 — Calidad, Análisis Estático y Trazabilidad SDD:**
+  - Tareas Gradle `detekt` y `ktlintCheck` registradas en `app/build.gradle.kts` e integradas en `.github/workflows/ci.yml`.
+  - Tareas y checklists de cimentación (`FT-00` a `FT-03`) marcados como completados (`[x]`) y validados automáticamente por `scripts/check_sdd.py`.
+

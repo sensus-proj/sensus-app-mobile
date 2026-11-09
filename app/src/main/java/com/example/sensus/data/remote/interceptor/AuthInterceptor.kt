@@ -5,7 +5,8 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 class AuthInterceptor(
-    private val securePreferences: SecurePreferences
+    private val securePreferences: SecurePreferences,
+    private val onUnauthorizedCallback: (() -> Unit)? = null
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -19,6 +20,17 @@ class AuthInterceptor(
             requestBuilder.header("Authorization", "Bearer $token")
         }
 
-        return chain.proceed(requestBuilder.build())
+        val response = chain.proceed(requestBuilder.build())
+        val path = originalRequest.url.encodedPath
+        val isPublicAuthRoute = path.endsWith("/auth/login") ||
+            path.endsWith("/auth/register") ||
+            path.endsWith("/auth/guest")
+
+        if (response.code == 401 && !isPublicAuthRoute) {
+            securePreferences.clearAll()
+            onUnauthorizedCallback?.invoke()
+        }
+
+        return response
     }
 }
