@@ -21,7 +21,7 @@ class NetworkClient(
 
     companion object {
         // Apunta al backend en AWS EC2 con SSL (HTTPS)
-        const val DEFAULT_BASE_URL = "https://18-117-247-171.sslip.io/"
+        const val DEFAULT_BASE_URL = "https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/"
     }
 
     private val json = Json {
