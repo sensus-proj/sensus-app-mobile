@@ -2,9 +2,8 @@ name: ci
 
 on:
   pull_request:
-    branches: [main]
   push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -141,7 +140,6 @@ jobs:
       - run: ./gradlew compileDebugAndroidTestSources --no-daemon
 
   build:
-    if: github.ref == 'refs/heads/main'
     needs: instrumentation-compile
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -168,6 +166,7 @@ jobs:
       - static-analysis
       - unit-test
       - instrumentation-compile
+      - build
     runs-on: ubuntu-latest
     steps:
       - name: Generar Apartado de CI/CD en Step Summary

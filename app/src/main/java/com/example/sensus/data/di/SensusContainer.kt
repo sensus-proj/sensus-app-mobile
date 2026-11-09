@@ -2,6 +2,12 @@ package com.example.sensus.data.di
 
 import android.content.Context
 import com.example.sensus.data.local.SecurePreferences
+import com.example.sensus.data.local.db.DatabaseFactory
+import com.example.sensus.data.local.db.SensusDatabase
+import com.example.sensus.data.local.db.dao.OfferDao
+import com.example.sensus.data.local.db.dao.PendingSyncDao
+import com.example.sensus.data.local.db.dao.UserSessionDao
+import com.example.sensus.data.local.security.DatabaseKeyManager
 import com.example.sensus.data.location.FusedLocationRepository
 import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.NetworkClient
@@ -14,6 +20,8 @@ import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.LoginUseCase
+import com.example.sensus.domain.usecase.RegisterUseCase
 import com.example.sensus.domain.usecase.RequestPasswordResetUseCase
 import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
@@ -27,6 +35,18 @@ class SensusContainer(
     val securePreferences: SecurePreferences by lazy {
         SecurePreferences(context.applicationContext)
     }
+
+    val databaseKeyManager: DatabaseKeyManager by lazy {
+        DatabaseKeyManager(securePreferences)
+    }
+
+    val database: SensusDatabase by lazy {
+        DatabaseFactory.create(context.applicationContext, databaseKeyManager)
+    }
+
+    val offerDao: OfferDao by lazy { database.offerDao() }
+    val userSessionDao: UserSessionDao by lazy { database.userSessionDao() }
+    val pendingSyncDao: PendingSyncDao by lazy { database.pendingSyncDao() }
 
     val networkClient: NetworkClient by lazy {
         NetworkClient(securePreferences, baseUrl)
@@ -53,6 +73,8 @@ class SensusContainer(
     }
 
     // Sprint 1 Use Cases
+    val loginUseCase by lazy { LoginUseCase(authRepository) }
+    val registerUseCase by lazy { RegisterUseCase(authRepository) }
     val requestPasswordResetUseCase by lazy { RequestPasswordResetUseCase(authRepository) }
     val resetPasswordUseCase by lazy { ResetPasswordUseCase(authRepository) }
     val startGuestSessionUseCase by lazy { StartGuestSessionUseCase(authRepository, securePreferences) }

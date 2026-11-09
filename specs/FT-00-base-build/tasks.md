@@ -5,7 +5,7 @@
 
 ## Fase A — Gradle y Version Catalog
 
-- [ ] T00.1 Conciliar el drift de Kotlin (constitucion 2.4.21 vs build 2.3.20) y registrar la decision en `Memoria.md` §6 — verif: revision humana
+- [x] T00.1 Conciliar el drift de Kotlin (constitucion 2.4.21 vs build 2.3.20) y registrar la decision en `Memoria.md` §6 — verif: revision humana
 - [ ] T00.2 Completar `gradle/libs.versions.toml` con Hilt, KSP, Room, SQLCipher, Retrofit, OkHttp, Serialization, JUnit5, MockK, Turbine y Kover — verif: `compileDebugKotlin`
 - [ ] T00.3 Aplicar plugins por `alias(libs.plugins.*)` en `build.gradle.kts` raiz y `app/build.gradle.kts` — verif: `compileDebugKotlin`
 - [ ] T00.4 Verificar que ningun `*.gradle.kts` tenga versiones literales de dependencias — verif: `python scripts/check_sdd.py`

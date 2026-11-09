@@ -15,7 +15,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.sensus.data.SensusAuthManager
 import com.example.sensus.theme.SensusTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private var deepLinkResetToken by mutableStateOf<String?>(null)

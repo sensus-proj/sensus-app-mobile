@@ -53,6 +53,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validar rama autorizada (Exclusivamente main o tags)
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ] && [[ "${{ github.ref }}" != refs/tags/v* ]]; then
+            echo "::error::Despliegue rechazado: Solo la rama 'main' (o tags oficiales 'v*.*.*') tiene autorización para desplegar o publicar en Google Play."
+            exit 1
+          fi
+
       - name: Validar Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
 
@@ -122,6 +129,13 @@ jobs:
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
+
+      - name: Validar rama autorizada para despliegue (Exclusivamente main)
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ] && [[ "${{ github.ref }}" != refs/tags/v* ]]; then
+            echo "::error::Despliegue rechazado: Solo la rama 'main' tiene autorización para desplegar o publicar en Google Play."
+            exit 1
+          fi
 
       - name: Configurar JDK 17
         uses: actions/setup-java@v4

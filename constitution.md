@@ -1,7 +1,7 @@
 ---
-version: 1.2.0
+version: 1.2.2
 ratified: 2026-10-29
-last_amended: 2026-11-01
+last_amended: 2026-11-08
 status: active
 source_of_truth: .specify/memory/constitution.md
 mirror: ./constitution.md
@@ -17,7 +17,7 @@ methodology: SDD
 
 - **Nombre:** Sensus Mobile
 - **Plataforma:** Android nativo
-- **Lenguaje:** Kotlin 2.4.21
+- **Lenguaje:** Kotlin 2.3.20
 - **UI:** Jetpack Compose + Material Design 3
 - **Compatibilidad:** `minSdk 24` (Android 7.0), `targetSdk 36`
 - **Modelo de negocio:** Marketplace dual (Cliente / Comercio) para el rescate de excedentes y merma en perfecto estado.
@@ -43,18 +43,18 @@ methodology: SDD
 
 | Área | Tecnología |
 |------|------------|
-| Lenguaje | Kotlin 2.4.21 |
+| Lenguaje | Kotlin 2.3.20 |
 | UI | Jetpack Compose + Material 3 |
 | DI | Hilt |
 | Async/Reactivo | Coroutines + Flow (StateFlow/SharedFlow) |
-| Persistencia local | SQLite nativo cifrado con **SQLCipher (AES-256)** |
+| Persistencia local | Room + SQLite nativo cifrado con **SQLCipher (AES-256)** |
 | Credenciales | EncryptedSharedPreferences + Android Keystore |
 | Red | Ktor Client / Retrofit + OkHttp |
 | Serialización | Kotlinx Serialization / Moshi |
 | Imágenes | Coil |
 | Push | Firebase Cloud Messaging (FCM) |
 | ML on-device (si aplica) | ONNX Runtime (inferencia delegada al backend por defecto) |
-| Testing | JUnit 5 + MockK + Compose Test Rule + Turbine |
+| Testing | JUnit 4 (junit:4.13.2 ratificado) + MockK + Compose Test Rule + Turbine |
 | Build | Gradle (Kotlin DSL), Versionamiento Semántico |
 
 ---
@@ -67,6 +67,7 @@ methodology: SDD
 4. **TLS 1.3** para todo tráfico en tránsito; certificate pinning recomendado para endpoints críticos.
 5. **Moderación previa al guardado:** textos vía OpenAI `omni-moderation-latest`, imágenes vía Sightengine. Bloqueo inmediato en UI si hay infracción.
 6. **No generar APKs** salvo instrucción explícita del usuario; verificar integridad con `compileDebugKotlin`.
+7. **Cumplimiento estricto de DevSecOps (Prohibición absoluta de elusión):** Ningún proceso de validación de seguridad de la aplicación, ni de escaneo de código (SAST, DAST, dependencias, detección de secretos, linters, cobertura Kover ni gates de calidad) se debe saltar, skipear, ignorar, falsear, brincar o burlar bajo ninguna circunstancia. Toda excepción o bypass está terminantemente prohibido, garantizando trazabilidad y seguridad continua. La suite completa de CI y DevSecOps (compuertas SDD, escaneo de secretos, SAST, linters, pruebas unitarias con Kover >= 80% y validación de compilación) es mandatoria y debe ejecutarse en todas las ramas y pull requests sin excepción.
 
 ---
 
@@ -90,10 +91,10 @@ methodology: SDD
 
 ## 7. Pruebas y calidad
 
-1. **Pruebas unitarias** con JUnit 5 + MockK para lógica de dominio y ViewModels.
+1. **Pruebas unitarias** con JUnit 4 (junit:4.13.2) + MockK + Turbine para lógica de dominio y ViewModels.
 2. **Pruebas de integración** con Compose Test Rule simulando flujos de navegación, persistencia SQLite y autenticación.
 3. **Análisis estático (SAST):** Semgrep con reglas personalizadas; Android Lint + detekt + ktlint.
-4. **Cobertura mínima obligatoria:** Todo código nuevo DEBE ir integrado con un mínimo del **80% de cobertura** verificada en pruebas unitarias (lógica de dominio y ViewModels con JUnit 5 + MockK + Turbine), pruebas de integración (Room + SQLCipher, API y navegación) y pruebas de extremo a extremo (E2E con Compose Test Rule / AndroidTest). Bloqueo automático de merge si baja del umbral del 80%.
+4. **Cobertura mínima obligatoria:** Todo código nuevo DEBE ir integrado con un mínimo del **80% de cobertura** verificada en pruebas unitarias (lógica de dominio y ViewModels con JUnit 4 + MockK + Turbine), pruebas de integración (Room + SQLCipher, API y navegación) y pruebas de extremo a extremo (E2E con Compose Test Rule / AndroidTest). Bloqueo automático de merge si baja del umbral del 80%.
 5. **Pruebas de UI:** obligatorias para flujos críticos (auth, apartado, pago/canje).
 
 ---
@@ -101,7 +102,7 @@ methodology: SDD
 ## 8. CI/CD y despliegue a Google Play Store
 
 1. **Pipeline de Integración Continua (CI):** Ejecutado en cada PR y push a `main`:
-   - `validate-wrapper` → `sdd-gates` (validación obligatoria de estructura SDD, capas Clean, contratos, secretos y cobertura mínima del 80%) → `security-scan` (SAST CodeQL) → `static-analysis` (Lint, Detekt, Ktlint) → `unit-test` (JUnit 5 + MockK + Turbine) → `instrumentation-compile` → `build` (compilación limpia sin generar binarios versionables).
+   - `validate-wrapper` → `sdd-gates` (validación obligatoria de estructura SDD, capas Clean, contratos, secretos y cobertura mínima del 80%) → `security-scan` (SAST CodeQL) → `static-analysis` (Lint, Detekt, Ktlint) → `unit-test` (JUnit 4 + MockK + Turbine) → `instrumentation-compile` → `build` (compilación limpia sin generar binarios versionables).
 2. **Infraestructura de Despliegue Continuo (CD) a Play Store (`.github/workflows/release-playstore.yml`):**
    - **Disparo controlado:** manual mediante `workflow_dispatch` con selección de pista (`internal`, `alpha`, `beta`, `production`) y porcentaje de rollout progresivo (`user_fraction`), o activado por tag de versión formal `v*.*.*` sobre `main` con aprobación requerida en GitHub Environment `play-store-release`.
    - **Quality Gate previo:** Bloqueo terminante del build y despliegue si algún gate de CI falla o si la cobertura es inferior al 80%.

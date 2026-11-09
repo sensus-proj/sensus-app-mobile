@@ -73,6 +73,14 @@ class SecurePreferences(private val context: Context) {
         return prefs.getInt(KEY_GUEST_RADIUS, 2000)
     }
 
+    fun saveString(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+    }
+
+    fun getString(key: String): String? {
+        return prefs.getString(key, null)
+    }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
