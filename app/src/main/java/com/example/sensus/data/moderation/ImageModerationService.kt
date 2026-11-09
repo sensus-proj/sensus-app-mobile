@@ -6,10 +6,7 @@ import com.example.sensus.data.remote.dto.ModerateImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-sealed interface ModerationResult {
-    data object Approved : ModerationResult
-    data class Rejected(val reason: String) : ModerationResult
-}
+import com.example.sensus.domain.model.ModerationResult
 
 class ImageModerationService(
     private val mediaApi: MediaApiService? = null

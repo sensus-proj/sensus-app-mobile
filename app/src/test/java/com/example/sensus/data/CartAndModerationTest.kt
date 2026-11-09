@@ -1,9 +1,9 @@
 package com.example.sensus.data
 
-import com.example.sensus.data.cart.AddToCartResult
+import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.data.cart.CartManager
 import com.example.sensus.data.moderation.ImageModerationService
-import com.example.sensus.data.moderation.ModerationResult
+import com.example.sensus.domain.model.ModerationResult
 import kotlinx.coroutines.test.runTest
 import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType

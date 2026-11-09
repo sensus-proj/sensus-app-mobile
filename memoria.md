@@ -429,3 +429,51 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - python scripts/check_endpoints.py: **PASS (0 hallazgos)**
   - python scripts/check_secrets.py: **PASS (0 hallazgos)**
   - python scripts/check_coverage.py --min 80: **PASS (94.67%)**
+
+
+### 2026-11-08: Fase 2 — Migración Integral de UI Legacy a Presentation con MVI Estricto y Erradicación Total de ui/
+
+- **Endurecimiento de Compuertas y Reglas de Arquitectura (`scripts/check_layers.py`):**
+  - La compuerta se reforzó para evaluar la raíz (`MainActivity.kt`, `Navigation.kt`) y cualquier archivo en `ui/` como parte de la capa de presentación.
+  - Se prohibieron taxativamente los imports de `com.example.sensus.data.*` en capas de dominio y presentación.
+  - Se detectan y bloquean tokens obsoletos con sufijos `*UiState` y `*UiEvent`, exigiendo la adopción estricta de `ViewState`, `ViewIntent` y `ViewEffect`.
+  - El umbral de hallazgos inicial era de 61 violaciones arquitecturales.
+- **Dominio Mínimo y Desacoplamiento de Datos (`domain/model/StoreModels.kt`):**
+  - Se extrajeron todos los modelos y entidades de negocio que se encontraban en `data/Models.kt` hacia `domain/model/StoreModels.kt`: `StoreCategory`, `ProductOffer`, `CartItem`, `StoreCart`, `ApartadoOrder`, `MerchantStore`, `ChatMessage`, `NotificationItem`, `FriendShare`, `AddToCartResult`, `ModerationResult`.
+  - En `data/Models.kt` se crearon `typealias` retrocompatibles para no romper contratos heredados.
+  - Se crearon las interfaces de repositorio de dominio: `SessionRepository`, `DataRepository`, `CartRepository`, `OffersRepository`, `StoreRepository`.
+  - Se implementaron los repositorios puente en `data/repository/`: `SessionRepositoryImpl`, `CartRepositoryImpl`, `OffersRepositoryImpl`, `StoreRepositoryImpl`.
+  - Se desacopló `Sprint1UseCases.kt` de `SecurePreferences` mediante inyección de `SessionRepository`.
+  - Se integró `androidx.hilt:hilt-navigation-compose:1.2.0` en `libs.versions.toml` y `app/build.gradle.kts`.
+- **Migración Completa de Pantallas y ViewModels por Feature (`presentation/`):**
+  - **Sesión y Raíz (`presentation/root/`, `presentation/splash/`):**
+    - `AppViewModel` y `AppContract` creados como `@HiltViewModel` gestionando el flujo global de navegación y sesión.
+    - `SplashScreen.kt` migrado a `presentation/splash/SplashScreen.kt`.
+    - `MainActivity.kt` y `Navigation.kt` desacoplados de `SensusAuthManager`, conectados reactivamente a `AppViewModel`.
+  - **Autenticación (`presentation/auth/`):**
+    - Migradas las 5 pantallas de autenticación: `LoginScreen.kt`, `RegisterScreen.kt`, `OnboardingLocationScreen.kt`, `OtpVerificationScreen.kt`, `TermsScreen.kt`.
+    - Conectadas a `LoginViewModel` y `RegisterViewModel` vía `hiltViewModel()`.
+  - **Comprador (`presentation/buyer/`):**
+    - Creados contratos y `@HiltViewModel`s dedicados: `BuyerHomeViewModel`, `BuyerMapViewModel`, `CartViewModel`, `NotificationsViewModel`, `CommunityViewModel`, `SensiChatViewModel`, `BuyerProfileViewModel`, `RouteMapViewModel`.
+    - Migradas las 10 pantallas de comprador: `ActiveApartadoScreen`, `BuyerHomeScreen`, `BuyerMapScreen`, `BuyerProfileScreen`, `CartBottomSheet`, `CommunityScreen`, `NotificationsScreen`, `ProductDetailScreen`, `RouteMapScreen`, `SensiChatScreen`.
+  - **Comercio (`presentation/merchant/`):**
+    - Creados contratos y `@HiltViewModel`s: `MerchantDashboardViewModel`, `MerchantNewOfferViewModel`, `MerchantProfileViewModel`, `MerchantRegisterViewModel`.
+    - Migradas las 5 pantallas de comercio: `MerchantDashboardScreen`, `MerchantNewOfferScreen`, `MerchantProfileScreen`, `MerchantRegisterScreen`, `MerchantSalesScreen`.
+  - **Comunes y Diálogos (`presentation/common/`, `presentation/modals/`):**
+    - Migrados `CategoryIcons.kt`, `NavigationIntentUtils.kt`, `OsmMapUtils.kt`, `RadiusSelectorModal.kt` a `presentation/common/`.
+    - Migrados `ConfirmDialogs.kt` y `ForgotPasswordScreens.kt` a `presentation/modals/`.
+    - Creado `ForgotPasswordViewModel` (`@HiltViewModel`) inyectando casos de uso de dominio.
+  - **Contenedor Principal (`presentation/main/`):**
+    - `MainScreenViewModel` migrado con `MainScreenViewState` eliminando todo residuo de `UiState`.
+    - `MainAppContainer.kt` y `MainScreen.kt` migrados con estado reactivo puro y desacoplados de `MockDataProvider` y `SensusAuthManager`.
+- **Erradicación Total de `ui/`:**
+  - El directorio `app/src/main/java/com/example/sensus/ui` fue eliminado en su totalidad (`Test-Path` retorna `False`).
+  - No queda ninguna referencia residual en tests unitarios ni en `androidTest`.
+- **Resultados de Validación y Gates DevSecOps:**
+  - `python scripts/check_layers.py`: **`PASS (0 hallazgos, 108 archivos)`** (de 61 iniciales a 0).
+  - `python scripts/check_sdd.py`: **`PASS (0 hallazgos, 10 features)`**.
+  - `python scripts/check_endpoints.py`: **`PASS (0 hallazgos, 8 endpoints)`**.
+  - `python scripts/check_secrets.py`: **`PASS (0 hallazgos, 143 archivos)`**.
+  - `./gradlew.bat compileDebugKotlin`: **`BUILD SUCCESSFUL`** (sin generar APK/AAB).
+  - `./gradlew.bat testDebugUnitTest`: **`BUILD SUCCESSFUL`** (73/73 tests unitarios en verde).
+  - `python scripts/check_coverage.py --min 80`: **`PASS (92.50% de cobertura de código)`**.

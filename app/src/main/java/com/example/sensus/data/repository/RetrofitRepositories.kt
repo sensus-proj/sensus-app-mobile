@@ -5,7 +5,7 @@ import com.example.sensus.common.Result
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.SessionType
 import com.example.sensus.data.moderation.ImageModerationService
-import com.example.sensus.data.moderation.ModerationResult
+import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService

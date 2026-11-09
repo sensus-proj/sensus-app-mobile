@@ -5,7 +5,7 @@ import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.PasswordPolicy
 import com.example.sensus.domain.model.UserProfile
-import com.example.sensus.ui.common.formatRadiusText
+import com.example.sensus.presentation.common.formatRadiusText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

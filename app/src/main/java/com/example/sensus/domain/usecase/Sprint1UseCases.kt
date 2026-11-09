@@ -2,7 +2,6 @@ package com.example.sensus.domain.usecase
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
-import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.PasswordPolicy
@@ -108,12 +107,12 @@ class UpdateMerchantProfileUseCase(private val merchantRepository: MerchantRepos
 
 class StartGuestSessionUseCase(
     private val authRepository: AuthRepository,
-    private val securePreferences: SecurePreferences
+    private val sessionRepository: com.example.sensus.domain.repository.SessionRepository
 ) {
     suspend operator fun invoke(): Result<String> {
         val result = authRepository.createGuestSession()
         if (result is Result.Success) {
-            securePreferences.saveGuestSession(result.data, 2000)
+            sessionRepository.saveGuestSession(result.data, 2000)
         }
         return result
     }
@@ -121,7 +120,7 @@ class StartGuestSessionUseCase(
 
 class DeleteAccountUseCase(
     private val authRepository: AuthRepository,
-    private val securePreferences: SecurePreferences
+    private val sessionRepository: com.example.sensus.domain.repository.SessionRepository
 ) {
     suspend operator fun invoke(password: String): Result<Unit> {
         if (password.isBlank()) {
@@ -130,7 +129,7 @@ class DeleteAccountUseCase(
 
         val result = authRepository.deleteAccount(password)
         if (result is Result.Success) {
-            securePreferences.clearAll()
+            sessionRepository.clearSession()
         }
         return result
     }

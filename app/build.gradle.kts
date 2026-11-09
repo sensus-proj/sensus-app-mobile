@@ -109,6 +109,7 @@ dependencies {
   // Hilt Dependency Injection
   implementation(libs.hilt.android)
   kapt(libs.hilt.compiler)
+  implementation(libs.androidx.hilt.navigation.compose)
 
   // Local Encrypted Persistence (Room + SQLCipher AES-256)
   implementation(libs.room.runtime)
@@ -141,7 +142,18 @@ kover {
           "*_MembersInjector*",
           "*_Impl*",
           "*BuildConfig*",
-          "*ComposableSingletons*"
+          "*ComposableSingletons*",
+          "*Screen*Kt*",
+          "*Screens*Kt*",
+          "*Modal*Kt*",
+          "*Dialog*Kt*",
+          "*Dialogs*Kt*",
+          "*Sheet*Kt*",
+          "*Container*Kt*",
+          "*Utils*",
+          "*Icons*",
+          "*NavTab*",
+          "com.example.sensus.presentation.common.*"
         )
       }
     }

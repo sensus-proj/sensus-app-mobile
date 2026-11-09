@@ -32,6 +32,10 @@ class SensusContainer(
     context: Context,
     baseUrl: String = NetworkClient.DEFAULT_BASE_URL
 ) {
+    init {
+        com.example.sensus.data.SensusAuthManager.init(context)
+    }
+
     val securePreferences: SecurePreferences by lazy {
         SecurePreferences(context.applicationContext)
     }
@@ -50,6 +54,10 @@ class SensusContainer(
 
     val networkClient: NetworkClient by lazy {
         NetworkClient(securePreferences, baseUrl)
+    }
+
+    val sessionRepository: com.example.sensus.domain.repository.SessionRepository by lazy {
+        com.example.sensus.data.repository.SessionRepositoryImpl(securePreferences)
     }
 
     val authRepository: AuthRepository by lazy {
@@ -77,8 +85,8 @@ class SensusContainer(
     val registerUseCase by lazy { RegisterUseCase(authRepository) }
     val requestPasswordResetUseCase by lazy { RequestPasswordResetUseCase(authRepository) }
     val resetPasswordUseCase by lazy { ResetPasswordUseCase(authRepository) }
-    val startGuestSessionUseCase by lazy { StartGuestSessionUseCase(authRepository, securePreferences) }
-    val deleteAccountUseCase by lazy { DeleteAccountUseCase(authRepository, securePreferences) }
+    val startGuestSessionUseCase by lazy { StartGuestSessionUseCase(authRepository, sessionRepository) }
+    val deleteAccountUseCase by lazy { DeleteAccountUseCase(authRepository, sessionRepository) }
     val updateProfileUseCase by lazy { UpdateProfileUseCase(profileRepository) }
     val updateMerchantProfileUseCase by lazy { UpdateMerchantProfileUseCase(merchantRepository) }
     val getUserLocationUseCase by lazy { GetUserLocationUseCase(locationRepository) }

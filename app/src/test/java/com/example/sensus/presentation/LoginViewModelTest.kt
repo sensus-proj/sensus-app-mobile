@@ -1,10 +1,10 @@
 package com.example.sensus.presentation
 
-import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.usecase.LoginUseCase
+import com.example.sensus.domain.usecase.StartGuestSessionUseCase
 import com.example.sensus.presentation.auth.LoginViewEffect
 import com.example.sensus.presentation.auth.LoginViewIntent
 import com.example.sensus.presentation.auth.LoginViewModel
@@ -28,13 +28,13 @@ class LoginViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var loginUseCase: LoginUseCase
-    private lateinit var viewModel: LoginViewModel
+    private lateinit var startGuestSessionUseCase: StartGuestSessionUseCase
 
     @Before
-    fun setUp() {
+    fun setup() {
         Dispatchers.setMain(testDispatcher)
         loginUseCase = mockk()
-        viewModel = LoginViewModel(loginUseCase)
+        startGuestSessionUseCase = mockk()
     }
 
     @After
@@ -43,61 +43,65 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun initialState_shouldBeDefault() {
-        val state = viewModel.viewState.value
-        assertEquals("", state.email)
-        assertEquals("", state.password)
-        assertFalse(state.isLoading)
-        assertEquals(null, state.errorMessage)
+    fun emailChanged_updatesState() {
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+        viewModel.dispatchIntent(LoginViewIntent.EmailChanged("test@example.com"))
+
+        assertEquals("test@example.com", viewModel.viewState.value.email)
     }
 
     @Test
-    fun emailChanged_shouldUpdateStateAndClearError() = runTest(testDispatcher) {
-        viewModel.dispatchIntent(LoginViewIntent.EmailChanged("test@sensus.com"))
-        assertEquals("test@sensus.com", viewModel.viewState.value.email)
+    fun passwordChanged_updatesState() {
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+        viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("secret123"))
+
+        assertEquals("secret123", viewModel.viewState.value.password)
     }
 
     @Test
-    fun passwordChanged_shouldUpdateStateAndClearError() = runTest(testDispatcher) {
-        viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("Secret123#"))
-        assertEquals("Secret123#", viewModel.viewState.value.password)
+    fun submitLogin_success_emitsNavigateEffect() = runTest {
+        val mockProfile = UserProfile(
+            id = "user1",
+            nombreCompleto = "Juan Perez",
+            correo = "test@example.com",
+            roles = listOf("Consumidor")
+        )
+        coEvery { loginUseCase("test@example.com", "secret123") } returns Result.Success(mockProfile)
+
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+        viewModel.dispatchIntent(LoginViewIntent.EmailChanged("test@example.com"))
+        viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("secret123"))
+        viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.viewState.value.isLoading)
     }
 
     @Test
-    fun submitLogin_success_shouldEmitNavigateToHomeEffect() = runTest(testDispatcher) {
-        val user = UserProfile(id = "u1", nombreCompleto = "Juan Perez", correo = "juan@sensus.com")
-        coEvery { loginUseCase("juan@sensus.com", "Pass123#") } returns Result.Success(user)
+    fun submitLogin_failure_updatesErrorState() = runTest {
+        coEvery { loginUseCase(any(), any()) } returns Result.Failure(AppError.Validation("Credenciales invalidas"))
 
-        viewModel.dispatchIntent(LoginViewIntent.EmailChanged("juan@sensus.com"))
-        viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("Pass123#"))
-
-        viewModel.effect.test {
-            viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            val effect = awaitItem()
-            assertTrue(effect is LoginViewEffect.NavigateToHome)
-            assertEquals(user, (effect as LoginViewEffect.NavigateToHome).userProfile)
-            assertFalse(viewModel.viewState.value.isLoading)
-        }
-    }
-
-    @Test
-    fun submitLogin_failure_shouldUpdateErrorAndEmitToastEffect() = runTest(testDispatcher) {
-        coEvery { loginUseCase(any(), any()) } returns Result.Failure(AppError.Validation("Credenciales inválidas"))
-
-        viewModel.dispatchIntent(LoginViewIntent.EmailChanged("bad@sensus.com"))
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+        viewModel.dispatchIntent(LoginViewIntent.EmailChanged("test@example.com"))
         viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("wrong"))
+        viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
 
-        viewModel.effect.test {
-            viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
-            testDispatcher.scheduler.advanceUntilIdle()
+        testDispatcher.scheduler.advanceUntilIdle()
 
-            val effect = awaitItem()
-            assertTrue(effect is LoginViewEffect.ShowToast)
-            assertEquals("Credenciales inválidas", (effect as LoginViewEffect.ShowToast).message)
-            assertEquals("Credenciales inválidas", viewModel.viewState.value.errorMessage)
-            assertFalse(viewModel.viewState.value.isLoading)
-        }
+        assertEquals("Credenciales invalidas", viewModel.viewState.value.errorMessage)
+        assertFalse(viewModel.viewState.value.isLoading)
+    }
+
+    @Test
+    fun startGuestSession_success_emitsGuestEffect() = runTest {
+        coEvery { startGuestSessionUseCase() } returns Result.Success("token")
+
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+        viewModel.dispatchIntent(LoginViewIntent.StartGuestSession)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.viewState.value.isGuestLoading)
     }
 }

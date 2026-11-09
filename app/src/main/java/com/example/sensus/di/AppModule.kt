@@ -1,13 +1,22 @@
 package com.example.sensus.di
 
 import android.content.Context
+import com.example.sensus.data.DefaultDataRepository
 import com.example.sensus.data.di.SensusContainer
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.moderation.ImageModerationService
+import com.example.sensus.data.repository.CartRepositoryImpl
+import com.example.sensus.data.repository.OffersRepositoryImpl
+import com.example.sensus.data.repository.StoreRepositoryImpl
 import com.example.sensus.domain.repository.AuthRepository
+import com.example.sensus.domain.repository.CartRepository
+import com.example.sensus.domain.repository.DataRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
+import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.ProfileRepository
+import com.example.sensus.domain.repository.SessionRepository
+import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.LoginUseCase
@@ -44,6 +53,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSessionRepository(container: SensusContainer): SessionRepository {
+        return container.sessionRepository
+    }
+
+    @Provides
+    @Singleton
     fun provideAuthRepository(container: SensusContainer): AuthRepository {
         return container.authRepository
     }
@@ -70,6 +85,30 @@ object AppModule {
     @Singleton
     fun provideImageModerationService(container: SensusContainer): ImageModerationService {
         return container.moderationService
+    }
+
+    @Provides
+    @Singleton
+    fun provideCartRepository(): CartRepository {
+        return CartRepositoryImpl()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOffersRepository(): OffersRepository {
+        return OffersRepositoryImpl()
+    }
+
+    @Provides
+    @Singleton
+    fun provideStoreRepository(): StoreRepository {
+        return StoreRepositoryImpl()
+    }
+
+    @Provides
+    @Singleton
+    fun provideDataRepository(): DataRepository {
+        return DefaultDataRepository()
     }
 
     @Provides
