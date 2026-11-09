@@ -477,3 +477,17 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - `./gradlew.bat compileDebugKotlin`: **`BUILD SUCCESSFUL`** (sin generar APK/AAB).
   - `./gradlew.bat testDebugUnitTest`: **`BUILD SUCCESSFUL`** (73/73 tests unitarios en verde).
   - `python scripts/check_coverage.py --min 80`: **`PASS (92.50% de cobertura de código)`**.
+
+
+### Política Arquitectural de Transición: Criterio de Retiro Obligatorio de Mocks al Integrar el API Real
+
+- **Contexto Operativo:**
+  - El backend (`sensus-back`) en Sprint 1 cuenta con las especificaciones y contratos de autenticación, perfil de usuario, activación y edición de comercio.
+  - Los endpoints de ofertas remotas (`GET /api/v1/offers/nearby`), asistente Sensi IA, notificaciones en la nube y feed de comunidad aún no se encuentran desplegados en el servidor.
+- **Estrategia Acordada:**
+  - Los datos provisionales de `MockDataProvider` operan temporalmente como proveedor puente en memoria / semilla local para permitir la navegación, interacción y validación de las pantallas de la capa `presentation/`.
+  - Se añadieron anotaciones `@Deprecated` y marcas `TODO: [API-MIGRATION]` en `MockDataProvider.kt`, `OffersRepositoryImpl.kt` y `StoreRepositoryImpl.kt`.
+- **Regla Mandatoria de Retiro:**
+  1. En cuanto el backend libere el endpoint `GET /api/v1/offers/nearby` (Spec 007 / FT-07), `OffersRepositoryImpl` se conectará directamente al cliente Retrofit y sincronizará con la base de datos cifrada SQLite Room (`OfferDao`).
+  2. En ese momento, **el archivo `MockDataProvider.kt` y cualquier referencia residual a mocks en `app/src/main` DEBEN SER ELIMINADOS de forma definitiva**.
+  3. Ningún dato simulado o hardcoded podrá persistir en código de producción; los mocks quedarán estrictamente confinados a `app/src/test` y `androidTest`.

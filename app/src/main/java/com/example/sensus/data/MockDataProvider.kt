@@ -1,5 +1,20 @@
 package com.example.sensus.data
 
+/**
+ * REGLA ARQUITECTURAL DE TRANSICIÓN [API-MIGRATION]:
+ * Este proveedor de datos simulados (mock/seed) es de naturaleza PROVISIONAL y exclusivamente
+ * para poblar la base de datos local y memoria durante el Sprint 1 ante la ausencia de los
+ * endpoints remotos de catálogo (GET /api/v1/offers/nearby, Spec 007 / FT-07).
+ *
+ * CRITERIO OBLIGATORIO DE RETIRO:
+ * En el momento en que se conecte e implemente el cliente Retrofit hacia la API real de ofertas
+ * y catálogo remoto, este archivo y todo su contenido DEBEN SER ELIMINADOS de `app/src/main`.
+ * Ningún mock podrá permanecer en código de producción; únicamente en carpetas de prueba (`test/` o `androidTest/`).
+ */
+@Deprecated(
+    message = "Provisional. Se eliminará obligatoriamente al integrar el endpoint remoto GET /api/v1/offers/nearby.",
+    level = DeprecationLevel.WARNING
+)
 object MockDataProvider {
 
     private val _sampleOffers = mutableListOf(
