@@ -272,7 +272,7 @@ private fun sendUserMessage(text: String, messages: MutableList<ChatMessage>) {
         ChatMessage(
             id = "bot_${System.currentTimeMillis()}",
             isFromUser = false,
-            text = "¡Excelente! Analicé las mermas disponibles y armé una opción perfecta para ti:",
+            text = "¡Excelente! Analicé las ofertas disponibles y armé una opción perfecta para ti:",
             comboTitle = "Combo Express Inteligente",
             comboPrice = 98.0,
             comboItems = listOf(

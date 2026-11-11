@@ -54,3 +54,16 @@
 # Coroutines
 # ====================================================================
 -dontwarn kotlinx.coroutines.**
+
+# ====================================================================
+# Tink (androidx.security:security-crypto optional cloud KMS downloader)
+# ====================================================================
+-dontwarn com.google.api.client.http.GenericUrl
+-dontwarn com.google.api.client.http.HttpHeaders
+-dontwarn com.google.api.client.http.HttpRequest
+-dontwarn com.google.api.client.http.HttpRequestFactory
+-dontwarn com.google.api.client.http.HttpResponse
+-dontwarn com.google.api.client.http.HttpTransport
+-dontwarn com.google.api.client.http.javanet.NetHttpTransport$Builder
+-dontwarn com.google.api.client.http.javanet.NetHttpTransport
+-dontwarn org.joda.time.Instant

@@ -396,7 +396,7 @@ fun CommunityScreen(
                             color = SensusTextPrimary
                         )
                         Text(
-                            text = "Apartó ${friend.activeOffersCount} ofertas de merma • ${friend.distance}",
+                            text = "Apartó ${friend.activeOffersCount} ofertas locales • ${friend.distance}",
                             fontSize = 12.sp,
                             color = SensusTextSecondary
                         )

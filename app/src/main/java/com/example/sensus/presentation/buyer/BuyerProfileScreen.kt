@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,6 +55,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -94,6 +97,7 @@ fun BuyerProfileScreen(
     onDeleteAccountClick: () -> Unit,
     onTermsClick: () -> Unit,
     onHistoryClick: () -> Unit,
+    onGuestActionRequired: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // SE-006: Estado del perfil editable
@@ -102,20 +106,35 @@ fun BuyerProfileScreen(
     // container removed, using viewModel
     var isSaving by remember { mutableStateOf(false) }
 
+    val state by viewModel.viewState.collectAsState()
+    val isGuest = state.isGuest
+    val profile = state.profile
+
     var userName by remember { mutableStateOf("") }
     var userEmailState by remember { mutableStateOf("") }
     var userPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(Unit) {
-        when (val res = Result.Success(com.example.sensus.domain.model.UserProfile(nombreCompleto = "Usuario", correo = "user@sensus.app"))) {
-            is Result.Success -> {
-                userName = res.data.nombreCompleto
-                userEmailState = res.data.correo
-                if (!res.data.fotoPerfilUrl.isNullOrBlank()) {
-                    userPhotoUri = Uri.parse(res.data.fotoPerfilUrl)
-                }
-            }
-            is Result.Failure -> {}
+        viewModel.dispatchIntent(BuyerProfileViewIntent.LoadProfile)
+    }
+
+    LaunchedEffect(profile, isGuest, state.isLoading) {
+        if (isGuest) {
+            userName = "Invitado Sensus"
+            userEmailState = "Modo Invitado (Radio máx. 2 km)"
+            userPhotoUri = null
+        } else if (profile != null) {
+            userName = profile.nombreCompleto.ifBlank { "Usuario Sensus" }
+            userEmailState = profile.correo.ifBlank { "" }
+            userPhotoUri = profile.fotoPerfilUrl?.takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
+        } else if (state.isLoading) {
+            userName = "Cargando perfil..."
+            userEmailState = "Verificando sesión activa"
+            userPhotoUri = null
+        } else {
+            userName = "Sesión no iniciada"
+            userEmailState = "Inicia sesión para ver tu cuenta"
+            userPhotoUri = null
         }
     }
     val userEmail = userEmailState
@@ -166,7 +185,9 @@ fun BuyerProfileScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showEditProfileSheet = true }
+                    .clickable {
+                        if (isGuest) onGuestActionRequired() else showEditProfileSheet = true
+                    }
             ) {
                 Row(
                     modifier = Modifier
@@ -217,19 +238,35 @@ fun BuyerProfileScreen(
                         )
                     }
 
-                    IconButton(
-                        onClick = { showEditProfileSheet = true },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(SensusPurple.copy(alpha = 0.1f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar perfil",
-                            tint = SensusPurple,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    if (isGuest) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = SensusPurple.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable { onGuestActionRequired() }
+                        ) {
+                            Text(
+                                text = "Ingresar",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SensusPurple,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { showEditProfileSheet = true },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(SensusPurple.copy(alpha = 0.1f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Editar perfil",
+                                tint = SensusPurple,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -286,8 +323,15 @@ fun BuyerProfileScreen(
                     }
 
                     Switch(
-                        checked = isMerchantMode,
-                        onCheckedChange = { onToggleMerchantMode(it) },
+                        checked = !isGuest && isMerchantMode,
+                        enabled = !isGuest,
+                        onCheckedChange = { enable ->
+                            if (isGuest) {
+                                onGuestActionRequired()
+                            } else {
+                                onToggleMerchantMode(enable)
+                            }
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = SensusPurple,
@@ -310,12 +354,14 @@ fun BuyerProfileScreen(
                     ProfileMenuOption(
                         icon = Icons.Default.Edit,
                         title = "Editar información personal",
-                        onClick = { showEditProfileSheet = true }
+                        isLocked = isGuest,
+                        onClick = { if (isGuest) onGuestActionRequired() else showEditProfileSheet = true }
                     )
                     ProfileMenuOption(
                         icon = Icons.Default.History,
                         title = "Mis apartados y pedidos",
-                        onClick = onHistoryClick
+                        isLocked = isGuest,
+                        onClick = { if (isGuest) onGuestActionRequired() else onHistoryClick() }
                     )
                     ProfileMenuOption(
                         icon = Icons.Default.NotificationsNone,
@@ -354,7 +400,8 @@ fun BuyerProfileScreen(
                         icon = Icons.Default.DeleteOutline,
                         title = "Eliminar cuenta",
                         tintColor = SensusRed,
-                        onClick = onDeleteAccountClick
+                        isLocked = isGuest,
+                        onClick = { if (isGuest) onGuestActionRequired() else onDeleteAccountClick() }
                     )
                 }
             }
@@ -627,6 +674,7 @@ private fun ProfileMenuOption(
     icon: ImageVector,
     title: String,
     tintColor: Color = SensusTextPrimary,
+    isLocked: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -637,11 +685,14 @@ private fun ProfileMenuOption(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (tintColor == SensusTextPrimary) SensusPurple else tintColor,
+                tint = if (isLocked) SensusTextMuted else if (tintColor == SensusTextPrimary) SensusPurple else tintColor,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(14.dp))
@@ -649,8 +700,24 @@ private fun ProfileMenuOption(
                 text = title,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = tintColor
+                color = if (isLocked) SensusTextMuted else tintColor
             )
+        }
+
+        if (isLocked) {
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = Color(0xFFF1F5F9),
+                modifier = Modifier.padding(end = 4.dp)
+            ) {
+                Text(
+                    text = "Requiere cuenta",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SensusTextMuted,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
         }
 
         Icon(

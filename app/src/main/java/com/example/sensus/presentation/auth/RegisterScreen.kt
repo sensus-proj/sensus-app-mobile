@@ -220,10 +220,11 @@ fun RegisterScreen(
                         modifier = Modifier.padding(22.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Error general
-                        if ((state.errorMessage ?: generalError) != null) {
+                        // Error general (local o del servidor)
+                        val visibleGeneralError = state.errorMessage ?: generalError
+                        if (!visibleGeneralError.isNullOrBlank()) {
                             Text(
-                                text = generalError!!,
+                                text = visibleGeneralError,
                                 color = Color(0xFFDC2626),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold

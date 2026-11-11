@@ -16,7 +16,8 @@ import java.util.concurrent.TimeUnit
 
 class NetworkClient(
     private val securePreferences: SecurePreferences,
-    baseUrl: String = DEFAULT_BASE_URL
+    baseUrl: String = DEFAULT_BASE_URL,
+    private val onUnauthorized: (() -> Unit)? = null
 ) {
 
     companion object {
@@ -39,7 +40,7 @@ class NetworkClient(
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
-        .addInterceptor(AuthInterceptor(securePreferences))
+        .addInterceptor(AuthInterceptor(securePreferences, onUnauthorized))
         .addInterceptor(loggingInterceptor)
         .build()
 

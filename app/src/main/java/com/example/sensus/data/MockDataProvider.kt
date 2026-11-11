@@ -35,7 +35,7 @@ object MockDataProvider {
             couponCode = "SNS-A7K9-24",
             latitude = 20.0558,
             longitude = -99.3418,
-            description = "Detergente biodegradable multiusos en empaque sellado de fábrica. Rescate de merma garantizado.",
+            description = "Detergente biodegradable multiusos en empaque sellado de fábrica. Calidad y ahorro garantizados.",
             expirationDate = "Hoy 21:00 hrs"
         ),
         ProductOffer(
@@ -198,7 +198,7 @@ object MockDataProvider {
         ChatMessage(
             id = "msg_2",
             isFromUser = false,
-            text = "¡Sí alcanza! Encontré ofertas de merma en 2 tiendas cercanas. Priorizamos ropa, superficies y manos sin salir de tu presupuesto.",
+            text = "¡Sí alcanza! Encontré ofertas locales en 2 tiendas cercanas. Priorizamos ropa, superficies y manos sin salir de tu presupuesto.",
             comboTitle = "Paquete de Limpieza Ahorro",
             comboPrice = 185.0,
             comboItems = listOf(

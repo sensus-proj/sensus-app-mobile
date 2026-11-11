@@ -234,7 +234,7 @@ fun GuestPromptDialog(
         },
         text = {
             Text(
-                text = "Estás navegando en Modo Invitado (2 km). Para reservar mermas, ampliar tu radio, publicar ofertas o guardar favoritos necesitas una cuenta Sensus.",
+                text = "Estás navegando en Modo Invitado (2 km). Para apartar ofertas, ampliar tu radio, publicar productos o guardar favoritos necesitas una cuenta Sensus.",
                 fontSize = 13.sp,
                 color = SensusTextSecondary
             )

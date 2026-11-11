@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,14 +80,10 @@ fun RouteMapScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     // container removed, using viewModel
 
-    var userLocation by remember { mutableStateOf(UserLocation()) }
+    val routeState by viewModel.viewState.collectAsState()
+    val userLocation = routeState.userLocation
     var selectedTravelMode by remember { mutableStateOf("walk") } // "walk", "bike", "car"
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
-
-    LaunchedEffect(Unit) {
-        val loc = viewModel.viewState.value.userLocation
-        userLocation = loc
-    }
 
     OsmMapUtils.BindMapLifecycle(mapViewRef, lifecycleOwner)
 
@@ -99,7 +96,7 @@ fun RouteMapScreen(
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                OsmMapUtils.createDefaultMapView(ctx).apply {
+                OsmMapUtils.createDefaultMapView(ctx, minZoom = 6.0).apply {
                     mapViewRef = this
                 }
             },

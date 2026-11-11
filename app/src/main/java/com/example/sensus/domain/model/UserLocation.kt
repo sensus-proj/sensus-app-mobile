@@ -6,14 +6,19 @@ data class UserLocation(
 )
 
 object GuestRadiusPolicy {
+    const val MIN_RADIUS_METERS = 50
+    const val MIN_RADIUS_KM = 0.05f
     const val GUEST_MAX_RADIUS_METERS = 2000
     const val GUEST_MAX_RADIUS_KM = 2.0f
+    const val MAX_RADIUS_METERS = 5000
+    const val MAX_RADIUS_KM = 5.0f
 
     fun isRadiusAllowedForGuest(radiusKm: Float): Boolean {
-        return radiusKm <= GUEST_MAX_RADIUS_KM
+        return radiusKm in MIN_RADIUS_KM..GUEST_MAX_RADIUS_KM
     }
 
     fun clampRadius(radiusKm: Float, isGuest: Boolean): Float {
-        return if (isGuest && radiusKm > GUEST_MAX_RADIUS_KM) GUEST_MAX_RADIUS_KM else radiusKm
+        val maxAllowed = if (isGuest) GUEST_MAX_RADIUS_KM else MAX_RADIUS_KM
+        return radiusKm.coerceIn(MIN_RADIUS_KM, maxAllowed)
     }
 }

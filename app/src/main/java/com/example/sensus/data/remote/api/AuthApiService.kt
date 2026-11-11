@@ -29,6 +29,9 @@ interface AuthApiService {
     @POST("api/v1/auth/guest")
     suspend fun createGuestSession(): Response<GuestSessionResponse>
 
+    @POST("api/v1/auth/logout")
+    suspend fun logout(): Response<Unit>
+
     @HTTP(method = "DELETE", path = "api/v1/users/account", hasBody = true)
     suspend fun deleteAccount(@Body request: DeleteAccountRequest): Response<Unit>
 }
