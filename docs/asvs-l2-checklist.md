@@ -75,6 +75,10 @@
 - [ ] `network_security_config` explicito y `usesCleartextTraffic=false` declarado.
 - [ ] Permisos runtime de ubicacion (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`) solo cuando se necesiten (FT-08).
 - [ ] Sin ubicacion en segundo plano (FT-08).
+- [ ] Permiso runtime `CAMERA` (con `required="false"`) solicitado solo al abrir escaner QR y sin subir video/frames (FT-14).
+- [ ] Permiso runtime `POST_NOTIFICATIONS` en Android 13+ sin bloquear app si se niega (FT-21).
+- [ ] `HttpLoggingInterceptor` en nivel `NONE` para compilaciones Release (FT-27).
+- [ ] Validacion de subida multipart (`<= 4.5 MB`, JPEG/PNG/WebP) y moderacion estricta `fail-closed` antes de Cloudinary (FT-15).
 
 ## V11 — Logica de negocio
 

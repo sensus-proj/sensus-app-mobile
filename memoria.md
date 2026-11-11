@@ -529,3 +529,20 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - Tareas (`tasks.md`), listas de verificación (`checklists/checklist.md`), `specs/README.md`, `memoria.md §6.3` y `CHECKLIST_PR.md` cerrados al 100% (`[x]` / estado `Cerrada`) para las 10 features (`FT-00` a `FT-09`), validado por `scripts/check_sdd.py`.
 
 
+
+---
+
+## Bitácora - Planificación Integral SDD Móvil (FT-10 a FT-27)
+
+- **Fecha:** 2026-11-10
+- **Alcance:** Creación exclusiva de artefactos `.md` SDD (sin modificar código Kotlin ni `constitution.md`, aplicando `AGENTS.md` §5.5).
+- **Artefactos creados (`72` archivos en `specs/FT-10`..`specs/FT-27`):**
+  - **Ola 0 (Saneamiento y Contratos):** `FT-10-deuda-y-contratos` (plugins reales Detekt/Ktlint, `allowBackup=false`, `POST /api/v1/auth/logout`, `GET /api/v1/merchants/me`, limpieza UI `SensusAmber`/OTP/WhatsApp, enlace LFPDPPP `rodnix.com.mx`, Navigation 3 y conciliación `FT-07`).
+  - **Ola 1 (Núcleo Marketplace y QR):** `FT-11-ofertas-cercanas-mapa`, `FT-12-detalle-filtros-ruteo`, `FT-13-reserva-qr-cliente`, `FT-14-canje-qr-comercio`.
+  - **Ola 2 (Panel Vendedor e Inventario):** `FT-15-oferta-creacion-comercio`, `FT-16-inventario-ciclo-vida`.
+  - **Ola 3 (Social, ML y Push):** `FT-17-favoritos`, `FT-18-feed-comunidad`, `FT-19-interacciones-reportes`, `FT-20-busqueda-recomendaciones-ml`, `FT-21-push-fcm-ajustes`.
+  - **Ola 4 (UX y Soporte):** `FT-22-ux-transversal-offline`, `FT-23-soporte-legal-faq`.
+  - **Ola 5 (Borradores bloqueados por contrato pendiente en backend):** `FT-24-sensi-ia`, `FT-25-amigos-qr`, `FT-26-resenas-comercio`.
+  - **Ola 6 (QA y Release):** `FT-27-qa-release-defensa`.
+- **Documentos transversales actualizados:** `specs/README.md`, `docs/endpoints-internos.md`, `docs/rate-matrix.md` y `docs/asvs-l2-checklist.md`.
+- **Pendientes explícitos antes de implementar:** confirmar decisiones **D-1 a D-8** (OSMDroid, CameraX+MLKit/ZXing y posible enmienda menor a `constitution.md` §3, Firebase FCM, contratos `033` y apertura en backend de `FT-24`..`FT-26`).
