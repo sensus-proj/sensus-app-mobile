@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Search
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensus.domain.model.GuestRadiusPolicy
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UserLocation
@@ -65,6 +67,7 @@ import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import com.example.sensus.presentation.common.OsmMapUtils
 import com.example.sensus.presentation.common.RadiusSelectorBottomSheet
 import com.example.sensus.presentation.common.formatRadiusText
 import com.example.sensus.presentation.common.getCategoryIcon
@@ -74,6 +77,8 @@ import java.util.Locale
 fun BuyerHomeScreen(
     homeViewModel: BuyerHomeViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     cartViewModel: CartViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    isGuest: Boolean = false,
+    onRequireAuth: () -> Unit = {},
     modifier: Modifier = Modifier,
     onProductClick: (ProductOffer) -> Unit,
     onMapToggle: () -> Unit,
@@ -81,37 +86,36 @@ fun BuyerHomeScreen(
     onOpenCart: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    // container removed
-    var userLocation by remember { mutableStateOf(UserLocation()) }
-
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(StoreCategory.ALL) }
-    var selectedRadiusKm by remember { mutableFloatStateOf(2.0f) }
-    var showRadiusSheet by remember { mutableStateOf(false) }
-
     val homeState by homeViewModel.viewState.collectAsState()
     val cartState by cartViewModel.viewState.collectAsState()
     val cart = cartState.storeCart
 
-    // SE-016: Obtener ubicación real del usuario
+    val effectiveIsGuest = isGuest || homeState.isGuest
+    val effectiveRadiusKm = GuestRadiusPolicy.clampRadius(homeState.selectedRadiusKm, effectiveIsGuest)
+    val userLocation = homeState.userLocation
+
+    var locationLabel by remember { mutableStateOf("Ubicación actual") }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(StoreCategory.ALL) }
+    var showRadiusSheet by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        // userLocation
+        homeViewModel.viewEffect.collect { effect ->
+            if (effect is BuyerHomeViewEffect.RequireAuthForRadius) {
+                onRequireAuth()
+            }
+        }
     }
 
-    // SE-016 & SE-018: Calcular distancia lineal exacta, filtrar por categorías y ordenar de menor a mayor distancia
-    val filteredOffers = remember(searchQuery, selectedCategory, userLocation, homeState.offers) {
-        homeState.offers.map { offer ->
-            val distResults = FloatArray(1)
-            android.location.Location.distanceBetween(
-                userLocation.latitude,
-                userLocation.longitude,
-                offer.latitude,
-                offer.longitude,
-                distResults
-            )
-            val realMeters = distResults[0].toInt().coerceAtLeast(40)
-            offer.copy(distanceMeters = realMeters)
-        }.filter { offer ->
+    LaunchedEffect(userLocation) {
+        locationLabel = OsmMapUtils.resolveLocationLabel(context, userLocation)
+    }
+
+    // SE-016 & SE-018: Calcular distancia real respecto al GPS del usuario, filtrar por radio (máx. 2 km invitado) y categorías
+    val filteredOffers = remember(searchQuery, selectedCategory, userLocation, homeState.offers, effectiveRadiusKm) {
+        val maxMeters = (effectiveRadiusKm * 1000).toInt()
+        OsmMapUtils.localizeAndMeasureOffers(userLocation, homeState.offers).filter { offer ->
+            val withinRadius = offer.distanceMeters <= maxMeters
             val matchesQuery = searchQuery.isBlank() ||
                     offer.name.contains(searchQuery, ignoreCase = true) ||
                     offer.storeName.contains(searchQuery, ignoreCase = true)
@@ -128,8 +132,8 @@ fun BuyerHomeScreen(
                 StoreCategory.PETS -> offer.category.contains("Mascotas", ignoreCase = true)
                 StoreCategory.PHARMACY -> offer.category.contains("Farmacia", ignoreCase = true)
             }
-            matchesQuery && matchesCategory
-        }.sortedBy { it.distanceMeters } // SE-016: Ordenar por distancia de menor a mayor por defecto
+            withinRadius && matchesQuery && matchesCategory
+        }
     }
 
     Box(
@@ -156,6 +160,7 @@ fun BuyerHomeScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.White)
+                            .clickable { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshLocation) }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Icon(
@@ -166,7 +171,7 @@ fun BuyerHomeScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Tula Centro, Hgo.",
+                            text = locationLabel,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = SensusTextPrimary
@@ -264,7 +269,7 @@ fun BuyerHomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Chip de radio interactivo
+                        // Chip de radio interactivo (validado con límite 2 km si es invitado)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -274,14 +279,18 @@ fun BuyerHomeScreen(
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Tune,
+                                imageVector = if (effectiveIsGuest) Icons.Default.Lock else Icons.Default.Tune,
                                 contentDescription = "Filtro radio",
                                 tint = SensusPurple,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Radio: ${formatRadiusText(selectedRadiusKm)}",
+                                text = if (effectiveIsGuest) {
+                                    "Radio: ${formatRadiusText(effectiveRadiusKm)} (Máx. 2 km)"
+                                } else {
+                                    "Radio: ${formatRadiusText(effectiveRadiusKm)}"
+                                },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = SensusTextPrimary
@@ -428,8 +437,12 @@ fun BuyerHomeScreen(
 
         if (showRadiusSheet) {
             RadiusSelectorBottomSheet(
-                currentRadiusKm = selectedRadiusKm,
-                onRadiusSelected = { selectedRadiusKm = it },
+                currentRadiusKm = effectiveRadiusKm,
+                isGuest = effectiveIsGuest,
+                onRadiusSelected = { km ->
+                    homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km))
+                },
+                onRequireAuth = onRequireAuth,
                 onDismiss = { showRadiusSheet = false }
             )
         }

@@ -2,6 +2,7 @@ package com.example.sensus.data.repository
 
 import com.example.sensus.data.SensusAuthManager
 import com.example.sensus.data.local.SecurePreferences
+import com.example.sensus.data.local.SessionType
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
@@ -16,21 +17,46 @@ class SessionRepositoryImpl(
     private val securePreferences: SecurePreferences,
     private val userSessionDao: UserSessionDao? = null,
     private val pendingSyncDao: PendingSyncDao? = null,
-    private val offerDao: OfferDao? = null
+    private val offerDao: OfferDao? = null,
+    private val authApiService: com.example.sensus.data.remote.api.AuthApiService? = null
 ) : SessionRepository {
 
     private val _sessionState = MutableStateFlow(buildCurrentState())
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
 
     private fun buildCurrentState(): SessionState {
+        val token = securePreferences.getAuthToken()?.takeIf { it.isNotBlank() }
+        val sessionType = securePreferences.getSessionType()
+        val hasToken = token != null
+
+        val isGuestPref = hasToken && sessionType == SessionType.GUEST
+        val isRegisteredPref = hasToken && sessionType == SessionType.REGISTERED
+        val isLegacyManager = !hasToken && sessionType == SessionType.UNAUTHENTICATED && SensusAuthManager.isSessionActive
+
+        val isActive = isGuestPref || isRegisteredPref || isLegacyManager
+        val isGuest = isGuestPref || (isLegacyManager && SensusAuthManager.isGuestUser)
+        val email = when {
+            !isActive -> null
+            isGuest -> "invitado@sensus.app"
+            else -> securePreferences.getUserEmail()?.takeIf { it.isNotBlank() } ?: SensusAuthManager.currentUser?.email
+        }
+        val name = when {
+            !isActive -> null
+            isGuest -> "Invitado Sensus"
+            else -> securePreferences.getUserName()?.takeIf { it.isNotBlank() } ?: SensusAuthManager.currentUser?.name
+        }
+        val photoUrl = if (!isActive || isGuest) null else securePreferences.getUserPhoto()
+
         return SessionState(
-            isSessionActive = SensusAuthManager.isSessionActive,
-            isGuest = SensusAuthManager.isGuestUser,
+            isSessionActive = isActive,
+            isGuest = isGuest,
             hasAcceptedTerms = SensusAuthManager.hasAcceptedTerms,
             hasLocationPermission = SensusAuthManager.hasLocationPermission,
             hasCompletedSplash = SensusAuthManager.hasCompletedSplash,
-            activeEmail = SensusAuthManager.currentUser?.email,
-            activeToken = securePreferences.getAuthToken()
+            activeEmail = email,
+            activeName = name,
+            activePhotoUrl = photoUrl,
+            activeToken = token
         )
     }
 
@@ -38,8 +64,17 @@ class SessionRepositoryImpl(
         _sessionState.update { buildCurrentState() }
     }
 
+    fun refreshSync() {
+        syncState()
+    }
+
+    override suspend fun syncSession() {
+        syncState()
+    }
+
     override suspend fun saveGuestSession(token: String, maxRadiusMeters: Int) {
         securePreferences.saveGuestSession(token, maxRadiusMeters)
+        SensusAuthManager.loginAsGuest()
         syncState()
     }
 
@@ -47,6 +82,15 @@ class SessionRepositoryImpl(
      * FT-08 (T08.6): Purga completa de preferencias cifradas, tablas Room+SQLCipher y estado en memoria.
      */
     override suspend fun clearSession() {
+        try {
+            authApiService?.logout()
+        } catch (_: Exception) {
+            // Ignorar errores de red para asegurar fail-safe en cliente
+        }
+        clearLocalSession()
+    }
+
+    override suspend fun clearLocalSession() {
         securePreferences.clearAll()
         try {
             userSessionDao?.clearSession()

@@ -297,8 +297,9 @@ fun LoginScreen(
                             }
                         }
 
-                        // Banner visible de error con feedback claro
-                        if (!loginErrorMessage.isNullOrBlank()) {
+                        // Banner visible de error con feedback claro (local o del servidor)
+                        val visibleErrorMessage = state.errorMessage ?: loginErrorMessage
+                        if (!visibleErrorMessage.isNullOrBlank()) {
                             Surface(
                                 color = SensusRed.copy(alpha = 0.08f),
                                 shape = RoundedCornerShape(12.dp),
@@ -319,7 +320,7 @@ fun LoginScreen(
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
-                                        text = loginErrorMessage!!,
+                                        text = visibleErrorMessage,
                                         color = SensusRed,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,

@@ -18,7 +18,7 @@ class DefaultAuthRepository(
 class DefaultProfileRepository(
     securePreferences: SecurePreferences,
     networkClient: NetworkClient = NetworkClient(securePreferences)
-) : ProfileRepository by RetrofitProfileRepository(networkClient.profileApi)
+) : ProfileRepository by RetrofitProfileRepository(networkClient.profileApi, securePreferences = securePreferences)
 
 class DefaultMerchantRepository(
     networkClient: NetworkClient

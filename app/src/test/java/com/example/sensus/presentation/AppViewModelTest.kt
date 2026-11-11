@@ -86,4 +86,18 @@ class AppViewModelTest {
         coVerify(exactly = 1) { sessionRepository.clearSession() }
         assertEquals(AppScreen.LOGIN, viewModel.viewState.value.currentScreen)
     }
+
+    @Test
+    fun sessionDroppedInMain_redirectsToLogin() = runTest {
+        sessionFlow.value = SessionState(isSessionActive = true, isGuest = false, hasAcceptedTerms = true)
+        val viewModel = AppViewModel(sessionRepository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))
+        assertEquals(AppScreen.MAIN, viewModel.viewState.value.currentScreen)
+
+        sessionFlow.value = SessionState(isSessionActive = false)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(AppScreen.LOGIN, viewModel.viewState.value.currentScreen)
+    }
 }

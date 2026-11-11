@@ -34,7 +34,7 @@ data class ProductOffer(
     val latitude: Double = 20.0545,
     val longitude: Double = -99.3420,
     val postalCode: String = "",
-    val description: String = "Excedente de inventario en perfecto estado con empaque sellado de fǭbrica. Rescate de merma garantizado.",
+    val description: String = "Excedente de inventario en perfecto estado con empaque sellado de fábrica. Calidad y ahorro garantizados.",
     val expirationDate: String = "Hoy 20:00 hrs",
     val imageUrl: String? = null
 ) {

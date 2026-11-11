@@ -189,7 +189,7 @@ fun OnboardingLocationScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Conoce las mermas y excedentes disponibles a menos de 2 km a tu alrededor en tiempo real y ahorra hasta un 50%.",
+                        text = "Descubre las ofertas y excedentes disponibles a menos de 2 km a tu alrededor en tiempo real y ahorra hasta un 50%.",
                         fontSize = 14.sp,
                         color = SensusTextSecondary,
                         textAlign = TextAlign.Center,

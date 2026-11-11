@@ -36,6 +36,18 @@ class SecurePreferences(private val context: Context) {
         prefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
     }
 
+    fun saveUserSession(name: String, email: String, photoUrl: String? = null) {
+        prefs.edit()
+            .putString(KEY_USER_NAME, name)
+            .putString(KEY_USER_EMAIL, email)
+            .putString(KEY_USER_PHOTO, photoUrl ?: "")
+            .apply()
+    }
+
+    fun getUserName(): String? = prefs.getString(KEY_USER_NAME, null)
+    fun getUserEmail(): String? = prefs.getString(KEY_USER_EMAIL, null)
+    fun getUserPhoto(): String? = prefs.getString(KEY_USER_PHOTO, null)?.takeIf { it.isNotBlank() }
+
     fun getAuthToken(): String? {
         return prefs.getString(KEY_AUTH_TOKEN, null)
     }
@@ -90,5 +102,8 @@ class SecurePreferences(private val context: Context) {
         private const val KEY_AUTH_TOKEN = "key_auth_token"
         private const val KEY_SESSION_TYPE = "key_session_type"
         private const val KEY_GUEST_RADIUS = "key_guest_radius"
+        private const val KEY_USER_NAME = "key_user_name"
+        private const val KEY_USER_EMAIL = "key_user_email"
+        private const val KEY_USER_PHOTO = "key_user_photo"
     }
 }

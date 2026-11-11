@@ -250,7 +250,11 @@ fun MainAppContainer(
                 if (notif.category == "Ofertas") {
                     selectedProductForDetail = defaultFallbackOffer
                 } else if (notif.category == "Reservas") {
-                    activeApartadoOffer = defaultFallbackOffer
+                    if (isGuest) {
+                        showGuestPrompt = true
+                    } else {
+                        activeApartadoOffer = defaultFallbackOffer
+                    }
                 }
             }
         )
@@ -264,7 +268,11 @@ fun MainAppContainer(
             onShowQrClick = {
                 val offer = activeRouteOffer!!
                 activeRouteOffer = null
-                activeApartadoOffer = offer
+                if (isGuest) {
+                    showGuestPrompt = true
+                } else {
+                    activeApartadoOffer = offer
+                }
             }
         )
         return
@@ -355,27 +363,49 @@ fun MainAppContainer(
                 // Modo Comprador: El Mapa (índice 0) es la primera vista
                 when (buyerTabIndex) {
                     0 -> BuyerMapScreen(
+                        isGuest = isGuest,
+                        onRequireAuth = { showGuestPrompt = true },
                         onProductClick = { offer -> selectedProductForDetail = offer },
                         onRouteClick = { offer -> activeRouteOffer = offer },
                         onListToggle = { buyerTabIndex = 1 },
-                        onOpenCart = { showCartSheet = true }
+                        onOpenCart = {
+                            if (isGuest) {
+                                showGuestPrompt = true
+                            } else {
+                                showCartSheet = true
+                            }
+                        }
                     )
                     1 -> BuyerHomeScreen(
+                        isGuest = isGuest,
+                        onRequireAuth = { showGuestPrompt = true },
                         onProductClick = { offer -> selectedProductForDetail = offer },
                         onMapToggle = { buyerTabIndex = 0 },
                         onNotificationsClick = { showNotifications = true },
-                        onOpenCart = { showCartSheet = true }
+                        onOpenCart = {
+                            if (isGuest) {
+                                showGuestPrompt = true
+                            } else {
+                                showCartSheet = true
+                            }
+                        }
                     )
                     2 -> SensiChatScreen(
                         onApartarComboClick = {
-                            activeApartadoOffer = defaultFallbackOffer
+                            if (isGuest) {
+                                showGuestPrompt = true
+                            } else {
+                                activeApartadoOffer = defaultFallbackOffer
+                            }
                         }
                     )
                     3 -> CommunityScreen()
                     4 -> BuyerProfileScreen(
                         isMerchantMode = isMerchantRegistered || isMerchantMode,
                         onToggleMerchantMode = { enableMerchant ->
-                            if (enableMerchant) {
+                            if (isGuest) {
+                                showGuestPrompt = true
+                            } else if (enableMerchant) {
                                 if (isMerchantRegistered) {
                                     isMerchantMode = true
                                     merchantTabIndex = 0
@@ -390,8 +420,13 @@ fun MainAppContainer(
                         onDeleteAccountClick = { showConfirmDeleteAccount = true },
                         onTermsClick = onNavigateToTerms,
                         onHistoryClick = {
-                            activeApartadoOffer = defaultFallbackOffer
-                        }
+                            if (isGuest) {
+                                showGuestPrompt = true
+                            } else {
+                                activeApartadoOffer = defaultFallbackOffer
+                            }
+                        },
+                        onGuestActionRequired = { showGuestPrompt = true }
                     )
                 }
             } else {
@@ -444,18 +479,21 @@ fun MainAppContainer(
                 // Sub-botones en arcoíris / abanico lateral alrededor del botón central
                 if (animProgress > 0.01f) {
                     if (!isMerchantMode) {
-                        // Coordenadas en arcoíris / acordeón hacia los lados para 5 botones
-                        val arcPositions = listOf(
-                            -132.dp to -24.dp, // Extremo izquierdo: Mapa
-                            -72.dp to -78.dp,  // Izquierda superior: Ofertas
-                            0.dp to -98.dp,    // Cúspide central del arcoíris: Sensi IA
-                            72.dp to -78.dp,   // Derecha superior: Comunidad
-                            132.dp to -24.dp   // Extremo derecho: Perfil
+                        // Posiciones en arcoíris simétrico (-2, -1, 0 = Centro Cúspide, +1, +2)
+                        val slotOffsets = mapOf(
+                            -2 to (-136.dp to -24.dp), // Extremo izquierdo
+                            -1 to (-74.dp to -78.dp),  // Intermedio izquierdo
+                             0 to (0.dp to -104.dp),    // CENTRO CÚSPIDE (Opción activa seleccionada)
+                             1 to (74.dp to -78.dp),   // Intermedio derecho
+                             2 to (136.dp to -24.dp)   // Extremo derecho
                         )
 
                         BuyerNavTab.values().forEachIndexed { index, tab ->
                             val isSelected = buyerTabIndex == index
-                            val (targetX, targetY) = arcPositions[index]
+                            // La opción activa se sitúa en la posición 0 (centro cúspide),
+                            // y las demás se distribuyen simétricamente alrededor en orden circular
+                            val slotIndex = (index - buyerTabIndex + 2).mod(5) - 2
+                            val (targetX, targetY) = slotOffsets[slotIndex] ?: (0.dp to -104.dp)
 
                             RainbowArcSubMenuItem(
                                 title = tab.title,
@@ -472,17 +510,17 @@ fun MainAppContainer(
                             )
                         }
                     } else {
-                        // Coordenadas en arcoíris / acordeón lateral para 4 botones del comercio
-                        val arcPositions = listOf(
-                            -115.dp to -34.dp, // Izquierda extremo: Mi Tienda
-                            -42.dp to -88.dp,  // Izquierda centro: Nueva Oferta
-                            42.dp to -88.dp,   // Derecha centro: Canjes QR
-                            115.dp to -34.dp   // Derecha extremo: Perfil
+                        // Coordenadas para 4 botones del comercio, centrando simétricamente
+                        val slotOffsets = mapOf(
+                            0 to (-115.dp to -34.dp),
+                            1 to (-42.dp to -90.dp),
+                            2 to (42.dp to -90.dp),
+                            3 to (115.dp to -34.dp)
                         )
 
                         MerchantNavTab.values().forEachIndexed { index, tab ->
                             val isSelected = merchantTabIndex == index
-                            val (targetX, targetY) = arcPositions[index]
+                            val (targetX, targetY) = slotOffsets[index] ?: (0.dp to -90.dp)
 
                             RainbowArcSubMenuItem(
                                 title = tab.title,
@@ -607,47 +645,65 @@ private fun RainbowArcSubMenuItem(
     val pxX = with(density) { targetX.toPx() } * animProgress
     val pxY = with(density) { targetY.toPx() } * animProgress
 
+    val itemScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.22f else 0.95f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "itemScale"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .offset { IntOffset(pxX.roundToInt(), pxY.roundToInt()) }
-            .scale(animProgress)
+            .scale(animProgress * itemScale)
             .alpha(animProgress.coerceIn(0f, 1f))
             .clickable { onClick() }
     ) {
-        // Botón circular del submenú
+        // Botón circular del submenú con mayor dinamismo y resalte
         Surface(
             shape = CircleShape,
             color = if (isSelected) SensusPurple else Color.White,
-            shadowElevation = 6.dp,
-            border = BorderStroke(1.5.dp, if (isSelected) SensusPurple else Color(0xFFE2E8F0)),
-            modifier = Modifier.size(46.dp)
+            shadowElevation = if (isSelected) 12.dp else 4.dp,
+            border = BorderStroke(
+                width = if (isSelected) 2.5.dp else 1.dp,
+                color = if (isSelected) Color(0xFFF3E8FF) else Color(0xFFE2E8F0)
+            ),
+            modifier = Modifier.size(if (isSelected) 52.dp else 44.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
                     tint = if (isSelected) Color.White else SensusPurple,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(if (isSelected) 26.dp else 20.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Etiqueta del sub-botón tipo acordeón
+        // Etiqueta destacada
         Surface(
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(10.dp),
             color = if (isSelected) SensusPurple else Color.White,
-            shadowElevation = 3.dp,
-            border = BorderStroke(0.5.dp, Color(0xFFE2E8F0))
+            shadowElevation = if (isSelected) 6.dp else 2.dp,
+            border = BorderStroke(
+                width = if (isSelected) 1.dp else 0.5.dp,
+                color = if (isSelected) Color(0xFFC084FC) else Color(0xFFE2E8F0)
+            )
         ) {
             Text(
                 text = title,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = if (isSelected) 11.sp else 9.5.sp,
+                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
                 color = if (isSelected) Color.White else SensusTextPrimary,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                modifier = Modifier.padding(
+                    horizontal = if (isSelected) 9.dp else 6.dp,
+                    vertical = if (isSelected) 3.dp else 2.dp
+                )
             )
         }
     }

@@ -14,10 +14,12 @@ import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.data.repository.RetrofitProfileRepository
+import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
+import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.LoginUseCase
@@ -27,11 +29,17 @@ import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class SensusContainer(
     context: Context,
     baseUrl: String = NetworkClient.DEFAULT_BASE_URL
 ) {
+    private val containerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     init {
         com.example.sensus.data.SensusAuthManager.init(context)
     }
@@ -53,15 +61,37 @@ class SensusContainer(
     val pendingSyncDao: PendingSyncDao by lazy { database.pendingSyncDao() }
 
     val networkClient: NetworkClient by lazy {
-        NetworkClient(securePreferences, baseUrl)
+        NetworkClient(
+            securePreferences = securePreferences,
+            baseUrl = baseUrl,
+            onUnauthorized = {
+                containerScope.launch {
+                    sessionRepository.clearLocalSession()
+                }
+            }
+        )
     }
 
-    val sessionRepository: com.example.sensus.domain.repository.SessionRepository by lazy {
-        com.example.sensus.data.repository.SessionRepositoryImpl(securePreferences)
+    val sessionRepository: SessionRepository by lazy {
+        SessionRepositoryImpl(
+            securePreferences = securePreferences,
+            userSessionDao = userSessionDao,
+            pendingSyncDao = pendingSyncDao,
+            offerDao = offerDao,
+            authApiService = networkClient.authApi
+        )
+    }
+
+    private fun notifySessionUpdated() {
+        (sessionRepository as? SessionRepositoryImpl)?.refreshSync()
     }
 
     val authRepository: AuthRepository by lazy {
-        RetrofitAuthRepository(networkClient.authApi, securePreferences)
+        RetrofitAuthRepository(
+            authApi = networkClient.authApi,
+            securePreferences = securePreferences,
+            onSessionUpdated = { notifySessionUpdated() }
+        )
     }
 
     val moderationService: ImageModerationService by lazy {
@@ -69,7 +99,12 @@ class SensusContainer(
     }
 
     val profileRepository: ProfileRepository by lazy {
-        RetrofitProfileRepository(networkClient.profileApi, moderationService)
+        RetrofitProfileRepository(
+            profileApi = networkClient.profileApi,
+            moderationService = moderationService,
+            securePreferences = securePreferences,
+            onSessionUpdated = { notifySessionUpdated() }
+        )
     }
 
     val merchantRepository: MerchantRepository by lazy {

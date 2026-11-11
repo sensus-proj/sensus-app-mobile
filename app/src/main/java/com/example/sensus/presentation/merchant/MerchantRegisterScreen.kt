@@ -203,7 +203,7 @@ fun MerchantRegisterScreen(
 
                     Column {
                         Text(
-                            text = "Convierte mermas en ganancias",
+                            text = "Convierte excedentes en ganancias",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White

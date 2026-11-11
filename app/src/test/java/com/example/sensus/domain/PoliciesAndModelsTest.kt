@@ -39,10 +39,12 @@ class PoliciesAndModelsTest {
 
     @Test
     fun guestRadiusPolicy_shouldEnforceStrict2KmMax() {
+        assertTrue(GuestRadiusPolicy.isRadiusAllowedForGuest(0.05f))
         assertTrue(GuestRadiusPolicy.isRadiusAllowedForGuest(0.5f))
         assertTrue(GuestRadiusPolicy.isRadiusAllowedForGuest(1.0f))
         assertTrue(GuestRadiusPolicy.isRadiusAllowedForGuest(2.0f))
 
+        assertFalse(GuestRadiusPolicy.isRadiusAllowedForGuest(0.04f))
         assertFalse(GuestRadiusPolicy.isRadiusAllowedForGuest(2.1f))
         assertFalse(GuestRadiusPolicy.isRadiusAllowedForGuest(3.0f))
         assertFalse(GuestRadiusPolicy.isRadiusAllowedForGuest(5.0f))
@@ -50,13 +52,16 @@ class PoliciesAndModelsTest {
 
     @Test
     fun guestRadiusPolicy_clampRadius_shouldClampOnlyForGuest() {
-        // Para usuario invitado: recorta a 2.0 km si excede
+        // Para usuario invitado: mínimo 50 m y máximo 2.0 km
+        assertEquals(0.05f, GuestRadiusPolicy.clampRadius(0.01f, isGuest = true), 0.001f)
         assertEquals(2.0f, GuestRadiusPolicy.clampRadius(5.0f, isGuest = true), 0.001f)
         assertEquals(2.0f, GuestRadiusPolicy.clampRadius(3.5f, isGuest = true), 0.001f)
         assertEquals(1.5f, GuestRadiusPolicy.clampRadius(1.5f, isGuest = true), 0.001f)
 
-        // Para usuario registrado: no recorta
+        // Para usuario registrado: mínimo 50 m y máximo 5.0 km
+        assertEquals(0.05f, GuestRadiusPolicy.clampRadius(0.01f, isGuest = false), 0.001f)
         assertEquals(5.0f, GuestRadiusPolicy.clampRadius(5.0f, isGuest = false), 0.001f)
+        assertEquals(5.0f, GuestRadiusPolicy.clampRadius(7.0f, isGuest = false), 0.001f)
         assertEquals(3.5f, GuestRadiusPolicy.clampRadius(3.5f, isGuest = false), 0.001f)
     }
 
@@ -66,8 +71,12 @@ class PoliciesAndModelsTest {
 
     @Test
     fun formatRadiusText_shouldFormatCorrectly() {
+        assertEquals("50 m", formatRadiusText(0.05f))
+        assertEquals("75 m", formatRadiusText(0.075f))
+        assertEquals("250 m", formatRadiusText(0.25f))
         assertEquals("500 m", formatRadiusText(0.5f))
         assertEquals("1 km", formatRadiusText(1.0f))
+        assertEquals("1.25 km", formatRadiusText(1.25f))
         assertEquals("1.5 km", formatRadiusText(1.5f))
         assertEquals("2 km", formatRadiusText(2.0f))
         assertEquals("5 km", formatRadiusText(5.0f))

@@ -9,7 +9,7 @@
 - **Nombre:** Sensus
 - **Plataforma:** Android nativo
 - **Lenguaje & UI:** Kotlin 2.3.20 (ratificado) + Jetpack Compose + Material 3
-- **Modelo de negocio:** Marketplace dual (Comprador / Comercio) para el rescate de excedentes y merma en perfecto estado ("Encuentra tu próximo ahorro", "Convierte mermas en ganancias").
+- **Modelo de negocio:** Marketplace dual (Comprador / Comercio) para aprovechar excedentes y ofertas locales en perfecto estado ("Encuentra tu próximo ahorro", "Convierte excedentes en ganancias").
 - **Estrategia de lanzamiento:** Publicación en Google Play con interfaz completa, fluida y datos simulados ("pintada"/mock estructurado) para pasar revisión en el primer mes; iteraciones progresivas de backend.
 - **Repositorio:** GitHub `CZalbert67/Sensus` (rama `main`).
 
@@ -546,3 +546,33 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - **Ola 6 (QA y Release):** `FT-27-qa-release-defensa`.
 - **Documentos transversales actualizados:** `specs/README.md`, `docs/endpoints-internos.md`, `docs/rate-matrix.md` y `docs/asvs-l2-checklist.md`.
 - **Pendientes explícitos antes de implementar:** confirmar decisiones **D-1 a D-8** (OSMDroid, CameraX+MLKit/ZXing y posible enmienda menor a `constitution.md` §3, Firebase FCM, contratos `033` y apertura en backend de `FT-24`..`FT-26`).
+
+---
+
+## Bitácora - Iteración Móvil: Detección Real de Sesión, GPS Real, Capas de Mapa, Límite 2 km Invitado y UX
+
+- **Fecha:** 2026-11-11
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`)
+- **Alcance ejecutado y verificado:**
+  1. **Corrección integral de detección y sincronización de sesión (`AppModule`, `SensusContainer`, `SessionRepositoryImpl`, `RetrofitRepositories`, `AppViewModel`, `BuyerProfileViewModel`, `CommunityViewModel`):**
+     - **Fuente única de verdad (`SessionRepository`):** Eliminada la doble instanciación entre `SensusContainer.sessionRepository` (usada por `StartGuestSessionUseCase` y `DeleteAccountUseCase`) y `AppModule.provideSessionRepository()` (usada por `AppViewModel` y los ViewModels de comprador). Toda la app observa ahora la misma instancia singleton `container.sessionRepository`.
+     - **Sincronización reactiva tras Auth y Perfil:** `SessionState` incorpora `activeName` y `activePhotoUrl`. `RetrofitAuthRepository` (`login`, `register`, `createGuestSession`, `logout`, `deleteAccount`) y `RetrofitProfileRepository` (`getProfile`, `updateProfile`) notifican de inmediato a `SessionRepositoryImpl.refreshSync()`.
+     - **Persistencia, cierre API (`Spec 004`) y manejo de HTTP `401`:** `SessionRepositoryImpl.clearSession()` invoca `POST /api/v1/auth/logout` (fail-safe) y purga `SecurePreferences`, DAOs SQLCipher de Room (`UserSessionDao`, `PendingSyncDao`, `OfferDao`) y `SensusAuthManager`. `NetworkClient`/`AuthInterceptor` invocan `clearLocalSession()` en respuestas `401` y `AppViewModel` redirige automáticamente de `MAIN` a `LOGIN`.
+     - **Perfil y Modo Invitado resilientes:** `BuyerProfileViewModel` y `CommunityViewModel` reaccionan a transiciones Invitado ↔ Registrado ↔ Logout (evitando estado obsoleto entre cuentas en `MainActivity`) y precargan nombre/correo cacheados de `SessionState` cuando no hay conectividad. `BuyerProfileScreen`, `ProductDetailScreen`, `CartBottomSheet`, `RouteMapScreen`, `SensiChatScreen` y `NotificationsScreen` bloquean acciones autenticadas en Modo Invitado con `GuestPromptDialog`. Corregidos banners de error en `LoginScreen` y `RegisterScreen` (previniendo `NullPointerException` en errores de servidor).
+  2. **Mapa interactivo, GPS real, Capas seleccionables, Controles ergonómicos y Bloqueo de Zoom (`FusedLocationRepository`, `OsmMapUtils`, `BuyerMapViewModel`, `BuyerMapScreen`, `BuyerHomeViewModel`, `BuyerHomeScreen`, `RouteMapScreen`):**
+     - **Eliminación de popup inicial mock:** `BuyerMapScreen` inicia sin tienda seleccionada (`selectedOffer = null`); la tarjeta inferior solo aparece al tocar un marcador e incluye botón de cierre.
+     - **Detección real de ubicación GPS:** `FusedLocationRepository` solicita lecturas frescas vía `CurrentLocationRequest` (`PRIORITY_HIGH_ACCURACY` con fallback a `PRIORITY_BALANCED_POWER_ACCURACY` en interiores y selección del fix más reciente entre `FUSED_PROVIDER`, `GPS_PROVIDER` y `NETWORK_PROVIDER`). Integrado reactivamente en Mapa, Feed (`OsmMapUtils.resolveLocationLabel`) y Ruteo, con aviso directo a Ajustes si el GPS está apagado.
+     - **Capas visuales del mapa (`MapLayerStyle`):** Selector flotante **Capas** en `BuyerMapScreen` con 4 estilos funcionales sin API key: **Estándar** (OSM `MAPNIK`), **Satélite** (Esri `World_Imagery`), **Relieve** (Esri `World_Topo_Map`) y **Nocturno** (OSM con `TilesOverlay.INVERT_COLORS`).
+     - **Selector personalizado de distancia (`50 m` – `5 km`) y bloqueo estricto de 2 km para Invitado:** Rediseñado `RadiusSelectorBottomSheet` con `Slider` continuo (pasos de `50 m`), botones finos `- 50 m`/`+ 50 m`, campo numérico exacto en metros (`50`–`5000`), accesos rápidos (`50 m`, `100 m`, `250 m`, `500 m`, `1 km`, `2 km`, `3.5 km`, `5 km`) y formato dinámico `m`/`km` en `formatRadiusText`. Validado en dominio (`GuestRadiusPolicy.MIN_RADIUS_METERS = 50`) y ViewModels, filtrado geodésico real desde `~42 m` en `OsmMapUtils.localizeAndMeasureOffers` y auto-acercamiento suave al elegir `< 250 m` en `BuyerMapScreen`.
+     - **Ergonomía de controles y límites de zoom:** Botones `+` / `-` y botón de ubicación precisa agrupados en la esquina inferior derecha (`navigationBarsPadding()` y desplazamiento animado ante tarjeta inferior), píldora de bolsa en la esquina inferior izquierda, y bloqueo estricto de alejamiento mínimo (`MIN_MAP_ZOOM = 13.0`) y acercamiento máximo (`MAX_MAP_ZOOM = 18.0`) tanto en gestos como en botones.
+  3. **Menú flotante dinámico y limpieza de textos UX:**
+     - `MainAppContainer.kt` (`RainbowArcSubMenuItem`): centra automáticamente la opción activa en la cúspide del abanico con animación elástica `Spring` (`1.22x`).
+     - Actualización de copy en `ConfirmDialogs.kt`, `OnboardingLocationScreen.kt`, `CommunityScreen.kt`, `SensiChatScreen.kt`, `MerchantRegisterScreen.kt`, `StoreModels.kt`, `MockDataProvider.kt` y `GuestModeAndAccountDialogsE2ETest.kt` hacia lenguaje orientado a **ofertas locales**, **excedentes** y **calidad garantizada**.
+- **Evidencia de verificación y gates (2026-11-11):**
+  - `./gradlew.bat compileDebugKotlin testDebugUnitTest koverXmlReportDebug assembleDebug`: **`BUILD SUCCESSFUL`** (con nuevas pruebas en `BuyerViewModelsTest.kt`, `PoliciesAndModelsTest.kt` y `AppViewModelTest.kt` usando Turbine y MockK).
+  - `python scripts/check_sdd.py`: **`PASS (0 hallazgos, 28 features)`**
+  - `python scripts/check_layers.py`: **`PASS (0 hallazgos, 128 archivos)`**
+  - `python scripts/check_endpoints.py`: **`PASS (0 hallazgos, 54 endpoints)`**
+  - `python scripts/check_secrets.py`: **`PASS (0 hallazgos, 172 archivos)`**
+  - `python scripts/check_coverage.py --min 80`: **`PASS (93.75% en app/build/reports/kover/reportDebug.xml)`**
+  - Despliegue solicitado por usuario para pruebas en dispositivo físico Samsung Galaxy S23 Ultra (`SM_S918U`) vía ADB (`adb install -r`).

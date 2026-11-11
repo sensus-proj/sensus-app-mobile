@@ -7,6 +7,7 @@ import com.example.sensus.presentation.base.ViewState
 
 data class BuyerProfileViewState(
     val profile: UserProfile? = null,
+    val isGuest: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 ) : ViewState

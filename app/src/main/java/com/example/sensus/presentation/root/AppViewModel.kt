@@ -16,7 +16,9 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             sessionRepository.sessionState.collect { session ->
                 updateState {
+                    val sessionDroppedInMain = currentScreen == AppScreen.MAIN && !session.isSessionActive
                     copy(
+                        currentScreen = if (sessionDroppedInMain) AppScreen.LOGIN else currentScreen,
                         isSessionActive = session.isSessionActive,
                         isGuest = session.isGuest,
                         hasAcceptedTerms = session.hasAcceptedTerms,
@@ -35,6 +37,7 @@ class AppViewModel @Inject constructor(
             }
             is AppViewIntent.SplashFinished -> {
                 viewModelScope.launch {
+                    sessionRepository.syncSession()
                     sessionRepository.setSplashCompleted(true)
                     val s = sessionRepository.sessionState.value
                     val nextScreen = if (s.isSessionActive) {

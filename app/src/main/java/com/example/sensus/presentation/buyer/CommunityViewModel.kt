@@ -16,8 +16,26 @@ class CommunityViewModel @Inject constructor(
 
     init {
         val friends = storeRepository.getSampleFriends()
-        val email = sessionRepository.sessionState.value.activeEmail ?: "Usuario Sensus"
-        updateState { copy(friends = friends, currentUserName = email) }
+        val initialSession = sessionRepository.sessionState.value
+        val initialName = when {
+            initialSession.isGuest -> "Invitado Sensus"
+            else -> initialSession.activeName?.takeIf { it.isNotBlank() }
+                ?: initialSession.activeEmail?.takeIf { it.isNotBlank() }
+                ?: "Usuario Sensus"
+        }
+        updateState { copy(friends = friends, currentUserName = initialName) }
+
+        viewModelScope.launch {
+            sessionRepository.sessionState.collect { session ->
+                val resolvedName = when {
+                    session.isGuest -> "Invitado Sensus"
+                    else -> session.activeName?.takeIf { it.isNotBlank() }
+                        ?: session.activeEmail?.takeIf { it.isNotBlank() }
+                        ?: "Usuario Sensus"
+                }
+                updateState { copy(currentUserName = resolvedName) }
+            }
+        }
     }
 
     override fun processIntent(intent: CommunityViewIntent) {}

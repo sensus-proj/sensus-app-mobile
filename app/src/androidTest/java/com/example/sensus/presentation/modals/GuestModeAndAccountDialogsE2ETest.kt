@@ -35,7 +35,7 @@ class GuestModeAndAccountDialogsE2ETest {
         }
 
         composeTestRule.onNodeWithText("Inicia sesión para continuar").assertExists()
-        composeTestRule.onNodeWithText("Estás navegando en Modo Invitado (2 km). Para reservar mermas, ampliar tu radio, publicar ofertas o guardar favoritos necesitas una cuenta Sensus.").assertExists()
+        composeTestRule.onNodeWithText("Estás navegando en Modo Invitado (2 km). Para apartar ofertas, ampliar tu radio, publicar productos o guardar favoritos necesitas una cuenta Sensus.").assertExists()
 
         composeTestRule.onNodeWithText("Iniciar Sesión").performClick()
         assertTrue(loginClicked)

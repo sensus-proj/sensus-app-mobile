@@ -44,13 +44,21 @@ import java.util.concurrent.TimeUnit
 
 class RetrofitAuthRepository(
     private val authApi: AuthApiService,
-    private val securePreferences: SecurePreferences
+    private val securePreferences: SecurePreferences,
+    private val onSessionUpdated: (() -> Unit)? = null
 ) : AuthRepository {
 
     private fun handleAuthSuccess(body: AuthResponse): Result<UserProfile> {
         securePreferences.saveAuthToken(body.token)
         securePreferences.saveSessionType(SessionType.REGISTERED)
-        return Result.Success(body.user.toDomain())
+        val domainUser = body.user.toDomain()
+        securePreferences.saveUserSession(
+            name = domainUser.nombreCompleto,
+            email = domainUser.correo,
+            photoUrl = domainUser.fotoPerfilUrl
+        )
+        onSessionUpdated?.invoke()
+        return Result.Success(domainUser)
     }
 
     override suspend fun login(correo: String, password: String): Result<UserProfile> = withContext(Dispatchers.IO) {
@@ -119,6 +127,7 @@ class RetrofitAuthRepository(
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
                 securePreferences.saveGuestSession(body.token, body.maxRadiusMeters)
+                onSessionUpdated?.invoke()
                 Result.Success(body.token)
             } else {
                 mapHttpError(response)
@@ -130,11 +139,26 @@ class RetrofitAuthRepository(
         }
     }
 
+    override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = authApi.logout()
+            // 204 o 200 revoca en servidor, pero pase lo que pase se limpia localmente
+            Result.Success(Unit)
+        } catch (_: Exception) {
+            // Fail-safe: aunque falle red, el cliente se desconecta
+            Result.Success(Unit)
+        } finally {
+            securePreferences.clearAll()
+            onSessionUpdated?.invoke()
+        }
+    }
+
     override suspend fun deleteAccount(password: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = authApi.deleteAccount(DeleteAccountRequest(password = password))
             if (response.isSuccessful) {
                 securePreferences.clearAll()
+                onSessionUpdated?.invoke()
                 Result.Success(Unit)
             } else {
                 mapHttpError(response)
@@ -177,7 +201,9 @@ class RetrofitAuthRepository(
 
 class RetrofitProfileRepository(
     private val profileApi: ProfileApiService,
-    private val moderationService: ImageModerationService = ImageModerationService()
+    private val moderationService: ImageModerationService = ImageModerationService(),
+    private val securePreferences: SecurePreferences? = null,
+    private val onSessionUpdated: (() -> Unit)? = null
 ) : ProfileRepository {
 
     private fun toUserProfile(dto: com.example.sensus.data.remote.dto.UserDto): UserProfile {
@@ -188,7 +214,14 @@ class RetrofitProfileRepository(
         try {
             val response = profileApi.getProfile()
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(toUserProfile(response.body()!!))
+                val profile = toUserProfile(response.body()!!)
+                securePreferences?.saveUserSession(
+                    name = profile.nombreCompleto,
+                    email = profile.correo,
+                    photoUrl = profile.fotoPerfilUrl
+                )
+                onSessionUpdated?.invoke()
+                Result.Success(profile)
             } else {
                 mapHttpError(response)
             }
@@ -208,7 +241,14 @@ class RetrofitProfileRepository(
                 )
             )
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(toUserProfile(response.body()!!))
+                val updated = toUserProfile(response.body()!!)
+                securePreferences?.saveUserSession(
+                    name = updated.nombreCompleto,
+                    email = updated.correo,
+                    photoUrl = updated.fotoPerfilUrl
+                )
+                onSessionUpdated?.invoke()
+                Result.Success(updated)
             } else {
                 mapHttpError(response)
             }

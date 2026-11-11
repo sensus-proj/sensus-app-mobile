@@ -1,5 +1,6 @@
 package com.example.sensus.presentation
 
+import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.ProductOffer
@@ -16,10 +17,14 @@ import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
+import app.cash.turbine.test
+import com.example.sensus.presentation.buyer.BuyerHomeViewEffect
 import com.example.sensus.presentation.buyer.BuyerHomeViewIntent
+import com.example.sensus.presentation.buyer.BuyerMapViewEffect
 import com.example.sensus.presentation.buyer.BuyerHomeViewModel
 import com.example.sensus.presentation.buyer.BuyerMapViewIntent
 import com.example.sensus.presentation.buyer.BuyerMapViewModel
+import com.example.sensus.presentation.common.MapLayerStyle
 import com.example.sensus.presentation.buyer.BuyerProfileViewIntent
 import com.example.sensus.presentation.buyer.BuyerProfileViewModel
 import com.example.sensus.presentation.buyer.CartViewIntent
@@ -43,7 +48,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -65,10 +73,13 @@ class BuyerViewModelsTest {
     @Test
     fun buyerHome_categorySelection_and_search_updatesState() = runTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
         coEvery { offersRepo.getOffers() } returns listOf(
             ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
         )
-        val vm = BuyerHomeViewModel(offersRepo)
+        val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.dispatchIntent(BuyerHomeViewIntent.CategorySelected(StoreCategory.FOOD))
@@ -83,6 +94,33 @@ class BuyerViewModelsTest {
     }
 
     @Test
+    fun buyerHome_guestMode_clampsRadius_and_refreshesLocation() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isGuest = true))
+        coEvery { locationRepo.hasLocationPermission() } returns true
+        coEvery { locationRepo.getCurrentLocation() } returns UserLocation(19.5, -99.2)
+        coEvery { locationRepo.getFreshLocation() } returns UserLocation(19.6, -99.3)
+
+        val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.isGuest)
+        assertEquals(19.5, vm.viewState.value.userLocation.latitude, 0.001)
+
+        vm.viewEffect.test {
+            vm.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(4.5f))
+            assertEquals(BuyerHomeViewEffect.RequireAuthForRadius, awaitItem())
+            assertEquals(2.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        vm.dispatchIntent(BuyerHomeViewIntent.RefreshLocation)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(19.6, vm.viewState.value.userLocation.latitude, 0.001)
+    }
+
+    @Test
     fun buyerMap_selection_and_permission() = runTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
         val locationRepo = mockk<LocationRepository>(relaxed = true)
@@ -94,6 +132,7 @@ class BuyerViewModelsTest {
 
         val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
+        assertNull(vm.viewState.value.selectedOffer)
 
         vm.dispatchIntent(BuyerMapViewIntent.OfferSelected(offer))
         assertEquals(offer, vm.viewState.value.selectedOffer)
@@ -101,6 +140,74 @@ class BuyerViewModelsTest {
         vm.dispatchIntent(BuyerMapViewIntent.LocationPermissionGranted(true))
         testDispatcher.scheduler.advanceUntilIdle()
         coVerify { sessionRepo.setLocationPermission(true) }
+    }
+
+    @Test
+    fun buyerMap_guestMode_blocksRadiusAbove2Km_and_registeredAllows5KmAndLayers() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionFlow = MutableStateFlow(SessionState(isGuest = true))
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns sessionFlow
+
+        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.isGuest)
+
+        vm.viewEffect.test {
+            vm.dispatchIntent(BuyerMapViewIntent.RadiusSelected(5.0f))
+            assertEquals(BuyerMapViewEffect.RequireAuthForRadius, awaitItem())
+            assertEquals(2.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        // Invitado si puede reducir hasta el mínimo de 50 m (0.05 km) y <= 2 km
+        vm.dispatchIntent(BuyerMapViewIntent.RadiusSelected(0.05f))
+        assertEquals(0.05f, vm.viewState.value.selectedRadiusKm, 0.001f)
+        vm.dispatchIntent(BuyerMapViewIntent.RadiusSelected(1.0f))
+        assertEquals(1.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
+
+        // Usuario autenticado puede ampliar a 5 km y cambiar capas del mapa
+        sessionFlow.value = SessionState(isGuest = false)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.viewState.value.isGuest)
+
+        vm.dispatchIntent(BuyerMapViewIntent.RadiusSelected(5.0f))
+        assertEquals(5.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
+
+        vm.dispatchIntent(BuyerMapViewIntent.LayerSelected(MapLayerStyle.SATELLITE))
+        assertEquals(MapLayerStyle.SATELLITE, vm.viewState.value.selectedLayer)
+        vm.dispatchIntent(BuyerMapViewIntent.LayerSelected(MapLayerStyle.DARK))
+        assertEquals(MapLayerStyle.DARK, vm.viewState.value.selectedLayer)
+    }
+
+    @Test
+    fun buyerMap_refreshLocation_fetchesFreshGps_and_warnsWhenGpsDisabled() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { locationRepo.hasLocationPermission() } returns true
+        coEvery { locationRepo.isLocationEnabled() } returns false
+        coEvery { locationRepo.getCurrentLocation() } returns UserLocation(20.1, -98.7)
+        coEvery { locationRepo.getFreshLocation() } returns UserLocation(20.12, -98.73)
+
+        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(20.1, vm.viewState.value.userLocation.latitude, 0.001)
+
+        vm.viewEffect.test {
+            vm.dispatchIntent(BuyerMapViewIntent.RefreshLocation(forceFresh = true))
+            val effect = awaitItem() as BuyerMapViewEffect.ShowLocationMessage
+            assertTrue(effect.isGpsDisabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        coEvery { locationRepo.isLocationEnabled() } returns true
+        vm.dispatchIntent(BuyerMapViewIntent.RefreshLocation(forceFresh = true))
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.hasRealLocation)
+        assertEquals(20.12, vm.viewState.value.userLocation.latitude, 0.001)
     }
 
     @Test
@@ -162,7 +269,9 @@ class BuyerViewModelsTest {
         coEvery { profileRepo.getProfile() } returns Result.Success(user)
         coEvery { updateUseCase("Nuevo Nombre", any()) } returns Result.Success(user.copy(nombreCompleto = "Nuevo Nombre"))
 
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isGuest = false, activeEmail = "r@sensus.com"))
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("Rodrigo", vm.viewState.value.profile?.nombreCompleto)
 
@@ -172,6 +281,39 @@ class BuyerViewModelsTest {
 
         vm.dispatchIntent(BuyerProfileViewIntent.LoadProfile)
         testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Test
+    fun buyerProfile_reactsToGuest_Registered_Logout_and_OfflineFallback() = runTest {
+        val profileRepo = mockk<ProfileRepository>(relaxed = true)
+        val updateUseCase = mockk<UpdateProfileUseCase>(relaxed = true)
+        val sessionFlow = MutableStateFlow(SessionState(isSessionActive = true, isGuest = true))
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns sessionFlow
+
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.isGuest)
+        assertEquals("Invitado Sensus", vm.viewState.value.profile?.nombreCompleto)
+
+        // Usuario cierra sesión e inicia con cuenta registrada mientras API está offline
+        coEvery { profileRepo.getProfile() } returns Result.Failure(AppError.Network("Sin red"))
+        sessionFlow.value = SessionState(
+            isSessionActive = true,
+            isGuest = false,
+            activeName = "Rodrigo Pérez",
+            activeEmail = "rodrigo@sensus.app",
+            activeToken = "jwt-1"
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.viewState.value.isGuest)
+        assertEquals("Rodrigo Pérez", vm.viewState.value.profile?.nombreCompleto)
+        assertEquals("rodrigo@sensus.app", vm.viewState.value.profile?.correo)
+
+        // Cierre de sesión limpia el perfil en memoria
+        sessionFlow.value = SessionState(isSessionActive = false, isGuest = false)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertNull(vm.viewState.value.profile)
     }
 
     @Test
