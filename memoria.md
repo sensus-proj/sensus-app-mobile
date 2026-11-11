@@ -615,3 +615,10 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - `python scripts/check_layers.py`: **`PASS`**
   - `python scripts/check_sdd.py`: **`PASS (0 hallazgos, 29 features)`**
   - `python scripts/check_endpoints.py` & `python scripts/check_secrets.py`: **`PASS`**
+
+### Corrección Windows/Android Studio en `:app:kaptReleaseKotlin` (`KaptWithoutKotlincTask`)
+
+- **Causa raíz:** Al ejecutar `:app:bundleRelease` desde Android Studio en Windows con toolchain JDK 17 distinto al daemon IDE (`jbr-21`), Gradle ejecuta Kapt en `IsolationMode.PROCESS` (`WorkerDaemonServer`) donde `java.io.tmpdir` caía en `C:\WINDOWS`, provocando `AccessDeniedException` al extraer `sqlitejdbc.dll` de `room-compiler:2.6.1`.
+- **Solución:** Configurado `KaptWithoutKotlincTask` en `app/build.gradle.kts` con `kaptProcessJvmArgs` (`-Dorg.sqlite.tmpdir` y `-Djava.io.tmpdir` apuntando a `<gradleUserHome>/tmp/sqlite`, compatible con Configuration Cache), validando extracción real de `sqlite-3.41.2.2-...-sqlitejdbc.dll` en `:app:kaptReleaseKotlin "-Pkapt.workers.isolation=process" --rerun-tasks`.
+- **Release bump (`2026-11-11`):** Incrementado `versionCode` de `3` a `4` y `versionName` a `"1.3.0"` en `app/build.gradle.kts` para evitar colisión de `versionCode` ya publicado en Google Play Console.
+- **Fix crash de arranque en Release R8 (`2026-11-11`):** Logcat de dispositivo (`R5CW90LY07N`, `versionCode = 4`) mostró `SIGABRT` en `System.loadLibrary("sqlcipher")` por `java.lang.NoSuchFieldError: no "J" field "mNativeHandle" in class "Lnet/sqlcipher/database/SQLiteDatabase;"` debido a ofuscación/remoción R8 (el AAR `android-database-sqlcipher:4.5.4` no incluye reglas consumer y `proguard-rules.pro` conservaba el nombre legado `NavigationKeysKt`). Se añadieron reglas `-keep,includedescriptorclasses` para `net.sqlcipher.**` / `net.zetetic.**` y reglas actualizadas para `@Serializable`, `NavigationKeys` y `SensusRoute` en `app/proguard-rules.pro`.

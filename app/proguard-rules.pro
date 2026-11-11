@@ -1,33 +1,39 @@
 # Sensus - Proguard / R8 Optimization & Obfuscation Rules
 
 # ====================================================================
-# Kotlinx Serialization
+# SQLCipher for Android (JNI native bindings: mNativeHandle, etc.)
+# ====================================================================
+-keep,includedescriptorclasses class net.sqlcipher.** { *; }
+-keep,includedescriptorclasses class net.zetetic.** { *; }
+-dontwarn net.sqlcipher.**
+-dontwarn net.zetetic.**
+
+# ====================================================================
+# Kotlinx Serialization & Navigation 3
 # ====================================================================
 -keepattributes *Annotation*,InnerClasses,Signature
 -dontnote kotlinx.serialization.SerializationKt
 
-# Keep companion objects for serializable classes
--keepclassmembers class * {
-    *** Companion;
+# Keep companion objects and generated serializers for @Serializable classes
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
 }
 
-# Keep the serializer method on companion objects
--keepclasseswithmembers class * {
-    kotlinx.serialization.KSerializer serializer(...);
-}
+-if @kotlinx.serialization.Serializable class **
+-keep,allowobfuscation class <1>$$serializer { *; }
 
-# Keep annotated @Serializable classes and their properties
--keep,allowobfuscation,allowoptimization class * {
-    @kotlinx.serialization.Serializable class *;
-}
+-keep,allowobfuscation,includedescriptorclasses @kotlinx.serialization.Serializable class ** { *; }
 
 -keepclassmembers class * {
     @kotlinx.serialization.SerialName <fields>;
 }
 
-# Navigation 3 keys
--keep class com.example.sensus.NavigationKeysKt { *; }
--keep class com.example.sensus.Main { *; }
+# Navigation 3 keys & polymorphic routes
+-keep class com.example.sensus.NavigationKeys { *; }
+-keep class com.example.sensus.NavigationKeys$** { *; }
+-keep class com.example.sensus.SensusRoute { *; }
+-keep class com.example.sensus.SensusRoute$** { *; }
 
 # ====================================================================
 # Data Models
@@ -51,9 +57,10 @@
 }
 
 # ====================================================================
-# Coroutines
+# Coroutines & Maps
 # ====================================================================
 -dontwarn kotlinx.coroutines.**
+-dontwarn org.osmdroid.**
 
 # ====================================================================
 # Tink (androidx.security:security-crypto optional cloud KMS downloader)

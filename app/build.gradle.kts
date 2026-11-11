@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask
 import java.io.File
 import java.io.StringReader
 import java.util.Properties
@@ -21,8 +22,8 @@ android {
         applicationId = "sensus.com"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3.0"
     }
 
     val keysPropertiesText =
@@ -178,6 +179,20 @@ dependencies {
 }
 
 // kapt { correctErrorTypes = false }
+
+val sqliteNativeTmpPath = File(gradle.gradleUserHomeDir, "tmp/sqlite").apply { mkdirs() }.absolutePath
+if (System.getProperty("org.sqlite.tmpdir").isNullOrBlank()) {
+    System.setProperty("org.sqlite.tmpdir", sqliteNativeTmpPath)
+}
+
+tasks.withType<KaptWithoutKotlincTask>().configureEach {
+    kaptProcessJvmArgs.addAll(
+        listOf(
+            "-Dorg.sqlite.tmpdir=$sqliteNativeTmpPath",
+            "-Djava.io.tmpdir=$sqliteNativeTmpPath",
+        ),
+    )
+}
 
 tasks.matching { it.name.contains("AarMetadata") }.configureEach {
     enabled = false
