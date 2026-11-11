@@ -71,7 +71,11 @@ class MerchantViewModelsTest {
 
         vm.dispatchIntent(
             MerchantRegisterViewIntent.ActivateMerchant(
-                "Tienda", "Abarrotes", "Dir", "9-20", "5512345678"
+                "Tienda",
+                "Abarrotes",
+                "Dir",
+                "9-20",
+                "5512345678"
             )
         )
     }

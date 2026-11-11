@@ -14,17 +14,17 @@ import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.sensus.domain.model.StoreCategory
 
-fun getCategoryIcon(category: StoreCategory): ImageVector {
-    return when (category) {
-        StoreCategory.ALL -> Icons.Default.Whatshot
-        StoreCategory.GROCERY -> Icons.Default.Storefront
-        StoreCategory.CLEANING -> Icons.Default.CleaningServices
-        StoreCategory.PERISHABLES -> Icons.Default.Fastfood
-        StoreCategory.DAIRY -> Icons.Default.Egg
-        StoreCategory.FOOD -> Icons.Default.Restaurant
-        StoreCategory.BAKERY -> Icons.Default.BakeryDining
-        StoreCategory.BEVERAGES -> Icons.Default.LocalDrink
-        StoreCategory.PETS -> Icons.Default.Pets
-        StoreCategory.PHARMACY -> Icons.Default.LocalPharmacy
-    }
-}
+private val categoryIconMap: Map<StoreCategory, ImageVector> = mapOf(
+    StoreCategory.ALL to Icons.Default.Whatshot,
+    StoreCategory.GROCERY to Icons.Default.Storefront,
+    StoreCategory.CLEANING to Icons.Default.CleaningServices,
+    StoreCategory.PERISHABLES to Icons.Default.Fastfood,
+    StoreCategory.DAIRY to Icons.Default.Egg,
+    StoreCategory.FOOD to Icons.Default.Restaurant,
+    StoreCategory.BAKERY to Icons.Default.BakeryDining,
+    StoreCategory.BEVERAGES to Icons.Default.LocalDrink,
+    StoreCategory.PETS to Icons.Default.Pets,
+    StoreCategory.PHARMACY to Icons.Default.LocalPharmacy
+)
+
+fun getCategoryIcon(category: StoreCategory): ImageVector = categoryIconMap[category] ?: Icons.Default.Storefront

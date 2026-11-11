@@ -6,8 +6,8 @@ import com.example.sensus.domain.usecase.LoginUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(

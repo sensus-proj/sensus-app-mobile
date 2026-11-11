@@ -75,4 +75,4 @@ docs/endpoints-internos.md    # Tabla canonica alineada a /api/v1
 
 | Estado | Revisor | Fecha | Evidencia |
 |---|---|---|---|
-| Borrador | — | — | Pendiente de ejecución |
+| En revisión (código y gates PASS; pendiente autorización Git/PR/tag `v1.13.0-ft10`) | Rodrigo (pendiente aprobación PR a `main`) | 2026-11-11 | `detekt`, `ktlintCheck`, `lint`, `compileDebugKotlin`, `compileDebugAndroidTestSources`, 100 tests unitarios (0 fallos), Kover `93.23%` y 5 `scripts/check_*.py` en PASS |

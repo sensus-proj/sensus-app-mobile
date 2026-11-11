@@ -5,6 +5,7 @@ import com.example.sensus.data.local.db.entity.PendingSyncEntity
 import com.example.sensus.domain.network.NetworkMonitor
 import com.example.sensus.domain.sync.SyncManager
 import com.example.sensus.domain.sync.SyncResult
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
 class DefaultSyncManager @Inject constructor(
     private val pendingSyncDao: PendingSyncDao,
@@ -77,5 +77,6 @@ class DefaultSyncManager @Inject constructor(
 
     private fun processOperation(operation: PendingSyncEntity) {
         // En Fase 1 valida la operación; listo para despachar a APIs remotas en Fase 4
+        require(operation.operationType.isNotBlank()) { "Pending sync operationType cannot be blank" }
     }
 }

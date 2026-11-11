@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.sensus.data.local.db.DatabaseFactory
 import com.example.sensus.data.local.db.SensusDatabase
 import com.example.sensus.data.local.db.entity.OfferEntity
 import com.example.sensus.data.local.db.entity.PendingSyncEntity
+import com.example.sensus.data.local.db.entity.UserPreferenceEntity
 import com.example.sensus.data.local.db.entity.UserSessionEntity
 import net.sqlcipher.database.SupportFactory
 import org.junit.After
@@ -17,7 +19,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class EncryptedDatabaseIntegrationTest {
@@ -35,6 +36,7 @@ class EncryptedDatabaseIntegrationTest {
         val factory = SupportFactory(testPassphrase)
         db = Room.databaseBuilder(context, SensusDatabase::class.java, testDbFile)
             .openHelperFactory(factory)
+            .addMigrations(DatabaseFactory.MIGRATION_1_2)
             .allowMainThreadQueries()
             .build()
     }
@@ -127,5 +129,23 @@ class EncryptedDatabaseIntegrationTest {
 
         syncDao.delete(pending.first())
         assertTrue(syncDao.getPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun userPreferenceDao_upsertAndRead_persistsMapLayerWithSQLCipher() {
+        val prefDao = db.userPreferenceDao()
+
+        prefDao.upsert(UserPreferenceEntity("map_layer", "SATELLITE", System.currentTimeMillis()))
+        val firstRead = prefDao.getByKey("map_layer")
+        assertNotNull(firstRead)
+        assertEquals("SATELLITE", firstRead.prefValue)
+
+        prefDao.upsert(UserPreferenceEntity("map_layer", "DARK", System.currentTimeMillis()))
+        val updatedRead = prefDao.getByKey("map_layer")
+        assertNotNull(updatedRead)
+        assertEquals("DARK", updatedRead.prefValue)
+
+        prefDao.deleteByKey("map_layer")
+        assertNull(prefDao.getByKey("map_layer"))
     }
 }

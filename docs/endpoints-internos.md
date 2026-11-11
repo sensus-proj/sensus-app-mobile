@@ -24,13 +24,13 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `PUT /api/merchants/profile` | `UpdateMerchantProfileUseCase` -> `ProfileRepository` -> `ProfileApi` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-06) |
 | `GET /api/offers/nearby` | `GetNearbyOffersUseCase` -> `GuestOfferRepository` -> `GuestOfferApi` | Publico (invitado) o Bearer | 60/min por IP | Pendiente (FT-07) |
 | `DELETE /api/users/account` | `DeleteAccountUseCase` -> `AccountRepository` -> `AccountApi` | Bearer | 1/hora por usuario | Pendiente (FT-08) |
-| `POST /api/v1/auth/logout` | `LogoutUseCase` -> `AuthRepository` -> `AuthApiService` | Bearer | 30/min por usuario | Pendiente (FT-10, spec 004) |
-| `POST /api/v1/auth/guest` | `StartGuestSessionUseCase` -> `AuthApiService` | Publico | 30/min por IP | Auditar en FT-10 |
-| `POST /api/v1/auth/reset-password` | `ResetPasswordUseCase` -> `AuthApiService` (conciliar con `/recover/confirm`) | Token temporal | 5/hora por IP | Auditar en FT-10 |
-| `POST /api/v1/users/photo-signature` | `RetrofitProfileRepository` -> `ProfileApiService` | Bearer | 10/min por usuario | Auditar en FT-10 |
-| `POST /api/v1/media/moderate` | `ImageModerationService` -> `MediaApiService` (consolidar con `/media/upload`) | Bearer | 20/min por usuario | Auditar en FT-10 |
-| `GET /api/v1/comercios/me` | `MerchantApiService` (legacy español; retirar por `/api/v1/merchants/me`) | Bearer `MERCHANT` | 30/min por usuario | Retirar en FT-10 |
-| `GET /api/v1/merchants/me` | `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-10, spec 006) |
+| `POST /api/v1/auth/logout` | `LogoutUseCase` -> `AuthRepository` -> `AuthApiService` | Bearer | 30/min por usuario | OK (FT-10, 2026-11-11; Spec 004) |
+| `POST /api/v1/auth/guest` | `StartGuestSessionUseCase` -> `AuthApiService` | Publico | 30/min por IP | OK (FT-10, 2026-11-11; AuthEndpoints.cs) |
+| `POST /api/v1/auth/reset-password` | `ResetPasswordUseCase` -> `AuthApiService` (concilia con `/recover/confirm`) | Token temporal | 5/hora por IP | OK (FT-10, 2026-11-11; backend expone /reset-password) |
+| `POST /api/v1/users/photo-signature` | `RetrofitProfileRepository` -> `ProfileApiService` | Bearer | 10/min por usuario | OK (FT-10, 2026-11-11; UserEndpoints.cs) |
+| `POST /api/v1/media/moderate` | `ImageModerationService` -> `MediaApiService` (previo a `/media/upload` en FT-15) | Bearer | 20/min por usuario | OK (FT-10, 2026-11-11; MediaEndpoints.cs) |
+| `GET /api/v1/comercios/me` | `MerchantApiService` (legacy espanol; retirado en cliente por `/api/v1/merchants/me`) | Bearer `MERCHANT` | 30/min por usuario | Retirado cliente (FT-10, 2026-11-11; backend transicional) |
+| `GET /api/v1/merchants/me` | `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | OK cliente FT-10 (2026-11-11; backend pendiente Spec 006/008) |
 | `GET /api/v1/offers/nearby` | `GetNearbyOffersUseCase` -> `OffersRepository` -> `OffersApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | Pendiente (FT-11, spec 007) |
 | `GET /api/v1/offers/{id}` | `GetOfferDetailUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-12, spec 032) |
 | `POST /api/v1/offers/{id}/view` | `RegisterOfferViewUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-12, spec 032) |

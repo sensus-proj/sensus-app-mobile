@@ -9,7 +9,7 @@ import retrofit2.http.PUT
 
 interface MerchantApiService {
 
-    @GET("api/v1/comercios/me")
+    @GET("api/v1/merchants/me")
     suspend fun getMyComercio(): Response<ComercioDto>
 
     @PUT("api/v1/merchants/profile")

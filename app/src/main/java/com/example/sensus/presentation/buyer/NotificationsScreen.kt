@@ -1,7 +1,5 @@
 package com.example.sensus.presentation.buyer
 
-import androidx.compose.runtime.collectAsState
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,18 +46,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sensus.domain.model.NotificationItem
-import com.example.sensus.theme.SensusAmber
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusPurpleLight
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 
+private const val SECURITY_COLOR_HEX = 0xFFE11D48
+private const val ICON_BG_ALPHA = 0.12f
+private const val ACTION_BG_ALPHA = 0.08f
+
 @Composable
 fun NotificationsScreen(
-    viewModel: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    viewModel: NotificationsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNotificationActionClick: (NotificationItem) -> Unit,
     modifier: Modifier = Modifier
@@ -66,7 +70,6 @@ fun NotificationsScreen(
     val notifState by viewModel.viewState.collectAsState()
     var selectedCategory by remember { mutableStateOf("Todas") }
     val categories = listOf("Todas", "Ofertas", "Reservas", "Seguridad")
-
     val filteredNotifications = remember(selectedCategory, notifState.notifications) {
         if (selectedCategory == "Todas") {
             notifState.notifications
@@ -80,75 +83,12 @@ fun NotificationsScreen(
             .fillMaxSize()
             .background(SensusBackground)
     ) {
-        // Barra superior
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = Color.White,
-            shadowElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = SensusPurple
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Notificaciones",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SensusTextPrimary
-                    )
-                }
-
-                TextButton(onClick = { /* Marcar todo como leido */ }) {
-                    Text(
-                        text = "Marcar leídas",
-                        fontSize = 12.sp,
-                        color = SensusPurple,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-
-        // Filtros de categoría (Chips)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            categories.forEach { cat ->
-                val isSelected = selectedCategory == cat
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) SensusPurple else Color.White,
-                    shadowElevation = if (isSelected) 2.dp else 0.dp,
-                    modifier = Modifier.clickable { selectedCategory = cat }
-                ) {
-                    Text(
-                        text = cat,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) Color.White else SensusTextPrimary,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                    )
-                }
-            }
-        }
-
-        // Lista de notificaciones
+        NotificationsTopBar(onNavigateBack = onNavigateBack)
+        NotificationCategoryFilterRow(
+            categories = categories,
+            selectedCategory = selectedCategory,
+            onSelectCategory = { selectedCategory = it }
+        )
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -168,24 +108,75 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationCard(
-    item: NotificationItem,
-    onActionClick: () -> Unit
-) {
-    val icon = when (item.category) {
-        "Ofertas" -> Icons.Default.LocalOffer
-        "Reservas" -> Icons.Default.AccessTime
-        "Seguridad" -> Icons.Default.Security
-        else -> Icons.Default.CheckCircle
+private fun NotificationsTopBar(onNavigateBack: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shadowElevation = 2.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Regresar",
+                        tint = SensusPurple
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Notificaciones",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusTextPrimary
+                )
+            }
+            TextButton(onClick = {}) {
+                Text(
+                    text = "Marcar leídas",
+                    fontSize = 12.sp,
+                    color = SensusPurple,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
+}
 
-    val iconColor = when (item.category) {
-        "Ofertas" -> SensusAmber
-        "Reservas" -> SensusPurple
-        "Seguridad" -> Color(0xFFE11D48)
-        else -> SensusSuccess
+@Composable
+private fun NotificationCategoryFilterRow(categories: List<String>, selectedCategory: String, onSelectCategory: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        categories.forEach { cat ->
+            val isSelected = selectedCategory == cat
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = if (isSelected) SensusPurple else Color.White,
+                shadowElevation = if (isSelected) 2.dp else 0.dp,
+                modifier = Modifier.clickable { onSelectCategory(cat) }
+            ) {
+                Text(
+                    text = cat,
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) Color.White else SensusTextPrimary,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                )
+            }
+        }
     }
+}
 
+@Composable
+private fun NotificationCard(item: NotificationItem, onActionClick: () -> Unit) {
+    val (icon, iconColor) = resolveNotificationStyle(item.category)
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -202,64 +193,52 @@ private fun NotificationCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(iconColor.copy(alpha = 0.12f)),
+                    .background(iconColor.copy(alpha = ICON_BG_ALPHA)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
             }
-
             Spacer(modifier = Modifier.width(12.dp))
+            NotificationCardBody(item = item, onActionClick = onActionClick, modifier = Modifier.weight(1f))
+        }
+    }
+}
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SensusTextPrimary
-                    )
-                    Text(
-                        text = item.timeAgo,
-                        fontSize = 11.sp,
-                        color = SensusTextMuted
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
+@Composable
+private fun NotificationCardBody(item: NotificationItem, onActionClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = item.timeAgo, fontSize = 11.sp, color = SensusTextMuted)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = item.message, fontSize = 12.sp, color = SensusTextSecondary, lineHeight = 16.sp)
+        if (item.actionText != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = SensusPurple.copy(alpha = ACTION_BG_ALPHA),
+                modifier = Modifier.clickable { onActionClick() }
+            ) {
                 Text(
-                    text = item.message,
-                    fontSize = 12.sp,
-                    color = SensusTextSecondary,
-                    lineHeight = 16.sp
+                    text = item.actionText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusPurple,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
-
-                if (item.actionText != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = SensusPurple.copy(alpha = 0.08f),
-                        modifier = Modifier.clickable { onActionClick() }
-                    ) {
-                        Text(
-                            text = item.actionText,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusPurple,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
             }
         }
     }
+}
+
+private fun resolveNotificationStyle(category: String) = when (category) {
+    "Ofertas" -> Icons.Default.LocalOffer to SensusPurpleLight
+    "Reservas" -> Icons.Default.AccessTime to SensusPurple
+    "Seguridad" -> Icons.Default.Security to Color(SECURITY_COLOR_HEX)
+    else -> Icons.Default.CheckCircle to SensusSuccess
 }

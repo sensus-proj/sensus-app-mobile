@@ -6,11 +6,11 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import com.example.sensus.domain.network.NetworkMonitor
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
-import javax.inject.Inject
 
 class ConnectivityNetworkMonitor @Inject constructor(
     @param:ApplicationContext private val context: Context
@@ -37,10 +37,7 @@ class ConnectivityNetworkMonitor @Inject constructor(
                 channel.trySend(networks.isNotEmpty())
             }
 
-            override fun onCapabilitiesChanged(
-                network: Network,
-                networkCapabilities: NetworkCapabilities
-            ) {
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                 val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 channel.trySend(hasInternet)
             }

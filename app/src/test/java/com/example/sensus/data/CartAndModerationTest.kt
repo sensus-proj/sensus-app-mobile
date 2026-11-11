@@ -1,23 +1,15 @@
 package com.example.sensus.data
 
-import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.data.cart.CartManager
 import com.example.sensus.data.moderation.ImageModerationService
+import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.domain.model.ModerationResult
 import kotlinx.coroutines.test.runTest
-import okhttp3.Call
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.IOException
 
 class CartAndModerationTest {
 

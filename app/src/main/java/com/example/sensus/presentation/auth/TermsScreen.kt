@@ -1,7 +1,6 @@
 package com.example.sensus.presentation.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.LocationOn
@@ -35,6 +34,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,29 +47,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.sensus.theme.SensusAmber
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusPurpleDark
-import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusTheme
+
+const val PRIVACY_POLICY_URL = "https://rodnix.com.mx/sensus/privacidad.html"
+
+private const val HEADER_BADGE_ALPHA = 0.12f
+private const val MUTED_BUTTON_ALPHA = 0.3f
 
 @Composable
-fun TermsScreen(
-    modifier: Modifier = Modifier,
-    onTermsAccepted: () -> Unit,
-    onNavigateBack: (() -> Unit)? = null
-) {
+fun TermsScreen(modifier: Modifier = Modifier, onTermsAccepted: () -> Unit, onNavigateBack: (() -> Unit)? = null, onPrivacyPolicyClick: (() -> Unit)? = null) {
+    val uriHandler = LocalUriHandler.current
+    val openPrivacyPolicy: () -> Unit = onPrivacyPolicyClick ?: { uriHandler.openUri(PRIVACY_POLICY_URL) }
     var termsAccepted by remember { mutableStateOf(true) }
     var locationAccepted by remember { mutableStateOf(true) }
-
-    val canProceed = termsAccepted && locationAccepted
 
     Box(
         modifier = modifier
@@ -86,210 +87,218 @@ fun TermsScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Botón superior de volver (si está habilitado)
-            if (onNavigateBack != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = SensusPurple
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Volver",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = SensusTextSecondary
-                    )
-                }
-            }
-
-            // Header Icon
-            Surface(
-                shape = CircleShape,
-                color = SensusAmber.copy(alpha = 0.25f),
-                modifier = Modifier.size(72.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.VerifiedUser,
-                        contentDescription = "Términos y Privacidad",
-                        tint = SensusPurple,
-                        modifier = Modifier.size(38.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Términos del Servicio",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = SensusPurple
-            )
-
-            Text(
-                text = "Para comenzar a ahorrar, revisa los lineamientos de Sensus",
-                fontSize = 13.sp,
-                color = SensusTextSecondary,
-                lineHeight = 18.sp
-            )
-
+            TermsTopBar(onNavigateBack = onNavigateBack)
+            TermsHeader()
             Spacer(modifier = Modifier.height(20.dp))
-
-            // Main Guidelines Card
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    TermItem(
-                        icon = Icons.Default.LocationOn,
-                        title = "Uso de Geolocalización",
-                        description = "Sensus utiliza tu ubicación en primer plano para calcular distancias exactas y mostrarte los locales más cercanos con promociones activas."
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
-
-                    TermItem(
-                        icon = Icons.Default.ConfirmationNumber,
-                        title = "Validez de Cupones",
-                        description = "Los descuentos son provistos por los comercios afiliados y son válidos al presentar el código en pantalla al momento de pagar."
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
-
-                    TermItem(
-                        icon = Icons.Default.Security,
-                        title = "Seguridad y Datos",
-                        description = "No compartimos tu información personal ni tus coordenadas con redes de publicidad externa. Tus datos están seguros con nosotros."
-                    )
-                }
-            }
-
+            TermsGuidelinesCard()
             Spacer(modifier = Modifier.height(18.dp))
-
-            // Checkbox 1: Terms
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = termsAccepted,
-                        onCheckedChange = { termsAccepted = it },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = SensusPurple,
-                            checkmarkColor = Color.White
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "He leído y acepto los Términos y Condiciones de Sensus",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = SensusTextPrimary,
-                        lineHeight = 17.sp
-                    )
-                }
-            }
-
+            TermsConsentCheckbox(
+                checked = termsAccepted,
+                label = "He leído y acepto los Términos y Condiciones de Sensus",
+                onCheckedChange = { termsAccepted = it }
+            )
             Spacer(modifier = Modifier.height(10.dp))
-
-            // Checkbox 2: Location
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = locationAccepted,
-                        onCheckedChange = { locationAccepted = it },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = SensusPurple,
-                            checkmarkColor = Color.White
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Autorizo el permiso de ubicación para descubrir ofertas en mi zona",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = SensusTextPrimary,
-                        lineHeight = 17.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Accept & Continue Button
-            Button(
-                onClick = onTermsAccepted,
-                enabled = canProceed,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SensusPurple,
-                    disabledContainerColor = SensusTextMuted.copy(alpha = 0.3f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Aceptar y Continuar",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
+            TermsConsentCheckbox(
+                checked = locationAccepted,
+                label = "Autorizo el permiso de ubicación para descubrir ofertas en mi zona",
+                onCheckedChange = { locationAccepted = it }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            TermsActions(
+                canProceed = termsAccepted && locationAccepted,
+                onPrivacyPolicyClick = openPrivacyPolicy,
+                onAcceptClick = onTermsAccepted
+            )
         }
     }
 }
 
 @Composable
-private fun TermItem(
-    icon: ImageVector,
-    title: String,
-    description: String
-) {
+private fun TermsTopBar(onNavigateBack: (() -> Unit)?) {
+    if (onNavigateBack == null) return
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onNavigateBack,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Regresar",
+                tint = SensusPurple
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Volver",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = SensusTextSecondary
+        )
+    }
+}
+
+@Composable
+private fun TermsHeader() {
+    Surface(
+        shape = CircleShape,
+        color = SensusPurple.copy(alpha = HEADER_BADGE_ALPHA),
+        modifier = Modifier.size(72.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.VerifiedUser,
+                contentDescription = "Términos y Privacidad",
+                tint = SensusPurple,
+                modifier = Modifier.size(38.dp)
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = "Términos del Servicio",
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        color = SensusPurple
+    )
+    Text(
+        text = "Para comenzar a ahorrar, revisa los lineamientos de Sensus",
+        fontSize = 13.sp,
+        color = SensusTextSecondary,
+        lineHeight = 18.sp
+    )
+}
+
+@Composable
+private fun TermsGuidelinesCard() {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            TermItem(
+                icon = Icons.Default.LocationOn,
+                title = "Uso de Geolocalización",
+                description = "Sensus utiliza tu ubicación en primer plano para calcular distancias " +
+                    "exactas y mostrarte los locales más cercanos con promociones activas."
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.ConfirmationNumber,
+                title = "Validez de Cupones",
+                description = "Los descuentos son provistos por los comercios afiliados y son " +
+                    "válidos al presentar el código en pantalla al momento de pagar."
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.Security,
+                title = "Seguridad y Datos",
+                description = "No compartimos tu información personal ni tus coordenadas con " +
+                    "redes de publicidad externa. Tus datos están seguros con nosotros."
+            )
+        }
+    }
+}
+
+@Composable
+private fun TermsConsentCheckbox(checked: Boolean, label: String, onCheckedChange: (Boolean) -> Unit) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = SensusPurple,
+                    checkmarkColor = Color.White
+                )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = SensusTextPrimary,
+                lineHeight = 17.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun TermsActions(canProceed: Boolean, onPrivacyPolicyClick: () -> Unit, onAcceptClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onPrivacyPolicyClick,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+            contentDescription = "Abrir Aviso de Privacidad",
+            tint = SensusPurple,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Consultar Aviso de Privacidad",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = SensusPurple
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    Button(
+        onClick = onAcceptClick,
+        enabled = canProceed,
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = SensusPurple,
+            disabledContainerColor = SensusTextMuted.copy(alpha = MUTED_BUTTON_ALPHA)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Aceptar y Continuar",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+    }
+}
+
+@Composable
+private fun TermItem(icon: ImageVector, title: String, description: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
@@ -308,9 +317,7 @@ private fun TermItem(
                 )
             }
         }
-
         Spacer(modifier = Modifier.width(12.dp))
-
         Column {
             Text(
                 text = title,
@@ -326,5 +333,16 @@ private fun TermItem(
                 lineHeight = 16.sp
             )
         }
+    }
+}
+
+@Preview(showBackground = true, name = "TermsDefault")
+@Composable
+internal fun TermsDefaultPreview() {
+    SensusTheme {
+        TermsScreen(
+            onTermsAccepted = {},
+            onNavigateBack = {}
+        )
     }
 }

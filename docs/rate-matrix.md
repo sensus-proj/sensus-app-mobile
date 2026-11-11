@@ -20,7 +20,7 @@
 
 | Operacion | Endpoint | Timeout | Reintentos | Pagina | Estado |
 |---|---|---|---|---|---|
-| Logout y consulta comercio | `POST /api/v1/auth/logout`, `GET /api/v1/merchants/me` | 15 s | 0 / 1 | — | Propuesto (FT-10) |
+| Logout y consulta comercio | `POST /api/v1/auth/logout`, `GET /api/v1/merchants/me` | 15 s | 0 / 1 | — | Alineado (FT-10, cliente HTTP 15 s) |
 | Ofertas cercanas y detalle | `GET /api/v1/offers/nearby`, `GET /api/v1/offers/{id}` | 20 s | 1 | 20 | Propuesto (FT-11, FT-12) |
 | Contador de vistas | `POST /api/v1/offers/{id}/view` | 10 s | 0 | — | Propuesto (FT-12) |
 | Apartado y canje QR | `POST /api/v1/offers/{id}/claim`, `POST /api/v1/offers/claims/{code}/redeem` | 20 s | 0 | — | Propuesto (FT-13, FT-14) |

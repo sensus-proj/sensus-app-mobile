@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         fun parseResetToken(intent: Intent?): String? {
             val data = intent?.data ?: return null
             val isReset = (data.scheme.equals("sensus", ignoreCase = true) && data.host.equals("reset", ignoreCase = true)) ||
-                    (data.host?.equals("rodnix.com.mx", ignoreCase = true) == true && (data.path?.startsWith("/sensus/reset") == true))
+                (data.host?.equals("rodnix.com.mx", ignoreCase = true) == true && (data.path?.startsWith("/sensus/reset") == true))
             return if (isReset) data.getQueryParameter("token") else null
         }
     }

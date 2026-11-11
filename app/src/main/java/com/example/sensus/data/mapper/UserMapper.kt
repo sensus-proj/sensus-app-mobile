@@ -16,11 +16,7 @@ object UserMapper {
         )
     }
 
-    fun UserProfile.toSessionEntity(
-        accessToken: String = "",
-        refreshToken: String = "",
-        expiresAt: Long = 0L
-    ): UserSessionEntity {
+    fun UserProfile.toSessionEntity(accessToken: String = "", refreshToken: String = "", expiresAt: Long = 0L): UserSessionEntity {
         return UserSessionEntity(
             id,
             correo,

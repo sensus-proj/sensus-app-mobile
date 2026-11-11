@@ -8,6 +8,7 @@ import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.data.repository.RetrofitProfileRepository
 import com.example.sensus.domain.model.HorarioDia
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
@@ -69,7 +70,10 @@ class RetrofitRepositoriesTest {
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"token\":\"guest_jwt_real_token\",\"tokenType\":\"Bearer\",\"maxRadiusMeters\":2000,\"role\":\"Invitado\"}")
+                .setBody(
+                    "{\"token\":\"guest_jwt_real_token\",\"tokenType\":\"Bearer\"," +
+                        "\"maxRadiusMeters\":2000,\"role\":\"Invitado\"}"
+                )
         )
 
         val result = authRepo.createGuestSession()
@@ -78,6 +82,21 @@ class RetrofitRepositoriesTest {
         assertEquals("guest_jwt_real_token", token)
 
         verify(exactly = 1) { securePreferences.saveGuestSession("guest_jwt_real_token", 2000) }
+    }
+
+    @Test
+    fun authRepo_logout_shouldPostWithBearerTokenAndClearPreferences() = runTest {
+        every { securePreferences.getAuthToken() } returns "jwt-logout-123"
+        mockWebServer.enqueue(MockResponse().setResponseCode(204))
+
+        val result = authRepo.logout()
+        assertTrue(result is Result.Success)
+
+        val request = mockWebServer.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/v1/auth/logout", request.path)
+        assertEquals("Bearer jwt-logout-123", request.getHeader("Authorization"))
+        verify(exactly = 1) { securePreferences.clearAll() }
     }
 
     @Test
@@ -98,7 +117,11 @@ class RetrofitRepositoriesTest {
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"id\":\"usr_999\",\"nombreCompleto\":\"Carlos Gómez\",\"correo\":\"carlos@test.com\",\"roles\":[\"Consumidor\"],\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}")
+                .setBody(
+                    "{\"id\":\"usr_999\",\"nombreCompleto\":\"Carlos Gómez\"," +
+                        "\"correo\":\"carlos@test.com\",\"roles\":[\"Consumidor\"]," +
+                        "\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}"
+                )
         )
 
         val result = profileRepo.getProfile()
@@ -114,7 +137,12 @@ class RetrofitRepositoriesTest {
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"id\":\"usr_999\",\"nombreCompleto\":\"Carlos Modificado\",\"correo\":\"carlos@test.com\",\"roles\":[\"Consumidor\"],\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\",\"fotoPerfilUrl\":\"https://img.url/1\"}")
+                .setBody(
+                    "{\"id\":\"usr_999\",\"nombreCompleto\":\"Carlos Modificado\"," +
+                        "\"correo\":\"carlos@test.com\",\"roles\":[\"Consumidor\"]," +
+                        "\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"," +
+                        "\"fotoPerfilUrl\":\"https://img.url/1\"}"
+                )
         )
 
         val result = profileRepo.updateProfile("Carlos Modificado", "https://img.url/1")
@@ -125,11 +153,45 @@ class RetrofitRepositoriesTest {
     }
 
     @Test
+    fun merchantRepo_getMyMerchant_shouldQueryMerchantsMeEndpoint() = runTest {
+        every { securePreferences.getAuthToken() } returns "jwt-merchant-456"
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(
+                    "{\"id\":\"merch_1\",\"usuarioId\":\"usr_1\"," +
+                        "\"nombreComercial\":\"Panadería La Espiga\"," +
+                        "\"direccion\":\"Av. Juárez 10\",\"codigoPostal\":\"42800\"," +
+                        "\"latitud\":20.05,\"longitud\":-99.34,\"activo\":true," +
+                        "\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}"
+                )
+        )
+
+        val result = merchantRepo.getMyMerchant()
+        assertTrue(result is Result.Success)
+
+        val request = mockWebServer.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("/api/v1/merchants/me", request.path)
+        assertEquals("Bearer jwt-merchant-456", request.getHeader("Authorization"))
+
+        val merchant = (result as Result.Success).data
+        assertEquals("merch_1", merchant.id)
+        assertEquals("Panadería La Espiga", merchant.nombreComercial)
+        assertEquals("42800", merchant.codigoPostal)
+    }
+
+    @Test
     fun merchantRepo_updateMerchantProfile_shouldRecalculateCoordinates() = runTest {
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"id\":\"merch_1\",\"usuarioId\":\"usr_1\",\"nombreComercial\":\"Café Roma\",\"direccion\":\"Roma Norte 55\",\"codigoPostal\":\"06700\",\"latitud\":19.418000,\"longitud\":-99.162000,\"activo\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}")
+                .setBody(
+                    "{\"id\":\"merch_1\",\"usuarioId\":\"usr_1\",\"nombreComercial\":\"Café Roma\"," +
+                        "\"direccion\":\"Roma Norte 55\",\"codigoPostal\":\"06700\"," +
+                        "\"latitud\":19.418000,\"longitud\":-99.162000,\"activo\":true," +
+                        "\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}"
+                )
         )
 
         val result = merchantRepo.updateMerchantProfile(

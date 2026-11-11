@@ -2,17 +2,16 @@ package com.example.sensus.domain
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
-import com.example.sensus.domain.repository.SessionRepository
-import com.example.sensus.data.local.SessionType
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.AuthRepository
+import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
+import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
-import com.example.sensus.domain.model.UserLocation
-import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.LoginUseCase
 import com.example.sensus.domain.usecase.RegisterUseCase
@@ -23,9 +22,7 @@ import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

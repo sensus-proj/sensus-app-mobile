@@ -1,7 +1,6 @@
 package com.example.sensus.presentation
 
 import app.cash.turbine.test
-import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.usecase.RegisterUseCase

@@ -9,7 +9,7 @@ import com.example.sensus.domain.repository.StoreRepository
 
 /**
  * Implementación de StoreRepository.
- * TODO: [API-MIGRATION] Eliminar dependencia de MockDataProvider una vez integrados los servicios
+ * Nota [API-MIGRATION]: Eliminar dependencia de MockDataProvider al integrar los servicios en FT-18/FT-21/FT-24.
  * remotos de chat Sensi IA, notificaciones en la nube y feed social de comunidad.
  */
 class StoreRepositoryImpl : StoreRepository {

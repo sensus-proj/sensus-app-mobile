@@ -5,7 +5,6 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.usecase.LoginUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
-import com.example.sensus.presentation.auth.LoginViewEffect
 import com.example.sensus.presentation.auth.LoginViewIntent
 import com.example.sensus.presentation.auth.LoginViewModel
 import io.mockk.coEvery
@@ -19,7 +18,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 

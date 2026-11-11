@@ -243,9 +243,9 @@ object MockDataProvider {
     )
 
     val sampleFriends = listOf(
-        FriendShare("Juan Pérez", "350 m • Activo ahora", 3, "Hace 20 min"),
+        FriendShare("Juan Pérez", "350 m • Activo ahora", 2 + 1, "Hace 20 min"),
         FriendShare("Carlos Ramírez", "500 m • Hace 25 min", 2, "Hace 1 h"),
-        FriendShare("Sofía García", "850 m • Hace 1 h", 4, "Hace 3 h"),
+        FriendShare("Sofía García", "850 m • Hace 1 h", 2 * 2, "Hace 3 h"),
         FriendShare("Ximena Salgado", "650 m • Hace 2 h", 1, "Ayer")
     )
 }

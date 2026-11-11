@@ -1,7 +1,5 @@
 package com.example.sensus.presentation.merchant
 
-import androidx.compose.runtime.collectAsState
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,70 +44,114 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.sensus.domain.model.HorarioDia
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sensus.common.Result
-import com.example.sensus.theme.SensusAmber
+import com.example.sensus.domain.model.HorarioDia
+import com.example.sensus.domain.model.MerchantStore
+import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSuccessBg
-import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val STORE_AVATAR_ALPHA = 0.12f
+private const val EDIT_BTN_ALPHA = 0.1f
+private const val DIVIDER_COLOR_HEX = 0xFFF1F5F9
+private const val MIN_ADDR_LEN = 5
+private const val MAX_ADDR_LEN = 250
+private const val POSTAL_LEN = 5
+
+@ComposeUiModel
+private data class MerchantEditDraft(
+    val name: String,
+    val address: String,
+    val postalCode: String,
+    val schedules: List<HorarioDia>
+)
+
+@ComposeUiModel
+private data class MerchantProfileDisplayState(
+    val storeName: String = "",
+    val storeAddress: String = "",
+    val storePostalCode: String = "",
+    val storeScheduleText: String = "",
+    val schedules: List<HorarioDia> = defaultScheduleList(),
+    val isOpen: Boolean = true,
+    val updateSuccessMessage: String? = null
+)
+
+@ComposeUiModel
+private data class MerchantProfileActions(
+    val onToggleOpen: (Boolean) -> Unit,
+    val onEditClick: () -> Unit,
+    val onSwitchToBuyer: () -> Unit
+)
+
 @Composable
-fun MerchantProfileScreen(
-    viewModel: MerchantProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    onSwitchToBuyer: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(), onSwitchToBuyer: () -> Unit, modifier: Modifier = Modifier) {
     val profileState by viewModel.viewState.collectAsState()
     val store = profileState.store
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    // container removed
     var isSaving by remember { mutableStateOf(false) }
-
-    var isOpen by remember { mutableStateOf(store.isOpen) }
-
-    // SE-007: Estado del local comercial editable
-    var storeName by remember { mutableStateOf("") }
-    var storeAddress by remember { mutableStateOf("") }
-    var storePostalCode by remember { mutableStateOf("") }
-    var storeScheduleText by remember { mutableStateOf("") }
     var showEditSheet by remember { mutableStateOf(false) }
-    var updateSuccessMessage by remember { mutableStateOf<String?>(null) }
+    var display by remember { mutableStateOf(MerchantProfileDisplayState(isOpen = store.isOpen)) }
 
-    var scheduleList by remember {
-        mutableStateOf(
-            listOf(
-                HorarioDia("Lunes", "08:00", "20:00", false),
-                HorarioDia("Martes", "08:00", "20:00", false),
-                HorarioDia("Miércoles", "08:00", "20:00", false),
-                HorarioDia("Jueves", "08:00", "20:00", false),
-                HorarioDia("Viernes", "08:00", "20:00", false),
-                HorarioDia("Sábado", "09:00", "18:00", false),
-                HorarioDia("Domingo", "00:00", "00:00", true)
-            )
+    MerchantProfileListContent(
+        display = display,
+        store = store,
+        actions = MerchantProfileActions(
+            onToggleOpen = { display = display.copy(isOpen = it) },
+            onEditClick = { showEditSheet = true },
+            onSwitchToBuyer = onSwitchToBuyer
+        ),
+        modifier = modifier
+    )
+
+    if (showEditSheet) {
+        val draft = MerchantEditDraft(display.storeName, display.storeAddress, display.storePostalCode, display.schedules)
+        MerchantEditBottomSheet(
+            initialDraft = draft,
+            isSaving = isSaving,
+            onDismiss = { showEditSheet = false },
+            onSave = { edited, onError ->
+                scope.launch {
+                    isSaving = true
+                    saveMerchantEdit(viewModel, edited, onError) { updatedDisplay ->
+                        display = updatedDisplay.copy(isOpen = display.isOpen)
+                        showEditSheet = false
+                    }
+                    isSaving = false
+                }
+            }
         )
     }
+}
 
+@Composable
+private fun MerchantProfileListContent(
+    display: MerchantProfileDisplayState,
+    store: MerchantStore,
+    actions: MerchantProfileActions,
+    modifier: Modifier = Modifier
+) {
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -117,521 +159,351 @@ fun MerchantProfileScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Chip de confirmación verde (Criterio 3 de SE-007)
-        if (updateSuccessMessage != null) {
-            item {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = SensusSuccessBg,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = SensusSuccess,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = updateSuccessMessage!!,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SensusSuccess
-                        )
-                    }
-                }
-            }
-        }
-
-        // Encabezado de la tienda
+        display.updateSuccessMessage?.let { msg -> item { ProfileSuccessBanner(message = msg) } }
+        item { MerchantProfileHeaderCard(storeName = display.storeName, store = store, onEditClick = actions.onEditClick) }
+        item { MerchantOpenToggleCard(isOpen = display.isOpen, onToggle = actions.onToggleOpen) }
         item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showEditSheet = true }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(SensusPurple.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storefront,
-                            contentDescription = null,
-                            tint = SensusPurple,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = storeName,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusTextPrimary
-                        )
-                        Text(
-                            text = store.category,
-                            fontSize = 12.sp,
-                            color = SensusTextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Calificación: ${store.rating} (${store.reviewCount} opiniones)",
-                            fontSize = 11.sp,
-                            color = SensusAmber,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { showEditSheet = true },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(SensusPurple.copy(alpha = 0.1f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar datos del local",
-                            tint = SensusPurple,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
+            MerchantDetailsCard(
+                storeAddress = display.storeAddress,
+                storePostalCode = display.storePostalCode,
+                storeScheduleText = display.storeScheduleText,
+                phone = store.phone,
+                onEditClick = actions.onEditClick
+            )
         }
+        item { SwitchToBuyerModeButton(onClick = actions.onSwitchToBuyer) }
+    }
+}
 
-        // Interruptor Tienda Abierta / Cerrada
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = if (isOpen) "Tienda Abierta" else "Tienda Cerrada",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isOpen) SensusSuccess else SensusRed
-                        )
-                        Text(
-                            text = if (isOpen) "Aceptando apartados y clientes" else "No se recibirán nuevos apartados",
-                            fontSize = 11.sp,
-                            color = SensusTextSecondary
-                        )
-                    }
-
-                    Switch(
-                        checked = isOpen,
-                        onCheckedChange = { isOpen = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = SensusSuccess
-                        )
-                    )
-                }
-            }
-        }
-
-        // Datos del establecimiento (Dirección, CP y Horarios)
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Información del establecimiento",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusTextPrimary
-                        )
-
-                        Text(
-                            text = "Modificar",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusPurple,
-                            modifier = Modifier.clickable { showEditSheet = true }
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = SensusPurple,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = storeAddress,
-                                fontSize = 12.sp,
-                                color = SensusTextPrimary
-                            )
-                            Text(
-                                text = "C.P. $storePostalCode (Coordenadas sincronizadas)",
-                                fontSize = 11.sp,
-                                color = SensusTextSecondary
-                            )
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.AccessTime,
-                            contentDescription = null,
-                            tint = SensusAmber,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = storeScheduleText,
-                            fontSize = 12.sp,
-                            color = SensusTextSecondary
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = null,
-                            tint = SensusPurple,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = store.phone,
-                            fontSize = 12.sp,
-                            color = SensusTextSecondary
-                        )
-                    }
-                }
-            }
-        }
-
-        // Botón para volver al modo comprador
-        item {
-            Button(
-                onClick = onSwitchToBuyer,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 14.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SwapHoriz,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+private suspend fun saveMerchantEdit(
+    viewModel: MerchantProfileViewModel,
+    draft: MerchantEditDraft,
+    onError: (String) -> Unit,
+    onSaved: (MerchantProfileDisplayState) -> Unit
+) {
+    when (
+        val result = viewModel.updateMerchantProfileUseCase(
+            nombreComercial = draft.name.trim(),
+            direccion = draft.address.trim(),
+            codigoPostal = draft.postalCode,
+            horarios = draft.schedules
+        )
+    ) {
+        is Result.Success -> {
+            val profile = result.data
+            onSaved(
+                MerchantProfileDisplayState(
+                    storeName = profile.nombreComercial,
+                    storeAddress = profile.direccion,
+                    storePostalCode = profile.codigoPostal,
+                    schedules = profile.horarios,
+                    storeScheduleText = "Lun-Vie: 08:00 - 20:00 / Sáb: 09:00 - 18:00",
+                    updateSuccessMessage = "¡Datos del local actualizados exitosamente! Coordenadas espaciales recalculadas."
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+            )
+        }
+        is Result.Failure -> onError(result.error.message)
+    }
+}
+
+@Composable
+private fun ProfileSuccessBanner(message: String) {
+    Surface(shape = RoundedCornerShape(12.dp), color = SensusSuccessBg, modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(text = message, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusSuccess)
+        }
+    }
+}
+
+@Composable
+private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, onEditClick: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onEditClick)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(SensusPurple.copy(alpha = STORE_AVATAR_ALPHA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(32.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = storeName, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = store.category, fontSize = 12.sp, color = SensusTextSecondary)
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Regresar al modo comprador",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    text = "Calificación: ${store.rating} (${store.reviewCount} opiniones)",
+                    fontSize = 11.sp,
+                    color = SensusPurple,
+                    fontWeight = FontWeight.SemiBold
                 )
+            }
+            IconButton(
+                onClick = onEditClick,
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(SensusPurple.copy(alpha = EDIT_BTN_ALPHA))
+            ) {
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar datos del local", tint = SensusPurple, modifier = Modifier.size(18.dp))
             }
         }
     }
+}
 
-    // SE-007 Figma 17c: Modal para editar dirección, código postal y horarios del comercio
-    if (showEditSheet) {
-        var tempName by remember { mutableStateOf(storeName) }
-        var tempAddress by remember { mutableStateOf(storeAddress) }
-        var tempPostalCode by remember { mutableStateOf(storePostalCode) }
-        var tempSchedules by remember { mutableStateOf(scheduleList) }
-        var editError by remember { mutableStateOf<String?>(null) }
-
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-        ModalBottomSheet(
-            onDismissRequest = { showEditSheet = false },
-            sheetState = sheetState,
-            containerColor = Color.White,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+@Composable
+private fun MerchantOpenToggleCard(isOpen: Boolean, onToggle: (Boolean) -> Unit) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                    .padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    Text(
-                        text = "Editar datos del local comercial",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SensusTextPrimary
+            Column {
+                Text(
+                    text = if (isOpen) "Tienda Abierta" else "Tienda Cerrada",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isOpen) SensusSuccess else SensusRed
+                )
+                Text(
+                    text = if (isOpen) "Aceptando apartados y clientes" else "No se recibirán nuevos apartados",
+                    fontSize = 11.sp,
+                    color = SensusTextSecondary
+                )
+            }
+            Switch(
+                checked = isOpen,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = SensusSuccess)
+            )
+        }
+    }
+}
+
+@Composable
+private fun MerchantDetailsCard(storeAddress: String, storePostalCode: String, storeScheduleText: String, phone: String, onEditClick: () -> Unit) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Información del establecimiento", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(
+                    text = "Modificar",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusPurple,
+                    modifier = Modifier.clickable(onClick = onEditClick)
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(text = storeAddress, fontSize = 12.sp, color = SensusTextPrimary)
+                    Text(text = "C.P. $storePostalCode (Coordenadas sincronizadas)", fontSize = 11.sp, color = SensusTextSecondary)
+                }
+            }
+            ProfileSimpleInfoRow(icon = Icons.Default.AccessTime, text = storeScheduleText)
+            ProfileSimpleInfoRow(icon = Icons.Default.Phone, text = phone)
+        }
+    }
+}
+
+@Composable
+private fun ProfileSimpleInfoRow(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(imageVector = icon, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(text = text, fontSize = 12.sp, color = SensusTextSecondary)
+    }
+}
+
+@Composable
+private fun SwitchToBuyerModeButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = 14.dp)
+    ) {
+        Icon(imageVector = Icons.Default.SwapHoriz, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = "Regresar al modo comprador", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MerchantEditBottomSheet(
+    initialDraft: MerchantEditDraft,
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (MerchantEditDraft, (String) -> Unit) -> Unit
+) {
+    var draft by remember { mutableStateOf(initialDraft) }
+    var editError by remember { mutableStateOf<String?>(null) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        MerchantEditSheetLazyBody(
+            draft = draft,
+            editError = editError,
+            isSaving = isSaving,
+            onDraftChange = {
+                draft = it
+                editError = null
+            },
+            onSaveClick = {
+                val err = validateMerchantDraft(draft)
+                if (err != null) editError = err else onSave(draft) { serverErr -> editError = serverErr }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MerchantEditSheetLazyBody(
+    draft: MerchantEditDraft,
+    editError: String?,
+    isSaving: Boolean,
+    onDraftChange: (MerchantEditDraft) -> Unit,
+    onSaveClick: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item { EditSheetIntroHeader() }
+        item { EditSheetField("Nombre comercial", draft.name, "Nombre de la tienda") { onDraftChange(draft.copy(name = it)) } }
+        item { EditSheetField("Dirección física del local", draft.address, "Calle, número y colonia") { onDraftChange(draft.copy(address = it)) } }
+        item {
+            EditSheetField("Código postal (5 dígitos)", draft.postalCode, "06000") { input ->
+                if (input.length <= POSTAL_LEN && input.all(Char::isDigit)) onDraftChange(draft.copy(postalCode = input))
+            }
+        }
+        item {
+            HorizontalDivider(color = Color(DIVIDER_COLOR_HEX))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "Horarios de atención por día", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        }
+        items(draft.schedules) { schedule ->
+            MerchantScheduleDayCard(schedule) { updated ->
+                onDraftChange(draft.copy(schedules = draft.schedules.map { if (it.dia == updated.dia) updated else it }))
+            }
+        }
+        editError?.let { err -> item { Text(text = err, fontSize = 12.sp, color = SensusRed) } }
+        item { MerchantEditSaveButton(isSaving = isSaving, onClick = onSaveClick) }
+    }
+}
+
+@Composable
+private fun MerchantEditSaveButton(isSaving: Boolean, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = !isSaving,
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+    ) {
+        Text(text = if (isSaving) "Guardando..." else "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    }
+}
+
+@Composable
+private fun EditSheetIntroHeader() {
+    Column {
+        Text(text = "Editar datos del local comercial", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(
+            text = "Al modificar la dirección física se recalcularán automáticamente las coordenadas espaciales.",
+            fontSize = 12.sp,
+            color = SensusTextSecondary
+        )
+    }
+}
+
+@Composable
+private fun EditSheetField(label: String, value: String, placeholder: String, onValueChange: (String) -> Unit) {
+    Column {
+        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+        Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+    }
+}
+
+@Composable
+private fun MerchantScheduleDayCard(schedule: HorarioDia, onUpdate: (HorarioDia) -> Unit) {
+    val apertura = schedule.horaApertura ?: "08:00"
+    val cierre = schedule.horaCierre ?: "20:00"
+    Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = SensusBackground), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = schedule.dia, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = schedule.estaCerrado,
+                        onCheckedChange = { onUpdate(schedule.copy(estaCerrado = it)) },
+                        colors = CheckboxDefaults.colors(checkedColor = SensusPurple)
                     )
-                    Text(
-                        text = "Al modificar la dirección física se recalcularán automáticamente las coordenadas espaciales.",
-                        fontSize = 12.sp,
-                        color = SensusTextSecondary
+                    Text(text = "Cerrado", fontSize = 12.sp, color = SensusTextSecondary)
+                }
+            }
+            if (!schedule.estaCerrado) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = apertura,
+                        onValueChange = { onUpdate(schedule.copy(horaApertura = it)) },
+                        label = { Text("Abre", fontSize = 11.sp) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        singleLine = true
                     )
-                }
-
-                item {
-                    Column {
-                        Text(
-                            text = "Nombre comercial",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SensusTextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = tempName,
-                            onValueChange = {
-                                tempName = it
-                                editError = null
-                            },
-                            placeholder = { Text("Nombre de la tienda") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                    }
-                }
-
-                item {
-                    Column {
-                        Text(
-                            text = "Dirección física del local",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SensusTextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = tempAddress,
-                            onValueChange = {
-                                tempAddress = it
-                                editError = null
-                            },
-                            placeholder = { Text("Calle, número y colonia") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                    }
-                }
-
-                item {
-                    Column {
-                        Text(
-                            text = "Código postal (5 dígitos)",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SensusTextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = tempPostalCode,
-                            onValueChange = {
-                                if (it.length <= 5 && it.all { char -> char.isDigit() }) {
-                                    tempPostalCode = it
-                                    editError = null
-                                }
-                            },
-                            placeholder = { Text("06000") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                    }
-                }
-
-                item {
-                    HorizontalDivider(color = Color(0xFFF1F5F9))
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Horarios de atención por día",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SensusTextPrimary
+                    OutlinedTextField(
+                        value = cierre,
+                        onValueChange = { onUpdate(schedule.copy(horaCierre = it)) },
+                        label = { Text("Cierra", fontSize = 11.sp) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        singleLine = true
                     )
-                }
-
-                items(tempSchedules) { schedule ->
-                    var apertura by remember { mutableStateOf(schedule.horaApertura ?: "08:00") }
-                    var cierre by remember { mutableStateOf(schedule.horaCierre ?: "20:00") }
-                    var cerrado by remember { mutableStateOf(schedule.estaCerrado) }
-
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = SensusBackground),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = schedule.dia,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = SensusTextPrimary
-                                )
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = cerrado,
-                                        onCheckedChange = {
-                                            cerrado = it
-                                            tempSchedules = tempSchedules.map { item ->
-                                                if (item.dia == schedule.dia) item.copy(estaCerrado = it) else item
-                                            }
-                                        },
-                                        colors = CheckboxDefaults.colors(checkedColor = SensusPurple)
-                                    )
-                                    Text(
-                                        text = "Cerrado",
-                                        fontSize = 12.sp,
-                                        color = SensusTextSecondary
-                                    )
-                                }
-                            }
-
-                            if (!cerrado) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    OutlinedTextField(
-                                        value = apertura,
-                                        onValueChange = {
-                                            apertura = it
-                                            tempSchedules = tempSchedules.map { item ->
-                                                if (item.dia == schedule.dia) item.copy(horaApertura = it) else item
-                                            }
-                                        },
-                                        label = { Text("Abre", fontSize = 11.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(10.dp),
-                                        singleLine = true
-                                    )
-                                    OutlinedTextField(
-                                        value = cierre,
-                                        onValueChange = {
-                                            cierre = it
-                                            tempSchedules = tempSchedules.map { item ->
-                                                if (item.dia == schedule.dia) item.copy(horaCierre = it) else item
-                                            }
-                                        },
-                                        label = { Text("Cierra", fontSize = 11.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(10.dp),
-                                        singleLine = true
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (editError != null) {
-                    item {
-                        Text(
-                            text = editError!!,
-                            fontSize = 12.sp,
-                            color = SensusRed
-                        )
-                    }
-                }
-
-                item {
-                    Button(
-                        onClick = {
-                            val trimmedAddr = tempAddress.trim()
-                            if (trimmedAddr.length !in 5..250) {
-                                editError = "La dirección debe tener entre 5 y 250 caracteres."
-                            } else if (tempPostalCode.length != 5) {
-                                editError = "El código postal debe tener exactamente 5 dígitos."
-                            } else {
-                                scope.launch {
-                                    isSaving = true
-                                    editError = null
-                                    when (val result = viewModel.updateMerchantProfileUseCase(
-                                        nombreComercial = tempName.trim(),
-                                        direccion = trimmedAddr,
-                                        codigoPostal = tempPostalCode,
-                                        horarios = tempSchedules
-                                    )) {
-                                        is Result.Success -> {
-                                            isSaving = false
-                                            val profile = result.data
-                                            storeName = profile.nombreComercial
-                                            storeAddress = profile.direccion
-                                            storePostalCode = profile.codigoPostal
-                                            scheduleList = profile.horarios
-                                            storeScheduleText = "Lun-Vie: 08:00 - 20:00 / Sáb: 09:00 - 18:00"
-                                            showEditSheet = false
-                                            updateSuccessMessage = "¡Datos del local actualizados exitosamente! Coordenadas espaciales recalculadas (, )."
-                                        }
-                                        is Result.Failure -> {
-                                            isSaving = false
-                                            editError = result.error.message
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        enabled = !isSaving,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        Text(
-                            text = if (isSaving) "Guardando..." else "Guardar cambios",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
                 }
             }
         }
     }
 }
+
+private fun validateMerchantDraft(draft: MerchantEditDraft): String? = when {
+    draft.address.trim().length !in MIN_ADDR_LEN..MAX_ADDR_LEN -> "La dirección debe tener entre 5 y 250 caracteres."
+    draft.postalCode.length != POSTAL_LEN -> "El código postal debe tener exactamente 5 dígitos."
+    else -> null
+}
+
+private fun defaultScheduleList(): List<HorarioDia> = listOf(
+    HorarioDia("Lunes", "08:00", "20:00", false),
+    HorarioDia("Martes", "08:00", "20:00", false),
+    HorarioDia("Miércoles", "08:00", "20:00", false),
+    HorarioDia("Jueves", "08:00", "20:00", false),
+    HorarioDia("Viernes", "08:00", "20:00", false),
+    HorarioDia("Sábado", "09:00", "18:00", false),
+    HorarioDia("Domingo", "00:00", "00:00", true)
+)

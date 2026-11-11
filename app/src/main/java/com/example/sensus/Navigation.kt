@@ -1,8 +1,9 @@
 package com.example.sensus
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,12 +12,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.sensus.presentation.root.AppScreen
-import com.example.sensus.presentation.root.AppViewIntent
-import com.example.sensus.presentation.root.AppViewModel
-import com.example.sensus.presentation.splash.SplashScreen
+import androidx.navigation3.runtime.EntryProviderScope
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
+import com.example.sensus.presentation.auth.LoginCallbacks
 import com.example.sensus.presentation.auth.LoginScreen
 import com.example.sensus.presentation.auth.OnboardingLocationScreen
 import com.example.sensus.presentation.auth.OtpVerificationScreen
@@ -24,15 +30,26 @@ import com.example.sensus.presentation.auth.RegisterScreen
 import com.example.sensus.presentation.auth.TermsScreen
 import com.example.sensus.presentation.main.MainAppContainer
 import com.example.sensus.presentation.modals.ForgotPasswordScreen
+import com.example.sensus.presentation.root.AppScreen
+import com.example.sensus.presentation.root.AppViewIntent
+import com.example.sensus.presentation.root.AppViewModel
+import com.example.sensus.presentation.root.AppViewState
+import com.example.sensus.presentation.splash.SplashScreen
+
+private const val TRANSITION_MILLIS = 350
+
+private val rootRoutes = setOf(
+    SensusRoute.Splash,
+    SensusRoute.Onboarding,
+    SensusRoute.Login,
+    SensusRoute.Main
+)
 
 @Composable
-fun MainNavigation(
-    initialDeepLinkResetToken: String? = null,
-    onResetTokenConsumed: () -> Unit = {},
-    appViewModel: AppViewModel = hiltViewModel()
-) {
+fun MainNavigation(initialDeepLinkResetToken: String? = null, onResetTokenConsumed: () -> Unit = {}, appViewModel: AppViewModel = hiltViewModel()) {
     val appState by appViewModel.viewState.collectAsState()
     var previousScreenBeforeTerms by rememberSaveable { mutableStateOf<AppScreen?>(null) }
+    val backStack = rememberNavBackStack(NavigationKeys.savedStateConfig, SensusRoute.Splash)
 
     LaunchedEffect(initialDeepLinkResetToken) {
         if (!initialDeepLinkResetToken.isNullOrBlank()) {
@@ -41,128 +58,163 @@ fun MainNavigation(
         }
     }
 
-    Crossfade(
-        targetState = appState.currentScreen,
-        animationSpec = tween(durationMillis = 350),
+    LaunchedEffect(appState.currentScreen) {
+        syncBackStack(backStack, appState.currentScreen.toRoute())
+    }
+
+    NavDisplay(
+        backStack = backStack,
         modifier = Modifier.fillMaxSize(),
-        label = "AppScreenTransition"
-    ) { screen ->
-        when (screen) {
-            AppScreen.SPLASH -> {
-                SplashScreen(
-                    onSplashFinished = {
-                        appViewModel.dispatchIntent(AppViewIntent.SplashFinished)
-                    }
-                )
+        transitionSpec = { fadeIn(tween(TRANSITION_MILLIS)) togetherWith fadeOut(tween(TRANSITION_MILLIS)) },
+        popTransitionSpec = { fadeIn(tween(TRANSITION_MILLIS)) togetherWith fadeOut(tween(TRANSITION_MILLIS)) },
+        onBack = {
+            resolveBackScreen(appState.currentScreen, previousScreenBeforeTerms)?.let { target ->
+                appViewModel.dispatchIntent(AppViewIntent.NavigateTo(target))
             }
-            AppScreen.ONBOARDING -> {
-                OnboardingLocationScreen(
-                    onPermissionGranted = {
-                        appViewModel.dispatchIntent(AppViewIntent.LocationPermissionSet(true))
-                    },
-                    onManualLocationSelected = {
-                        appViewModel.dispatchIntent(AppViewIntent.LocationPermissionSet(false))
-                    }
-                )
+        },
+        entryProvider = buildSensusEntryProvider(
+            appState = appState,
+            previousScreenBeforeTerms = previousScreenBeforeTerms,
+            onSetPreviousTermsScreen = { previousScreenBeforeTerms = it },
+            onIntent = appViewModel::dispatchIntent
+        )
+    )
+}
+
+private fun syncBackStack(backStack: NavBackStack<NavKey>, target: SensusRoute) {
+    if (backStack.lastOrNull() == target) return
+    Snapshot.withMutableSnapshot {
+        if (target in rootRoutes) {
+            backStack[0] = target
+            while (backStack.size > 1) {
+                backStack.removeAt(backStack.lastIndex)
             }
-            AppScreen.LOGIN -> {
-                LoginScreen(
-                    onLoginSuccess = {
-                        if (appState.hasAcceptedTerms) {
-                            appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))
-                        } else {
-                            previousScreenBeforeTerms = AppScreen.LOGIN
-                            appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-                        }
-                    },
-                    onNavigateToRegister = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.REGISTER))
-                    },
-                    onNavigateToOtp = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.OTP))
-                    },
-                    onContinueAsGuest = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))
-                    },
-                    onForgotPassword = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.FORGOT_PASSWORD))
-                    }
-                )
-            }
-            AppScreen.REGISTER -> {
-                RegisterScreen(
-                    onRegisterSuccess = {
-                        if (appState.hasAcceptedTerms) {
-                            appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))
-                        } else {
-                            previousScreenBeforeTerms = AppScreen.REGISTER
-                            appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-                        }
-                    },
-                    onNavigateToLogin = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN))
-                    },
-                    onNavigateToTerms = {
-                        previousScreenBeforeTerms = AppScreen.REGISTER
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-                    }
-                )
-            }
-            AppScreen.OTP -> {
-                BackHandler { appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) }
-                OtpVerificationScreen(
-                    onVerifySuccess = {
-                        if (appState.hasAcceptedTerms) {
-                            appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))
-                        } else {
-                            previousScreenBeforeTerms = AppScreen.OTP
-                            appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-                        }
-                    },
-                    onNavigateBack = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN))
-                    }
-                )
-            }
-            AppScreen.FORGOT_PASSWORD -> {
-                BackHandler {
-                    appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN))
+        } else {
+            val existingIndex = backStack.indexOf(target)
+            if (existingIndex >= 0) {
+                while (backStack.lastIndex > existingIndex) {
+                    backStack.removeAt(backStack.lastIndex)
                 }
-                ForgotPasswordScreen(
-                    initialToken = appState.activeResetToken,
-                    onNavigateBack = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN))
-                    },
-                    onPasswordResetSuccess = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN))
-                    }
-                )
-            }
-            AppScreen.TERMS -> {
-                BackHandler {
-                    appViewModel.dispatchIntent(AppViewIntent.NavigateTo(previousScreenBeforeTerms ?: AppScreen.LOGIN))
-                }
-                TermsScreen(
-                    onTermsAccepted = {
-                        appViewModel.dispatchIntent(AppViewIntent.TermsAccepted(true))
-                    },
-                    onNavigateBack = {
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(previousScreenBeforeTerms ?: AppScreen.LOGIN))
-                    }
-                )
-            }
-            AppScreen.MAIN -> {
-                MainAppContainer(
-                    isGuest = appState.isGuest,
-                    onLogout = {
-                        appViewModel.dispatchIntent(AppViewIntent.Logout)
-                    },
-                    onNavigateToTerms = {
-                        previousScreenBeforeTerms = AppScreen.MAIN
-                        appViewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-                    }
-                )
+            } else {
+                backStack.add(target)
             }
         }
+    }
+}
+
+private fun resolveBackScreen(current: AppScreen, previousBeforeTerms: AppScreen?): AppScreen? = when (current) {
+    AppScreen.OTP, AppScreen.FORGOT_PASSWORD, AppScreen.REGISTER -> AppScreen.LOGIN
+    AppScreen.TERMS -> previousBeforeTerms ?: AppScreen.LOGIN
+    else -> null
+}
+
+private fun buildSensusEntryProvider(
+    appState: AppViewState,
+    previousScreenBeforeTerms: AppScreen?,
+    onSetPreviousTermsScreen: (AppScreen) -> Unit,
+    onIntent: (AppViewIntent) -> Unit
+): (NavKey) -> NavEntry<NavKey> = entryProvider {
+    registerOnboardingEntries(onIntent)
+    registerAuthEntries(appState, onSetPreviousTermsScreen, onIntent)
+    registerSecondaryEntries(appState, previousScreenBeforeTerms, onIntent)
+    registerMainEntry(appState, onSetPreviousTermsScreen, onIntent)
+}
+
+private fun EntryProviderScope<NavKey>.registerOnboardingEntries(onIntent: (AppViewIntent) -> Unit) {
+    entry<SensusRoute.Splash> {
+        SplashScreen(onSplashFinished = { onIntent(AppViewIntent.SplashFinished) })
+    }
+    entry<SensusRoute.Onboarding> {
+        OnboardingLocationScreen(
+            onPermissionGranted = { onIntent(AppViewIntent.LocationPermissionSet(true)) },
+            onManualLocationSelected = { onIntent(AppViewIntent.LocationPermissionSet(false)) }
+        )
+    }
+}
+
+private fun EntryProviderScope<NavKey>.registerAuthEntries(
+    appState: AppViewState,
+    onSetPreviousTermsScreen: (AppScreen) -> Unit,
+    onIntent: (AppViewIntent) -> Unit
+) {
+    entry<SensusRoute.Login> {
+        LoginScreen(
+            callbacks = LoginCallbacks(
+                onLoginSuccess = {
+                    navigateAfterAuth(AppScreen.LOGIN, appState.hasAcceptedTerms, onSetPreviousTermsScreen, onIntent)
+                },
+                onNavigateToRegister = { onIntent(AppViewIntent.NavigateTo(AppScreen.REGISTER)) },
+                onNavigateToOtp = { onIntent(AppViewIntent.NavigateTo(AppScreen.OTP)) },
+                onContinueAsGuest = { onIntent(AppViewIntent.NavigateTo(AppScreen.MAIN)) },
+                onForgotPassword = { onIntent(AppViewIntent.NavigateTo(AppScreen.FORGOT_PASSWORD)) }
+            )
+        )
+    }
+    entry<SensusRoute.Register> {
+        RegisterScreen(
+            onRegisterSuccess = {
+                navigateAfterAuth(AppScreen.REGISTER, appState.hasAcceptedTerms, onSetPreviousTermsScreen, onIntent)
+            },
+            onNavigateToLogin = { onIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) },
+            onNavigateToTerms = {
+                onSetPreviousTermsScreen(AppScreen.REGISTER)
+                onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
+            }
+        )
+    }
+}
+
+private fun EntryProviderScope<NavKey>.registerSecondaryEntries(
+    appState: AppViewState,
+    previousScreenBeforeTerms: AppScreen?,
+    onIntent: (AppViewIntent) -> Unit
+) {
+    entry<SensusRoute.Otp> {
+        OtpVerificationScreen(
+            onVerifySuccess = {
+                val target = if (appState.hasAcceptedTerms) AppScreen.MAIN else AppScreen.TERMS
+                onIntent(AppViewIntent.NavigateTo(target))
+            },
+            onNavigateBack = { onIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) }
+        )
+    }
+    entry<SensusRoute.ForgotPassword> {
+        ForgotPasswordScreen(
+            initialToken = appState.activeResetToken,
+            onNavigateBack = { onIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) },
+            onPasswordResetSuccess = { onIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) }
+        )
+    }
+    entry<SensusRoute.Terms> {
+        TermsScreen(
+            onTermsAccepted = { onIntent(AppViewIntent.TermsAccepted(true)) },
+            onNavigateBack = { onIntent(AppViewIntent.NavigateTo(previousScreenBeforeTerms ?: AppScreen.LOGIN)) }
+        )
+    }
+}
+
+private fun EntryProviderScope<NavKey>.registerMainEntry(
+    appState: AppViewState,
+    onSetPreviousTermsScreen: (AppScreen) -> Unit,
+    onIntent: (AppViewIntent) -> Unit
+) {
+    entry<SensusRoute.Main> {
+        MainAppContainer(
+            isGuest = appState.isGuest,
+            onLogout = { onIntent(AppViewIntent.Logout) },
+            onNavigateToTerms = {
+                onSetPreviousTermsScreen(AppScreen.MAIN)
+                onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
+            }
+        )
+    }
+}
+
+private fun navigateAfterAuth(origin: AppScreen, hasAcceptedTerms: Boolean, onSetPreviousTermsScreen: (AppScreen) -> Unit, onIntent: (AppViewIntent) -> Unit) {
+    if (hasAcceptedTerms) {
+        onIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))
+    } else {
+        onSetPreviousTermsScreen(origin)
+        onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
     }
 }

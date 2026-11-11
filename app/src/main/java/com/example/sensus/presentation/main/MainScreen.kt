@@ -6,9 +6,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.sensus.theme.SensusTheme
 
 @Composable
-fun MainScreen(
-    modifier: Modifier = Modifier
-) {
+fun MainScreen(modifier: Modifier = Modifier) {
     MainAppContainer(modifier = modifier)
 }
 

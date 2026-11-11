@@ -6,6 +6,7 @@ import com.example.sensus.data.local.SessionType
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
+import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,7 @@ class SessionRepositoryImpl(
     private val userSessionDao: UserSessionDao? = null,
     private val pendingSyncDao: PendingSyncDao? = null,
     private val offerDao: OfferDao? = null,
-    private val authApiService: com.example.sensus.data.remote.api.AuthApiService? = null
+    private val authApiService: AuthApiService? = null
 ) : SessionRepository {
 
     private val _sessionState = MutableStateFlow(buildCurrentState())
@@ -28,36 +29,31 @@ class SessionRepositoryImpl(
         val token = securePreferences.getAuthToken()?.takeIf { it.isNotBlank() }
         val sessionType = securePreferences.getSessionType()
         val hasToken = token != null
-
-        val isGuestPref = hasToken && sessionType == SessionType.GUEST
-        val isRegisteredPref = hasToken && sessionType == SessionType.REGISTERED
         val isLegacyManager = !hasToken && sessionType == SessionType.UNAUTHENTICATED && SensusAuthManager.isSessionActive
+        val isGuest = (hasToken && sessionType == SessionType.GUEST) || (isLegacyManager && SensusAuthManager.isGuestUser)
+        val isActive = isGuest || (hasToken && sessionType == SessionType.REGISTERED) || isLegacyManager
 
-        val isActive = isGuestPref || isRegisteredPref || isLegacyManager
-        val isGuest = isGuestPref || (isLegacyManager && SensusAuthManager.isGuestUser)
-        val email = when {
-            !isActive -> null
-            isGuest -> "invitado@sensus.app"
-            else -> securePreferences.getUserEmail()?.takeIf { it.isNotBlank() } ?: SensusAuthManager.currentUser?.email
-        }
-        val name = when {
-            !isActive -> null
-            isGuest -> "Invitado Sensus"
-            else -> securePreferences.getUserName()?.takeIf { it.isNotBlank() } ?: SensusAuthManager.currentUser?.name
-        }
-        val photoUrl = if (!isActive || isGuest) null else securePreferences.getUserPhoto()
-
+        val identity = resolveSessionIdentity(isActive, isGuest)
         return SessionState(
             isSessionActive = isActive,
             isGuest = isGuest,
             hasAcceptedTerms = SensusAuthManager.hasAcceptedTerms,
             hasLocationPermission = SensusAuthManager.hasLocationPermission,
             hasCompletedSplash = SensusAuthManager.hasCompletedSplash,
-            activeEmail = email,
-            activeName = name,
-            activePhotoUrl = photoUrl,
+            activeEmail = identity.first,
+            activeName = identity.second,
+            activePhotoUrl = identity.third,
             activeToken = token
         )
+    }
+
+    private fun resolveSessionIdentity(isActive: Boolean, isGuest: Boolean): Triple<String?, String?, String?> {
+        if (!isActive) return Triple(null, null, null)
+        if (isGuest) return Triple("invitado@sensus.app", "Invitado Sensus", null)
+        val email = securePreferences.getUserEmail()?.takeIf { it.isNotBlank() } ?: SensusAuthManager.currentUser?.email
+        val name = securePreferences.getUserName()?.takeIf { it.isNotBlank() } ?: SensusAuthManager.currentUser?.name
+        val photoUrl = securePreferences.getUserPhoto()
+        return Triple(email, name, photoUrl)
     }
 
     private fun syncState() {

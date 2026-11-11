@@ -2,11 +2,26 @@ package com.example.sensus.data.local.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.sensus.data.local.security.DatabaseKeyManager
 import net.sqlcipher.database.SupportFactory
 
 object DatabaseFactory {
     private const val DATABASE_NAME = "sensus_encrypted.db"
+
+    val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `user_preferences` (" +
+                    "`prefKey` TEXT NOT NULL, " +
+                    "`prefValue` TEXT, " +
+                    "`updatedAt` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`prefKey`)" +
+                    ")"
+            )
+        }
+    }
 
     @Volatile
     private var instance: SensusDatabase? = null
@@ -27,6 +42,7 @@ object DatabaseFactory {
             DATABASE_NAME
         )
             .openHelperFactory(factory)
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 }

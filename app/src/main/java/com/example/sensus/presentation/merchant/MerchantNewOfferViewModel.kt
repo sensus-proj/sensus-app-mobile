@@ -1,6 +1,5 @@
 package com.example.sensus.presentation.merchant
 
-import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel

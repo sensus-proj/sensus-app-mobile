@@ -1,7 +1,10 @@
 package com.example.sensus.presentation
 
+import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
+import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
+import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.presentation.root.AppScreen
 import com.example.sensus.presentation.root.AppViewIntent
 import com.example.sensus.presentation.root.AppViewModel
@@ -25,13 +28,18 @@ class AppViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var sessionRepository: SessionRepository
+    private lateinit var logoutUseCase: LogoutUseCase
+    private lateinit var getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase
     private val sessionFlow = MutableStateFlow(SessionState())
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         sessionRepository = mockk(relaxed = true)
+        logoutUseCase = mockk(relaxed = true)
+        getPreferredMapLayerUseCase = mockk(relaxed = true)
         coEvery { sessionRepository.sessionState } returns sessionFlow
+        coEvery { getPreferredMapLayerUseCase() } returns MapLayer.STANDARD
     }
 
     @After
@@ -40,8 +48,16 @@ class AppViewModelTest {
     }
 
     @Test
+    fun init_prewarmsPreferredMapLayerUseCase() = runTest {
+        AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { getPreferredMapLayerUseCase() }
+    }
+
+    @Test
     fun splashFinished_navigatesToOnboarding_whenNoLocationPermission() = runTest {
-        val viewModel = AppViewModel(sessionRepository)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.dispatchIntent(AppViewIntent.SplashFinished)
@@ -53,7 +69,7 @@ class AppViewModelTest {
 
     @Test
     fun deepLinkReceived_navigatesToForgotPassword() = runTest {
-        val viewModel = AppViewModel(sessionRepository)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.dispatchIntent(AppViewIntent.DeepLinkReceived("token123"))
@@ -65,7 +81,7 @@ class AppViewModelTest {
 
     @Test
     fun locationPermissionSet_navigatesToLogin() = runTest {
-        val viewModel = AppViewModel(sessionRepository)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.dispatchIntent(AppViewIntent.LocationPermissionSet(true))
@@ -77,20 +93,20 @@ class AppViewModelTest {
 
     @Test
     fun logout_clearsSession_andNavigatesToLogin() = runTest {
-        val viewModel = AppViewModel(sessionRepository)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.dispatchIntent(AppViewIntent.Logout)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 1) { sessionRepository.clearSession() }
+        coVerify(exactly = 1) { logoutUseCase() }
         assertEquals(AppScreen.LOGIN, viewModel.viewState.value.currentScreen)
     }
 
     @Test
     fun sessionDroppedInMain_redirectsToLogin() = runTest {
         sessionFlow.value = SessionState(isSessionActive = true, isGuest = false, hasAcceptedTerms = true)
-        val viewModel = AppViewModel(sessionRepository)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.dispatchIntent(AppViewIntent.NavigateTo(AppScreen.MAIN))

@@ -6,13 +6,15 @@ import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import java.util.concurrent.TimeUnit
+
+private const val TIMEOUT_SECONDS = 15L
 
 class NetworkClient(
     private val securePreferences: SecurePreferences,
@@ -21,7 +23,7 @@ class NetworkClient(
 ) {
 
     companion object {
-        // Apunta al backend en AWS EC2 con SSL (HTTPS)
+        // Apunta al backend oficial en AWS API Gateway / Lambda (.NET 10)
         const val DEFAULT_BASE_URL = "https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/"
     }
 
@@ -37,9 +39,9 @@ class NetworkClient(
     }
 
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .addInterceptor(AuthInterceptor(securePreferences, onUnauthorized))
         .addInterceptor(loggingInterceptor)
         .build()

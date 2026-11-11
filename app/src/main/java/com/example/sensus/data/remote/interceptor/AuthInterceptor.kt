@@ -4,6 +4,8 @@ import com.example.sensus.data.local.SecurePreferences
 import okhttp3.Interceptor
 import okhttp3.Response
 
+private const val HTTP_UNAUTHORIZED = 401
+
 class AuthInterceptor(
     private val securePreferences: SecurePreferences,
     private val onUnauthorizedCallback: (() -> Unit)? = null
@@ -26,7 +28,7 @@ class AuthInterceptor(
             path.endsWith("/auth/register") ||
             path.endsWith("/auth/guest")
 
-        if (response.code == 401 && !isPublicAuthRoute) {
+        if (response.code == HTTP_UNAUTHORIZED && !isPublicAuthRoute) {
             securePreferences.clearAll()
             onUnauthorizedCallback?.invoke()
         }

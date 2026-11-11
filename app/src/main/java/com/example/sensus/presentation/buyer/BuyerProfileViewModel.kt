@@ -6,17 +6,19 @@ import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
+import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class BuyerProfileViewModel @Inject constructor(
     val profileRepository: ProfileRepository,
     val updateProfileUseCase: UpdateProfileUseCase,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val logoutUseCase: LogoutUseCase
 ) : MviViewModel<BuyerProfileViewState, BuyerProfileViewIntent, BuyerProfileViewEffect>(BuyerProfileViewState()) {
 
     private var lastLoadedSessionKey: String? = null
@@ -67,8 +69,8 @@ class BuyerProfileViewModel @Inject constructor(
                 }
 
                 val hasRegisteredHint = session.isSessionActive ||
-                        !session.activeEmail.isNullOrBlank() ||
-                        !session.activeToken.isNullOrBlank()
+                    !session.activeEmail.isNullOrBlank() ||
+                    !session.activeToken.isNullOrBlank()
 
                 if (!hasRegisteredHint) {
                     lastLoadedSessionKey = null
@@ -104,6 +106,7 @@ class BuyerProfileViewModel @Inject constructor(
         when (intent) {
             is BuyerProfileViewIntent.LoadProfile -> loadProfile()
             is BuyerProfileViewIntent.UpdateName -> updateName(intent.newName)
+            is BuyerProfileViewIntent.Logout -> performLogout()
         }
     }
 
@@ -152,6 +155,12 @@ class BuyerProfileViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    private fun performLogout() {
+        viewModelScope.launch {
+            logoutUseCase()
         }
     }
 

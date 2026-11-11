@@ -2,14 +2,29 @@ package com.example.sensus.domain.model
 
 import java.util.Locale
 
+private const val DEFAULT_COLLECT_MINUTES = 45
+private const val DEFAULT_RATING = 4.8
+private const val DEFAULT_MERCHANT_RATING = 4.9
+private const val DEFAULT_REVIEW_COUNT = 120
+private const val DEFAULT_LAT = 20.0545
+private const val DEFAULT_LNG = -99.3420
+private const val METERS_PER_KM = 1000
+private const val METERS_PER_KM_DOUBLE = 1000.0
+private const val COUPON_SUFFIX_LENGTH = 4
+private const val RANDOM_CART_MIN = 1000
+private const val RANDOM_CART_MAX = 9999
+private const val DEFAULT_ACTIVE_OFFERS = 12
+private const val DEFAULT_RECOVERED_TODAY = 480.0
+private const val DEFAULT_REDEEMED_TODAY = 12
+
 enum class StoreCategory(val displayName: String) {
     ALL("Todo"),
     GROCERY("Abarrotes"),
     CLEANING("Limpieza y Hogar"),
     PERISHABLES("Perecederos"),
-    DAIRY("Lǭcteos"),
+    DAIRY("Lácteos"),
     FOOD("Comida"),
-    BAKERY("Panadera"),
+    BAKERY("Panadería"),
     BEVERAGES("Bebidas"),
     PETS("Mascotas"),
     PHARMACY("Farmacia")
@@ -25,21 +40,26 @@ data class ProductOffer(
     val discountPercent: Int,
     val unitsLeft: Int,
     val distanceMeters: Int,
-    val timeToCollectMinutes: Int = 45,
-    val rating: Double = 4.8,
-    val reviewCount: Int = 120,
-    val address: String = "Av. Juǭrez 120, Centro",
+    val timeToCollectMinutes: Int = DEFAULT_COLLECT_MINUTES,
+    val rating: Double = DEFAULT_RATING,
+    val reviewCount: Int = DEFAULT_REVIEW_COUNT,
+    val address: String = "Av. Juárez 120, Centro",
     val couponCode: String = "SNS-A7K9-24",
     val isVerified: Boolean = true,
-    val latitude: Double = 20.0545,
-    val longitude: Double = -99.3420,
+    val latitude: Double = DEFAULT_LAT,
+    val longitude: Double = DEFAULT_LNG,
     val postalCode: String = "",
-    val description: String = "Excedente de inventario en perfecto estado con empaque sellado de fábrica. Calidad y ahorro garantizados.",
+    val description: String =
+        "Excedente de inventario en perfecto estado con empaque sellado de fábrica. Calidad y ahorro garantizados.",
     val expirationDate: String = "Hoy 20:00 hrs",
     val imageUrl: String? = null
 ) {
     val formattedDistance: String
-        get() = if (distanceMeters < 1000) "${distanceMeters} m" else String.format(Locale.US, "%.1f km", distanceMeters / 1000.0)
+        get() = if (distanceMeters < METERS_PER_KM) {
+            "$distanceMeters m"
+        } else {
+            String.format(Locale.US, "%.1f km", distanceMeters / METERS_PER_KM_DOUBLE)
+        }
 
     val savedAmount: Double
         get() = originalPrice - discountPrice
@@ -93,13 +113,13 @@ data class ApartadoOrder(
     val totalOriginalPrice: Double,
     val totalDiscountPrice: Double,
     val totalSavedAmount: Double,
-    val timeToCollectMinutes: Int = 45
+    val timeToCollectMinutes: Int = DEFAULT_COLLECT_MINUTES
 ) {
     companion object {
         fun fromSingleOffer(offer: ProductOffer, quantity: Int): ApartadoOrder {
             val item = CartItem(offer, quantity)
             val coupon = if (quantity > 1) {
-                "SNS-${quantity}X-${offer.couponCode.takeLast(4)}"
+                "SNS-${quantity}X-${offer.couponCode.takeLast(COUPON_SUFFIX_LENGTH)}"
             } else {
                 offer.couponCode
             }
@@ -119,9 +139,9 @@ data class ApartadoOrder(
         }
 
         fun fromCart(cart: StoreCart): ApartadoOrder {
-            require(!cart.isEmpty) { "El carrito no puede estar vaco" }
+            require(!cart.isEmpty) { "El carrito no puede estar vacío" }
             val firstOffer = cart.items.first().offer
-            val randomSuffix = (1000..9999).random()
+            val randomSuffix = (RANDOM_CART_MIN..RANDOM_CART_MAX).random()
             return ApartadoOrder(
                 id = "order_${System.currentTimeMillis()}",
                 storeName = cart.storeName ?: firstOffer.storeName,
@@ -133,7 +153,7 @@ data class ApartadoOrder(
                 totalOriginalPrice = cart.totalOriginalPrice,
                 totalDiscountPrice = cart.totalDiscountPrice,
                 totalSavedAmount = cart.totalSavedAmount,
-                timeToCollectMinutes = 45
+                timeToCollectMinutes = DEFAULT_COLLECT_MINUTES
             )
         }
     }
@@ -143,16 +163,16 @@ data class MerchantStore(
     val name: String = "Bodega A. - Centro",
     val category: String = "Abarrotes y Limpieza",
     val isOpen: Boolean = true,
-    val rating: Double = 4.9,
-    val reviewCount: Int = 120,
-    val activeOffersCount: Int = 12,
-    val recoveredMoneyToday: Double = 480.0,
-    val redeemedTodayCount: Int = 12,
-    val address: String = "Direccin: Av. Universidad 412, Tula de Allende, Hgo.",
-    val schedule: String = "Horarios: Lun - Sǭb 09:00 - 20:00",
+    val rating: Double = DEFAULT_MERCHANT_RATING,
+    val reviewCount: Int = DEFAULT_REVIEW_COUNT,
+    val activeOffersCount: Int = DEFAULT_ACTIVE_OFFERS,
+    val recoveredMoneyToday: Double = DEFAULT_RECOVERED_TODAY,
+    val redeemedTodayCount: Int = DEFAULT_REDEEMED_TODAY,
+    val address: String = "Dirección: Av. Universidad 412, Tula de Allende, Hgo.",
+    val schedule: String = "Horarios: Lun - Sáb 09:00 - 20:00",
     val phone: String = "+52 55 1234 5678",
-    val latitude: Double = 20.0545,
-    val longitude: Double = -99.3420,
+    val latitude: Double = DEFAULT_LAT,
+    val longitude: Double = DEFAULT_LNG,
     val postalCode: String = ""
 )
 
@@ -170,7 +190,7 @@ data class NotificationItem(
     val title: String,
     val message: String,
     val timeAgo: String,
-    val category: String, // "Ofertas", "Reservas", "Seguridad"
+    val category: String,
     val actionText: String? = null
 )
 

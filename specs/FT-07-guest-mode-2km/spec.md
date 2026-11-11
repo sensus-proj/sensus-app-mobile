@@ -1,104 +1,99 @@
 # SPEC — FT-07 Modo Invitado y Filtro de 2 km
 
 > Rector: `.specify/memory/constitution.md` §2, §4, §5 y §10. Plantilla: `.specify/templates/spec-template.md`.
-> Historia: **SE-008**.
+> Historia: **SE-008**. Conciliada en **FT-10** (2026-11-11) contra la arquitectura real del código.
 
 ## 1. Contexto y objetivo
 
-`ui/auth/OnboardingLocationScreen.kt` permite continuar como invitado, pero `BuyerMapScreen`, `BuyerHomeScreen` y `RadiusSelectorModal` usan radios simulados de 0.5 a 5.0 km sin restriccion por sesion. Un invitado podria ver ofertas fuera de su zona o acceder a funciones que requieren cuenta.
+La app permite explorar ofertas cercanas sin cuenta mediante Modo Invitado (`StartGuestSessionUseCase`). Para proteger el modelo de negocio y el acceso gradual, el invitado tiene un límite estricto de radio de **2 km (2000 m)** (frente al rango personalizado de **50 m a 5000 m** para usuarios autenticados) y bloqueo explícito en acciones que requieren cuenta.
 
-**Objetivo:** definir el modo invitado con **filtro estricto de 2000 metros** y bloqueo de favoritos, comunidad y publicacion de ofertas.
+**Objetivo:** definir el modo invitado con **filtro estricto de 2000 metros** (`GuestRadiusPolicy`) y bloqueo explícito de favoritos, comunidad, reservas, chat y ampliación de radio.
 
-**Alcance:** entrada como invitado, filtro de radio fijo, bloqueo de acciones autenticadas, invitacion a iniciar sesion y cache local de ofertas cercanas.
-**Fuera de alcance:** login (FT-04), perfiles (FT-06), borrado de cuenta (FT-08).
+**Alcance:** entrada como invitado (`POST /api/v1/auth/guest`), política de radio en dominio (`GuestRadiusPolicy`), reutilización de `BuyerMapScreen`/`BuyerHomeScreen`, diálogo único `GuestPromptDialog`, validación de radio en selector y limpieza al iniciar sesión.
+**Fuera de alcance:** login/registro (FT-04), perfiles (FT-06), borrado de cuenta (FT-08), integración paginada de ofertas remotas (FT-11).
 
 ## 2. Requisitos funcionales
 
 | ID | Requisito |
 |---|---|
-| RF-07-01 | Desde la bienvenida, `Continuar como invitado` navega a `BuyerMapScreen` sin crear sesion. |
-| RF-07-02 | En modo invitado el radio es **exactamente 2000 m**; `RadiusSelectorModal` no permite cambiarlo. |
-| RF-07-03 | El repositorio aplica el filtro `distance <= 2000` en la consulta, no solo en la UI. |
-| RF-07-04 | Favoritos, Comunidad y Publicar oferta estan bloqueados con dialogo `Inicia sesion para continuar`. |
-| RF-07-05 | `BuyerHomeScreen` muestra solo ofertas dentro de 2000 m. |
-| RF-07-06 | El invitado no puede acceder a `MerchantDashboard` ni a rutas de comercio. |
-| RF-07-07 | Al iniciar sesion, el radio vuelve al valor por defecto del rol. |
-| RF-07-08 | El modo invitado no persiste tokens ni datos de cuenta. |
-| RF-07-09 | `GET /api/offers/nearby` recibe `center` y `radiusMeters`; en invitado el backend exige `radiusMeters=2000`. |
+| RF-07-01 | Desde Login, `Explorar como invitado` crea sesión temporal con `StartGuestSessionUseCase` y navega a `MAIN` (`BuyerMapScreen`). |
+| RF-07-02 | En modo invitado el radio máximo es **2000 m** (`GuestRadiusPolicy.GUEST_MAX_RADIUS_KM = 2.0f`); el rango general soporta `50 m` (`MIN_RADIUS_METERS = 50`) a `5000 m`. |
+| RF-07-03 | `GuestRadiusPolicy` normaliza y valida el radio tanto en dominio como en `BuyerMapViewModel` y `BuyerHomeViewModel`. |
+| RF-07-04 | Favoritos, Comunidad, Apartados, Chat Sensi, Ruteo y radios > 2 km muestran `GuestPromptDialog` (`Inicia sesión para continuar`). |
+| RF-07-05 | `BuyerHomeScreen` y `BuyerMapScreen` filtran las ofertas al radio permitido y muestran aviso de modo invitado. |
+| RF-07-06 | El invitado no puede acceder a rutas de comercio ni perfil comercial (`BuyerProfileViewModel` muestra perfil temporal de solo lectura). |
+| RF-07-07 | Al iniciar sesión registrada, `SessionRepository` descarta el estado invitado y habilita el rango completo de `50 m` a `5 km`. |
+| RF-07-08 | El modo invitado almacena únicamente el token JWT temporal de invitado en `SecurePreferences` y ningún dato personal de cuenta. |
+| RF-07-09 | `POST /api/v1/auth/guest` emite el token con límite `maxRadiusMeters = 2000`; `GET /api/offers/nearby` (migrado a `GET /api/v1/offers/nearby` en FT-11) recibe centro y `radiusMeters`. |
 
 ### Historia
 
 | ID | Historia | Criterio |
 |---|---|---|
-| SE-008 | Como visitante quiero explorar ofertas cercanas sin registrarme. | Ve solo ofertas a ≤2000 m y las acciones que requieren cuenta le piden iniciar sesion. |
+| SE-008 | Como visitante quiero explorar ofertas cercanas sin registrarme. | Ve solo ofertas dentro de ≤ 2000 m y las acciones que requieren cuenta muestran `GuestPromptDialog`. |
 
 ## 3. Requisitos no funcionales
 
-- **Privacidad:** el invitado no envia `userId` ni token; solo coordenadas aproximadas.
-- **Consistencia:** el filtro se aplica en repositorio y en backend; la UI no es autoridad.
-- **UX:** el bloqueo es explicito, no silencioso; un solo dialogo reutilizable.
-- **Rendimiento:** la consulta de cercania usa indice espacial; sin traer todo el catalogo.
-- **Design System:** morado de marca; sin amarillos ni emojis.
+- **Privacidad:** el invitado no envía `userId` ni PII; solo coordenadas locales con consentimiento.
+- **Consistencia:** la regla reside en `GuestRadiusPolicy` (capa `domain/`), verificada por `BuyerMapViewModel`, `BuyerHomeViewModel` y backend.
+- **UX:** bloqueo explícito con un único diálogo reutilizable (`GuestPromptDialog`); selector `RadiusSelectorBottomSheet` informa el tope de 2 km.
+- **Rendimiento:** cálculo geodésico local en `OsmMapUtils.localizeAndMeasureOffers` y consulta espacial preparada para FT-11.
+- **Design System:** morado de marca (`SensusPurple`); cero amarillos ni emojis.
 
-## 4. Arquitectura y contratos internos
+## 4. Arquitectura y contratos internos (conciliada con el código real)
 
+```text
+domain/
+  model/GuestRadiusPolicy.kt           # MIN_RADIUS_METERS = 50, MAX_REGISTERED_RADIUS_METERS = 5000, GUEST_MAX_RADIUS_KM = 2.0f
+  usecase/StartGuestSessionUseCase.kt  # Consume POST /api/v1/auth/guest y guarda SessionType.GUEST
+  repository/SessionRepository.kt      # Expone SessionState (isSessionActive, isGuest)
+
+data/
+  remote/api/AuthApiService.kt         # @POST("api/v1/auth/guest")
+  repository/SessionRepositoryImpl.kt  # Fuente única de verdad reactiva + SecurePreferences
+
+presentation/
+  buyer/BuyerMapScreen.kt              # Reutiliza mapa OSMDroid con tope 2 km para invitado
+  buyer/BuyerMapViewModel.kt           # Aplica GuestRadiusPolicy y emite RequireAuthForRadius
+  buyer/BuyerHomeScreen.kt             # Feed filtrado reutilizando BuyerHomeViewModel
+  common/RadiusSelectorModal.kt        # Selector personalizado 50 m - 5 km con restricción invitado
+  modals/GuestPromptDialog.kt          # Diálogo único para acciones protegidas
 ```
-presentation/guest/
-├── GuestMapScreen.kt
-├── GuestHomeScreen.kt
-└── GuestModeViewModel.kt
 
-domain/guest/
-├── model/GuestSession.kt
-├── repository/GuestOfferRepository.kt
-└── usecase/{EnterGuestModeUseCase,GetNearbyOffersUseCase}.kt
-
-data/guest/
-├── remote/GuestOfferApi.kt
-└── repository/GuestOfferRepositoryImpl.kt
-
-presentation/common/
-└── RadiusSelectorModal.kt        # bloqueado en invitado
-```
-
-Contrato:
+Contrato efectivo en dominio:
 
 ```kotlin
-data class GuestSession(val center: GeoPoint, val radiusMeters: Int = 2000)
+object GuestRadiusPolicy {
+    const val MIN_RADIUS_METERS: Int = 50
+    const val GUEST_MAX_RADIUS_KM: Float = 2.0f
+    const val REGISTERED_MAX_RADIUS_KM: Float = 5.0f
 
-interface GuestOfferRepository {
-    suspend fun nearby(center: GeoPoint, radiusMeters: Int): Result<List<Offer>>
+    fun isRadiusAllowedForGuest(radiusKm: Float): Boolean
+    fun clampRadius(radiusKm: Float, isGuest: Boolean): Float
 }
 ```
 
-Regla dura: `radiusMeters` se valida en el caso de uso; si el modo es invitado y el valor no es `2000`, se normaliza a `2000`.
-
 ## 5. Criterios de aceptacion
 
-- **Given** un invitado en el mapa **When** abre el selector de radio **Then** ve 2 km fijo y no puede cambiarlo.
-- **Given** ofertas a 2.5 km **When** el invitado carga el feed **Then** no aparecen.
-- **Given** un invitado **When** pulsa Favoritos, Comunidad o Publicar **Then** se muestra `Inicia sesion para continuar`.
-- **Given** un invitado **When** intenta abrir `MerchantDashboard` **Then** se le redirige a login.
-- **Given** un invitado que inicia sesion **When** entra **Then** el radio vuelve al valor del rol.
+- **Given** un invitado en el mapa **When** intenta seleccionar un radio mayor a `2000 m` **Then** `BuyerMapViewModel` fija `2.0f km` y muestra `GuestPromptDialog`.
+- **Given** ofertas fuera de `2 km` **When** el invitado consulta mapa o inicio **Then** quedan fuera del alcance visible.
+- **Given** un invitado **When** pulsa Favoritos, Comunidad o Apartar **Then** se muestra `GuestPromptDialog` con opciones de Login y Registro.
+- **Given** un invitado que inicia sesión con su cuenta **When** regresa al mapa **Then** desbloquea el selector completo de `50 m` a `5 km`.
 
 ## 6. Plan de pruebas
 
-- **Unitarias:** `EnterGuestModeUseCase`, `GetNearbyOffersUseCase` (normalizacion de radio).
-- **ViewModel:** Turbine sobre estado de invitado y bloqueo.
-- **UI:** Compose Test Rule para selector fijo, dialogo de bloqueo y redireccion.
-- **Integracion:** repositorio con `MockWebServer` devolviendo ofertas dentro y fuera de 2000 m.
-- **Seguridad:** verificar que no se envia token en modo invitado.
-- **Cobertura:** Kover ≥80% obligatorio en pruebas unitarias, de integración y E2E (constitución §7.4).
+- **Unitarias:** `PoliciesAndModelsTest` (`GuestRadiusPolicy`), `Sprint1UseCasesTest` (`StartGuestSessionUseCase`), `BuyerViewModelsTest` (`BuyerMapViewModel`, `BuyerHomeViewModel`, `BuyerProfileViewModel`).
+- **Integración (`MockWebServer`):** `RetrofitRepositoriesTest.authRepo_createGuestSession_shouldSaveTokenAndReturnIt`.
+- **E2E UI:** `GuestModeAndAccountDialogsE2ETest` (`GuestPromptDialog` y redirección a auth).
+- **Cobertura:** Kover >= 80% verificado en `reportDebug.xml`.
 
 ## 7. Riesgos, limites y deuda
 
-- El backend debe aplicar el mismo filtro; el cliente no es autoridad.
-- La ubicacion del invitado puede ser imprecisa; se usa la ultima conocida con consentimiento.
-- El modo invitado no accede a historial ni apartados; se difiere a una feature posterior.
-- Depende de FT-06 (`GeoPoint`) y FT-01 (red).
+- Mientras se integra `GET /api/v1/offers/nearby` paginado (FT-11), el filtrado geodésico corre sobre el catálogo local sincronizado en `OffersRepositoryImpl`.
+- `GuestPromptDialog` y `RadiusSelectorBottomSheet` permanecen en `presentation/` sin dependencias directas a `data/`.
 
 ## Aprobación
 
 | Estado | Revisor | Fecha | Evidencia |
 |---|---|---|---|
-| Borrador | — | — | Pendiente de ejecucion de FT-07. |
+| Aprobada (Conciliada FT-10) | Equipo Sensus Móvil | 2026-11-11 | `GuestRadiusPolicy.kt`, `StartGuestSessionUseCase.kt`, `PoliciesAndModelsTest.kt`, `GuestModeAndAccountDialogsE2ETest.kt` |

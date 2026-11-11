@@ -11,7 +11,7 @@ import com.example.sensus.domain.repository.OffersRepository
  * Implementación Offline-First de OffersRepository respaldada por Room + SQLCipher (OfferDao).
  * Estrategia de conflicto para inventario: server-wins (Constitución §5).
  *
- * TODO: [API-MIGRATION] En cuanto se integre el endpoint remoto GET /api/v1/offers/nearby (Spec 007 / FT-07),
+ * Nota [API-MIGRATION]: En cuanto se integre el endpoint remoto GET /api/v1/offers/nearby (Spec 007 / FT-11),
  * se debe eliminar obligatoriamente la semilla de respaldo MockDataProvider y sincronizar los datos directamente
  * entre el cliente Retrofit y la base de datos cifrada local Room (OfferDao).
  */
