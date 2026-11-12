@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.lang.reflect.Proxy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -83,14 +84,25 @@ class MapPreferencesRepositoryTest {
 
     @Test
     fun databaseMigration1To2_createsUserPreferencesTableWithoutDrops() {
-        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
-        val sqlSlot = slot<String>()
-        every { db.execSQL(capture(sqlSlot)) } returns Unit
+        val executedStatements = mutableListOf<String>()
+        val db = Proxy.newProxyInstance(
+            SupportSQLiteDatabase::class.java.classLoader,
+            arrayOf(SupportSQLiteDatabase::class.java)
+        ) { _, method, args ->
+            if (method.name == "execSQL" && args != null && args.isNotEmpty()) {
+                val sql = args[0] as? String
+                if (sql != null) {
+                    executedStatements += sql
+                }
+            }
+            null
+        } as SupportSQLiteDatabase
 
         DatabaseFactory.MIGRATION_1_2.migrate(db)
 
-        verify(exactly = 1) { db.execSQL(any<String>()) }
-        assertTrue(sqlSlot.captured.contains("CREATE TABLE IF NOT EXISTS `user_preferences`"))
-        assertTrue(sqlSlot.captured.contains("PRIMARY KEY(`prefKey`)"))
+        assertEquals(1, executedStatements.size)
+        val ddl = executedStatements.single()
+        assertTrue(ddl.contains("CREATE TABLE IF NOT EXISTS `user_preferences`"))
+        assertTrue(ddl.contains("PRIMARY KEY(`prefKey`)"))
     }
 }

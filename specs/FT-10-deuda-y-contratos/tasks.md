@@ -7,7 +7,7 @@
 - [x] T10.1 Declarar versiones de plugins Detekt y Ktlint en `gradle/libs.versions.toml` — verif: `./gradlew.bat help` (`detekt = "1.23.8"`, `ktlint = "12.2.0"`)
 - [x] T10.2 Reemplazar `StaticQualityCheckTask` en `app/build.gradle.kts` por los plugins oficiales `detekt` y `ktlintCheck` — verif: `./gradlew.bat detekt ktlintCheck`
 - [x] T10.3 Resolver todas las violaciones reportadas por `detekt` y `ktlintCheck` en `app/src/` sin bajar reglas — verif: `./gradlew.bat detekt ktlintCheck` (`BUILD SUCCESSFUL`, 0 violaciones)
-- [x] T10.4 Cambiar `android:allowBackup="false"` y configurar `usesCleartextTraffic="false"` en `AndroidManifest.xml` (moviendo excepciones locales a `debug`) — verif: `./gradlew.bat lint` (`BUILD SUCCESSFUL`)
+- [x] T10.4 Cambiar `android:allowBackup="false"` y configurar `usesCleartextTraffic="false"` en `AndroidManifest.xml` con `app/src/main/res/xml/network_security_config.xml` estricto (HTTPS + CAs del sistema en todas las variantes, retirando la configuración laxa de `debug`) — verif: `./gradlew.bat lint` y `mobsfscan` (`0` alertas nuevas)
 
 ## Fase B — Contratos `/api/v1` y Logout Real
 

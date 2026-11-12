@@ -6,7 +6,7 @@
 ## 1. Diseño
 
 1. **Gates estáticos reales.** Reemplazar el stub `StaticQualityCheckTask` en `app/build.gradle.kts` por los plugins oficiales `io.gitlab.arturbosch.detekt` y `org.jlleitschuh.gradle.ktlint`, con `config/detekt/detekt.yml` versionado.
-2. **Endurecimiento de manifiesto.** Ajustar `android:allowBackup="false"` y `android:usesCleartextTraffic="false"` en `app/src/main/AndroidManifest.xml`, usando `network_security_config.xml` solo en variante `debug`.
+2. **Endurecimiento de manifiesto.** Ajustar `android:allowBackup="false"` y `android:usesCleartextTraffic="false"` en `app/src/main/AndroidManifest.xml`, unificando `app/src/main/res/xml/network_security_config.xml` (solo CAs del sistema y HTTPS obligatorio también en `debug`).
 3. **Alineación de rutas `/api/v1/*`.** Migrar `AuthApiService`, `UserApiService` y `MerchantApiService` a `/api/v1/auth/*`, `/api/v1/users/me` y `GET /api/v1/merchants/me` + `PUT /api/v1/merchants/profile` (corrigiendo `api/v1/comercios/me`).
 4. **Logout verificable (Spec 004).** Incorporar `POST /api/v1/auth/logout` en `AuthApiService` y ejecutarlo en `LogoutUseCase` antes de purgar `EncryptedSharedPreferences` y `SensusDatabase`.
 5. **Acotamiento transicional de `MockDataProvider`.** Mantener `MockDataProvider` restringido al fallback offline de `StoreRepositoryImpl` y `OffersRepositoryImpl` hasta que las olas `FT-11..FT-26` (`RF-11-07`) sustituyan cada agregado, con fixtures dedicados en `src/test/` y `src/androidTest/` y cero usos en `presentation/`, `domain/` ni Auth/Profile/Merchant.

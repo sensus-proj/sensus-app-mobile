@@ -2,7 +2,7 @@
 
 > Orden: SQLCipher v2 -> Dominio -> Repositorio/DI -> ViewModels/Mapa -> Pruebas -> Gates/Docs.
 
-- [x] T28.1 Crear `UserPreferenceEntity.java`, `UserPreferenceDao.java`, actualizar `SensusDatabase` a `version = 2` y definir `MIGRATION_1_2` en `DatabaseFactory.kt` — verif: `./gradlew.bat compileDebugKotlin`
+- [x] T28.1 Crear `UserPreferenceEntity.java`, `UserPreferenceDao.java`, actualizar `SensusDatabase` a `version = 2` y definir `MIGRATION_1_2` en `SensusDatabaseMigrations.java` / `DatabaseFactory.kt` — verif: `./gradlew.bat compileDebugKotlin`
 - [x] T28.2 Crear `MapLayer.kt`, `MapPreferencesRepository.kt`, `GetPreferredMapLayerUseCase.kt` y `SavePreferredMapLayerUseCase.kt` en `domain/` — verif: `python scripts/check_layers.py` (`PASS`)
 - [x] T28.3 Implementar `MapPreferencesRepositoryImpl.kt` y registrar `UserPreferenceDao`, repositorio y casos de uso en `SensusContainer`, `DatabaseModule`, `RepositoryModule` y `PreferencesModule` — verif: `./gradlew.bat compileDebugKotlin`
 - [x] T28.4 Conectar `OsmMapUtils` (`toStyle`/`toDomain`), precarga en `AppViewModel`, persistencia/inicialización en `BuyerMapViewModel` y aplicación inmediata en `BuyerOsmMapView` — verif: `./gradlew.bat compileDebugKotlin`

@@ -11,7 +11,7 @@ Actualmente [`BuyerMapViewModel`](app/src/main/java/com/example/sensus/presentat
 
 **Alcance:**
 - Nueva entidad Java [`UserPreferenceEntity`](app/src/main/java/com/example/sensus/data/local/db/entity/UserPreferenceEntity.java) (tabla `user_preferences`) y DAO [`UserPreferenceDao`](app/src/main/java/com/example/sensus/data/local/db/dao/UserPreferenceDao.java).
-- Actualización de [`SensusDatabase`](app/src/main/java/com/example/sensus/data/local/db/SensusDatabase.java) de versión `1` a `2` con migración explícita no destructiva (`MIGRATION_1_2`) en [`DatabaseFactory`](app/src/main/java/com/example/sensus/data/local/db/DatabaseFactory.kt) y provisión DI en `DatabaseModule`/`SensusContainer`.
+- Actualización de [`SensusDatabase`](app/src/main/java/com/example/sensus/data/local/db/SensusDatabase.java) de versión `1` a `2` con migración explícita no destructiva (`MIGRATION_1_2` en [`SensusDatabaseMigrations`](app/src/main/java/com/example/sensus/data/local/db/SensusDatabaseMigrations.java), expuesta en [`DatabaseFactory`](app/src/main/java/com/example/sensus/data/local/db/DatabaseFactory.kt)) y provisión DI en `DatabaseModule`/`SensusContainer`.
 - Contrato puro de dominio (`MapLayer`, `MapPreferencesRepository`), casos de uso (`GetPreferredMapLayerUseCase`, `SavePreferredMapLayerUseCase`), implementación `MapPreferencesRepositoryImpl` con caché en memoria tras lectura inicial en `Dispatchers.IO`, precarga en `AppViewModel` durante Splash y carga/guardado reactivo en `BuyerMapViewModel` + `BuyerOsmMapView`.
 
 **Fuera de alcance:** sincronización remota de preferencias visuales en el backend AWS (`PUT /api/v1/users/settings` queda reservado a push en FT-21).
@@ -47,7 +47,8 @@ data/
     entity/UserPreferenceEntity.java      # @Entity(tableName = "user_preferences")
     dao/UserPreferenceDao.java            # getByKey, upsert, deleteByKey
     SensusDatabase.java                   # version = 2, userPreferenceDao()
-    DatabaseFactory.kt                    # MIGRATION_1_2 (CREATE TABLE IF NOT EXISTS user_preferences)
+    SensusDatabaseMigrations.java         # MIGRATION_1_2 (CREATE TABLE IF NOT EXISTS user_preferences)
+    DatabaseFactory.kt                    # Registra SensusDatabaseMigrations.MIGRATION_1_2
   repository/MapPreferencesRepositoryImpl.kt
 di/
   DatabaseModule.kt, RepositoryModule.kt, UseCaseModule.kt, SensusContainer.kt

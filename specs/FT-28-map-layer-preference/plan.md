@@ -4,7 +4,7 @@
 
 ## 1. Diseño
 
-1. **Esquema Room cifrado v2.** Crear `UserPreferenceEntity.java` y `UserPreferenceDao.java` (siguiendo el estándar Java del paquete `db/` para compatibilidad estricta con Kapt/Room), incrementar `SensusDatabase` a `version = 2` y definir `MIGRATION_1_2` en `DatabaseFactory.kt`.
+1. **Esquema Room cifrado v2.** Crear `UserPreferenceEntity.java` y `UserPreferenceDao.java` (siguiendo el estándar Java del paquete `db/` para compatibilidad estricta con Kapt/Room), incrementar `SensusDatabase` a `version = 2` y definir `MIGRATION_1_2` en `SensusDatabaseMigrations.java` (expuesta desde `DatabaseFactory.kt`).
 2. **Capa de dominio pura.** Crear `MapLayer`, `MapPreferencesRepository`, `GetPreferredMapLayerUseCase` y `SavePreferredMapLayerUseCase` sin imports Android/Room.
 3. **Repositorio con caché en memoria.** `MapPreferencesRepositoryImpl` guarda la lectura inicial en un campo `@Volatile` y escribe en `Dispatchers.IO` sobre `UserPreferenceDao`, degradando con seguridad a `MapLayer.STANDARD`.
 4. **Precarga y MVI.** `AppViewModel` dispara `getPreferredMapLayerUseCase()` en `init` para calentar caché durante Splash; `BuyerMapViewModel` arranca `viewState` desde `peekCached()` y carga/guarda ante `LayerSelected`; `BuyerOsmMapView` aplica la capa desde `factory` y `update`.
