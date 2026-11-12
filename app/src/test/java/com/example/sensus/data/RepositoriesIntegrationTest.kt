@@ -75,12 +75,19 @@ class RepositoriesIntegrationTest {
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"id\":\"usr_1\",\"nombreCompleto\":\"Ana Torres\",\"correo\":\"ana@test.com\",\"roles\":[\"Consumidor\"],\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}")
+                .setBody(
+                    "{\"id\":\"usr_1\",\"nombreCompleto\":\"Ana Torres\",\"correo\":\"ana@test.com\"," +
+                        "\"roles\":[\"Consumidor\"],\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}"
+                )
         )
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"id\":\"usr_1\",\"nombreCompleto\":\"Ana María Torres\",\"correo\":\"ana@test.com\",\"fotoPerfilUrl\":\"https://photo.url\",\"roles\":[\"Consumidor\"],\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}")
+                .setBody(
+                    "{\"id\":\"usr_1\",\"nombreCompleto\":\"Ana María Torres\",\"correo\":\"ana@test.com\"," +
+                        "\"fotoPerfilUrl\":\"https://photo.url\",\"roles\":[\"Consumidor\"]," +
+                        "\"estatus\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}"
+                )
         )
 
         val repo = DefaultProfileRepository(securePreferences, networkClient)
@@ -101,7 +108,12 @@ class RepositoriesIntegrationTest {
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"id\":\"m_1\",\"usuarioId\":\"u_1\",\"nombreComercial\":\"Panadería Tradicional\",\"direccion\":\"Av. Insurgentes Sur 1234\",\"codigoPostal\":\"03100\",\"latitud\":19.380000,\"longitud\":-99.170000,\"activo\":true,\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}")
+                .setBody(
+                    "{\"id\":\"m_1\",\"usuarioId\":\"u_1\",\"nombreComercial\":\"Panadería Tradicional\"," +
+                        "\"direccion\":\"Av. Insurgentes Sur 1234\",\"codigoPostal\":\"03100\"," +
+                        "\"latitud\":19.380000,\"longitud\":-99.170000,\"activo\":true," +
+                        "\"fechaRegistro\":\"2026-10-29T10:00:00Z\"}"
+                )
         )
 
         val repo = DefaultMerchantRepository(networkClient)

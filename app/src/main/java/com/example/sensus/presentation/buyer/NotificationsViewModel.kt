@@ -1,10 +1,8 @@
 package com.example.sensus.presentation.buyer
 
-import androidx.lifecycle.viewModelScope
 import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel

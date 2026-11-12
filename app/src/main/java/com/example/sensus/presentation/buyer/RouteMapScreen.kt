@@ -1,5 +1,7 @@
 package com.example.sensus.presentation.buyer
 
+import android.content.Context
+import android.graphics.Color as AndroidColor
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,9 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.example.sensus.presentation.common.NavigationIntentUtils
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,28 +49,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.NavigationIntentUtils
+import com.example.sensus.presentation.common.OsmMapUtils
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
-import com.example.sensus.presentation.common.OsmMapUtils
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
+private const val MAP_BG_HEX = 0xFFE5E7EB
+private const val MIN_ROUTE_ZOOM = 6.0
+private const val ROUTE_STROKE_WIDTH = 10f
+private const val BOUNDING_BOX_MARGIN = 0.002
+private const val BOUNDING_BOX_PADDING_PX = 180
+private const val TURN_ICON_BG_ALPHA = 0.12f
+
 @Composable
 fun RouteMapScreen(
-    viewModel: RouteMapViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    viewModel: RouteMapViewModel = hiltViewModel(),
     offer: ProductOffer,
     onNavigateBack: () -> Unit,
     onShowQrClick: () -> Unit,
@@ -78,11 +89,8 @@ fun RouteMapScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    // container removed, using viewModel
-
     val routeState by viewModel.viewState.collectAsState()
-    val userLocation = routeState.userLocation
-    var selectedTravelMode by remember { mutableStateOf("walk") } // "walk", "bike", "car"
+    var selectedTravelMode by remember { mutableStateOf("walk") }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
 
     OsmMapUtils.BindMapLifecycle(mapViewRef, lifecycleOwner)
@@ -90,279 +98,170 @@ fun RouteMapScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFE5E7EB))
+            .background(Color(MAP_BG_HEX))
     ) {
-        // SE-011: Renderizado nativo del mapa real interactivo con OSMDroid
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                OsmMapUtils.createDefaultMapView(ctx, minZoom = 6.0).apply {
-                    mapViewRef = this
-                }
+                OsmMapUtils.createDefaultMapView(ctx, minZoom = MIN_ROUTE_ZOOM).apply { mapViewRef = this }
             },
             update = { mapView ->
-                mapView.overlays.clear()
-
-                val userGeo = GeoPoint(userLocation.latitude, userLocation.longitude)
-                val storeGeo = GeoPoint(offer.latitude, offer.longitude)
-
-                // 1. Trazado de ruta (Polyline) con estilo morado Sensus
-                val routeLine = Polyline(mapView).apply {
-                    outlinePaint.color = android.graphics.Color.parseColor("#6E4DDB")
-                    outlinePaint.strokeWidth = 10f
-                    addPoint(userGeo)
-                    // Punto intermedio para simular trazo de calles real
-                    val midLat = (userGeo.latitude + storeGeo.latitude) / 2
-                    addPoint(GeoPoint(midLat, userGeo.longitude))
-                    addPoint(GeoPoint(midLat, storeGeo.longitude))
-                    addPoint(storeGeo)
-                }
-                mapView.overlays.add(routeLine)
-
-                // 2. Marcador de destino: Tienda
-                val storeMarker = Marker(mapView).apply {
-                    position = storeGeo
-                    val storePin = OsmMapUtils.createStorePinBitmap(
-                        context = context,
-                        storeName = offer.storeName,
-                        price = "$${offer.discountPrice.toInt()}",
-                        isSelected = true
-                    )
-                    icon = BitmapDrawable(context.resources, storePin)
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    title = offer.storeName
-                    snippet = offer.address
-                }
-                mapView.overlays.add(storeMarker)
-
-                // 3. Marcador de origen: Gatito Sensus del usuario
-                val catMarker = Marker(mapView).apply {
-                    position = userGeo
-                    val catBitmap = OsmMapUtils.createCatMarkerBitmap(context)
-                    icon = BitmapDrawable(context.resources, catBitmap)
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    title = "Tu ubicación actual"
-                    snippet = "Gatito Sensus"
-                }
-                mapView.overlays.add(catMarker)
-
-                // Encuadrar la vista entre el usuario y la tienda
-                val north = maxOf(userGeo.latitude, storeGeo.latitude) + 0.002
-                val south = minOf(userGeo.latitude, storeGeo.latitude) - 0.002
-                val east = maxOf(userGeo.longitude, storeGeo.longitude) + 0.002
-                val west = minOf(userGeo.longitude, storeGeo.longitude) - 0.002
-                val box = BoundingBox(north, east, south, west)
-                mapView.post {
-                    mapView.zoomToBoundingBox(box, true, 180)
-                }
-
-                mapView.invalidate()
+                renderRouteOverlays(mapView, context, routeState.userLocation, offer)
             }
         )
-
-        // Encabezado superior con botón volver y modos de viaje
-        Column(
+        RouteTopOverlay(
+            headerProps = RouteHeaderProps(
+                storeName = offer.storeName,
+                address = offer.address,
+                selectedTravelMode = selectedTravelMode
+            ),
+            onNavigateBack = onNavigateBack,
+            onSelectMode = { selectedTravelMode = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(16.dp)
                 .align(Alignment.TopCenter)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar",
-                        tint = SensusPurple
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White,
-                    shadowElevation = 2.dp,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storefront,
-                            contentDescription = null,
-                            tint = SensusPurple,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Hacia ${offer.storeName}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = SensusTextPrimary
-                            )
-                            Text(
-                                text = offer.address,
-                                fontSize = 11.sp,
-                                color = SensusTextMuted
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Selector de transporte (A pie, bici, auto)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TravelModeChip(
-                    icon = Icons.AutoMirrored.Filled.DirectionsWalk,
-                    label = "A pie 5 min",
-                    isSelected = selectedTravelMode == "walk",
-                    modifier = Modifier.weight(1f),
-                    onClick = { selectedTravelMode = "walk" }
+        )
+        RouteBottomOverlay(
+            onOpenGoogleMaps = {
+                NavigationIntentUtils.launchGoogleMapsDirections(
+                    context = context,
+                    latitude = offer.latitude,
+                    longitude = offer.longitude,
+                    destinationName = offer.storeName
                 )
-                TravelModeChip(
-                    icon = Icons.AutoMirrored.Filled.DirectionsBike,
-                    label = "Bici 2 min",
-                    isSelected = selectedTravelMode == "bike",
-                    modifier = Modifier.weight(1f),
-                    onClick = { selectedTravelMode = "bike" }
-                )
-                TravelModeChip(
-                    icon = Icons.Default.DirectionsCar,
-                    label = "Auto 1 min",
-                    isSelected = selectedTravelMode == "car",
-                    modifier = Modifier.weight(1f),
-                    onClick = { selectedTravelMode = "car" }
-                )
-            }
-        }
-
-        // Tarjeta de paso actual + Botón flotante "Ya llegué"
-        Column(
+            },
+            onShowQrClick = onShowQrClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(16.dp)
                 .align(Alignment.BottomCenter)
+        )
+    }
+}
+
+@ComposeUiModel
+private data class RouteHeaderProps(
+    val storeName: String,
+    val address: String,
+    val selectedTravelMode: String
+)
+
+@Composable
+private fun RouteTopOverlay(headerProps: RouteHeaderProps, onNavigateBack: () -> Unit, onSelectMode: (String) -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                onClick = onNavigateBack,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+            ) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusPurple)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            RouteDestinationPill(storeName = headerProps.storeName, address = headerProps.address, modifier = Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TravelModeChip(
+                icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                label = "A pie 5 min",
+                isSelected = headerProps.selectedTravelMode == "walk",
+                modifier = Modifier.weight(1f),
+                onClick = { onSelectMode("walk") }
+            )
+            TravelModeChip(
+                icon = Icons.AutoMirrored.Filled.DirectionsBike,
+                label = "Bici 2 min",
+                isSelected = headerProps.selectedTravelMode == "bike",
+                modifier = Modifier.weight(1f),
+                onClick = { onSelectMode("bike") }
+            )
+            TravelModeChip(
+                icon = Icons.Default.DirectionsCar,
+                label = "Auto 1 min",
+                isSelected = headerProps.selectedTravelMode == "car",
+                modifier = Modifier.weight(1f),
+                onClick = { onSelectMode("car") }
+            )
+        }
+    }
+}
+
+@Composable
+private fun RouteDestinationPill(storeName: String, address: String, modifier: Modifier = Modifier) {
+    Surface(shape = RoundedCornerShape(14.dp), color = Color.White, shadowElevation = 2.dp, modifier = modifier) {
+        Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(text = "Hacia $storeName", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = address, fontSize = 11.sp, color = SensusTextMuted)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RouteBottomOverlay(onOpenGoogleMaps: () -> Unit, onShowQrClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        NextTurnInstructionCard()
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onOpenGoogleMaps,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 12.dp)
         ) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                modifier = Modifier.fillMaxWidth()
+            Icon(imageVector = Icons.Default.Navigation, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "Cómo llegar con Google Maps", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Button(
+            onClick = onShowQrClick,
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 14.dp)
+        ) {
+            Icon(imageVector = Icons.Default.QrCode, contentDescription = "QR", tint = Color.White, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(text = "Ya llegué • Mostrar mi código QR", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun NextTurnInstructionCard() {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(SensusPurple.copy(alpha = TURN_ICON_BG_ALPHA)),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(SensusPurple.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TurnRight,
-                            contentDescription = "Giro",
-                            tint = SensusPurple,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "En 120 metros",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusPurple
-                        )
-                        Text(
-                            text = "Gira a la derecha en Av. Juárez",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SensusTextPrimary
-                        )
-                        Text(
-                            text = "El comercio estará a tu izquierda (frente al parque).",
-                            fontSize = 11.sp,
-                            color = SensusTextSecondary
-                        )
-                    }
-                }
+                Icon(imageVector = Icons.Default.TurnRight, contentDescription = "Giro", tint = SensusPurple, modifier = Modifier.size(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // SE-017: Botón para abrir Google Maps externo
-            OutlinedButton(
-                onClick = {
-                    NavigationIntentUtils.launchGoogleMapsDirections(
-                        context = context,
-                        latitude = offer.latitude,
-                        longitude = offer.longitude,
-                        destinationName = offer.storeName
-                    )
-                },
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Navigation,
-                    contentDescription = null,
-                    tint = SensusPurple,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "En 120 metros", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                Text(text = "Gira a la derecha en Av. Juárez", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Text(
-                    text = "Cómo llegar con Google Maps",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SensusPurple
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Botón "Ya llegué - Mostrar QR"
-            Button(
-                onClick = onShowQrClick,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 14.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.QrCode,
-                    contentDescription = "QR",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Ya llegué • Mostrar mi código QR",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    text = "El comercio estará a tu izquierda (frente al parque).",
+                    fontSize = 11.sp,
+                    color = SensusTextSecondary
                 )
             }
         }
@@ -370,18 +269,12 @@ fun RouteMapScreen(
 }
 
 @Composable
-private fun TravelModeChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
+private fun TravelModeChip(icon: ImageVector, label: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = if (isSelected) SensusPurple else Color.White,
         shadowElevation = 2.dp,
-        modifier = modifier.clickable { onClick() }
+        modifier = modifier.clickable(onClick = onClick)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -403,4 +296,48 @@ private fun TravelModeChip(
             )
         }
     }
+}
+
+private fun renderRouteOverlays(mapView: MapView, context: Context, userLocation: UserLocation, offer: ProductOffer) {
+    mapView.overlays.clear()
+    val userGeo = GeoPoint(userLocation.latitude, userLocation.longitude)
+    val storeGeo = GeoPoint(offer.latitude, offer.longitude)
+    val midLat = (userGeo.latitude + storeGeo.latitude) / 2
+
+    val routeLine = Polyline(mapView).apply {
+        outlinePaint.color = AndroidColor.parseColor("#6E4DDB")
+        outlinePaint.strokeWidth = ROUTE_STROKE_WIDTH
+        addPoint(userGeo)
+        addPoint(GeoPoint(midLat, userGeo.longitude))
+        addPoint(GeoPoint(midLat, storeGeo.longitude))
+        addPoint(storeGeo)
+    }
+    val storeMarker = Marker(mapView).apply {
+        position = storeGeo
+        val storePin = OsmMapUtils.createStorePinBitmap(context, offer.storeName, "$${offer.discountPrice.toInt()}", isSelected = true)
+        icon = BitmapDrawable(context.resources, storePin)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        title = offer.storeName
+        snippet = offer.address
+    }
+    val catMarker = Marker(mapView).apply {
+        position = userGeo
+        icon = BitmapDrawable(context.resources, OsmMapUtils.createCatMarkerBitmap(context))
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        title = "Tu ubicación actual"
+        snippet = "Gatito Sensus"
+    }
+
+    mapView.overlays.add(routeLine)
+    mapView.overlays.add(storeMarker)
+    mapView.overlays.add(catMarker)
+
+    val box = BoundingBox(
+        maxOf(userGeo.latitude, storeGeo.latitude) + BOUNDING_BOX_MARGIN,
+        maxOf(userGeo.longitude, storeGeo.longitude) + BOUNDING_BOX_MARGIN,
+        minOf(userGeo.latitude, storeGeo.latitude) - BOUNDING_BOX_MARGIN,
+        minOf(userGeo.longitude, storeGeo.longitude) - BOUNDING_BOX_MARGIN
+    )
+    mapView.post { mapView.zoomToBoundingBox(box, true, BOUNDING_BOX_PADDING_PX) }
+    mapView.invalidate()
 }

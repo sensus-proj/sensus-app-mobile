@@ -9,12 +9,12 @@ import com.example.sensus.data.remote.interceptor.AuthInterceptor
 import com.example.sensus.data.repository.OffersRepositoryImpl
 import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.domain.model.ProductOffer
-import kotlinx.coroutines.test.runTest
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse

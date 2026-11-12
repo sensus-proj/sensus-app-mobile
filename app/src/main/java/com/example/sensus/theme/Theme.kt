@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 private val LightColorScheme = lightColorScheme(
     primary = SensusPurple,
     onPrimary = SensusWhite,
-    secondary = SensusAmber,
+    secondary = SensusPurpleLight,
     onSecondary = SensusPurpleDark,
     tertiary = SensusBeige,
     background = SensusBackground,
@@ -21,13 +21,8 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun SensusTheme(
-    darkTheme: Boolean = false,
-    dynamicColor: Boolean = false,
-    content: @Composable () -> Unit,
-) {
+fun SensusTheme(content: @Composable () -> Unit) {
     // Sensus UI strictly implements a light design system with white cards and purple accents.
-    // Forcing LightColorScheme prevents invisible white-on-white text when the host device has dark mode enabled.
     MaterialTheme(
         colorScheme = LightColorScheme,
         typography = Typography,
@@ -54,9 +49,9 @@ fun sensusOutlinedTextFieldColors(
     unfocusedLabelColor = SensusTextSecondary,
     cursorColor = SensusPurple,
     errorTextColor = SensusTextPrimary,
-    errorBorderColor = Color(0xFFDC2626),
-    errorCursorColor = Color(0xFFDC2626),
-    errorLabelColor = Color(0xFFDC2626),
+    errorBorderColor = SensusRed,
+    errorCursorColor = SensusRed,
+    errorLabelColor = SensusRed,
     focusedPlaceholderColor = SensusTextMuted,
     unfocusedPlaceholderColor = SensusTextMuted,
     focusedLeadingIconColor = SensusPurple,

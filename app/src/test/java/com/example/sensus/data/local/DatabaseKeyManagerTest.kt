@@ -5,7 +5,6 @@ import com.example.sensus.data.local.security.DatabaseKeyManager
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import io.mockk.slot
 import io.mockk.unmockkStatic
 import org.junit.After
 import org.junit.Assert.assertEquals

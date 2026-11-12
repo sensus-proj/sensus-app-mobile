@@ -1,8 +1,9 @@
 package com.example.sensus.presentation
 
+import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
-import com.example.sensus.domain.model.CartItem
+import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.domain.model.StoreCategory
@@ -15,16 +16,16 @@ import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.repository.StoreRepository
+import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
-import app.cash.turbine.test
 import com.example.sensus.presentation.buyer.BuyerHomeViewEffect
 import com.example.sensus.presentation.buyer.BuyerHomeViewIntent
-import com.example.sensus.presentation.buyer.BuyerMapViewEffect
 import com.example.sensus.presentation.buyer.BuyerHomeViewModel
+import com.example.sensus.presentation.buyer.BuyerMapViewEffect
 import com.example.sensus.presentation.buyer.BuyerMapViewIntent
 import com.example.sensus.presentation.buyer.BuyerMapViewModel
-import com.example.sensus.presentation.common.MapLayerStyle
 import com.example.sensus.presentation.buyer.BuyerProfileViewIntent
 import com.example.sensus.presentation.buyer.BuyerProfileViewModel
 import com.example.sensus.presentation.buyer.CartViewIntent
@@ -36,9 +37,12 @@ import com.example.sensus.presentation.buyer.RouteMapViewIntent
 import com.example.sensus.presentation.buyer.RouteMapViewModel
 import com.example.sensus.presentation.buyer.SensiChatViewIntent
 import com.example.sensus.presentation.buyer.SensiChatViewModel
+import com.example.sensus.presentation.common.MapLayerStyle
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,17 +124,29 @@ class BuyerViewModelsTest {
         assertEquals(19.6, vm.viewState.value.userLocation.latitude, 0.001)
     }
 
+    private fun createMapLayerUseCases(
+        cached: MapLayer? = null,
+        stored: MapLayer = MapLayer.STANDARD
+    ): Pair<GetPreferredMapLayerUseCase, SavePreferredMapLayerUseCase> {
+        val getUseCase = mockk<GetPreferredMapLayerUseCase>()
+        val saveUseCase = mockk<SavePreferredMapLayerUseCase>(relaxed = true)
+        every { getUseCase.peekCached() } returns cached
+        coEvery { getUseCase() } returns stored
+        return getUseCase to saveUseCase
+    }
+
     @Test
     fun buyerMap_selection_and_permission() = runTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
         val locationRepo = mockk<LocationRepository>(relaxed = true)
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val (getMapLayerUseCase, saveMapLayerUseCase) = createMapLayerUseCases()
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
 
         val offer = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
         coEvery { offersRepo.getOffers() } returns listOf(offer)
 
-        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo)
+        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, getMapLayerUseCase, saveMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertNull(vm.viewState.value.selectedOffer)
 
@@ -148,9 +164,10 @@ class BuyerViewModelsTest {
         val locationRepo = mockk<LocationRepository>(relaxed = true)
         val sessionFlow = MutableStateFlow(SessionState(isGuest = true))
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val (getMapLayerUseCase, saveMapLayerUseCase) = createMapLayerUseCases()
         coEvery { sessionRepo.sessionState } returns sessionFlow
 
-        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo)
+        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, getMapLayerUseCase, saveMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.isGuest)
 
@@ -179,6 +196,9 @@ class BuyerViewModelsTest {
         assertEquals(MapLayerStyle.SATELLITE, vm.viewState.value.selectedLayer)
         vm.dispatchIntent(BuyerMapViewIntent.LayerSelected(MapLayerStyle.DARK))
         assertEquals(MapLayerStyle.DARK, vm.viewState.value.selectedLayer)
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify { saveMapLayerUseCase(MapLayer.SATELLITE) }
+        coVerify { saveMapLayerUseCase(MapLayer.DARK) }
     }
 
     @Test
@@ -186,13 +206,14 @@ class BuyerViewModelsTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
         val locationRepo = mockk<LocationRepository>(relaxed = true)
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val (getMapLayerUseCase, saveMapLayerUseCase) = createMapLayerUseCases()
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
         coEvery { locationRepo.hasLocationPermission() } returns true
         coEvery { locationRepo.isLocationEnabled() } returns false
         coEvery { locationRepo.getCurrentLocation() } returns UserLocation(20.1, -98.7)
         coEvery { locationRepo.getFreshLocation() } returns UserLocation(20.12, -98.73)
 
-        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo)
+        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, getMapLayerUseCase, saveMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(20.1, vm.viewState.value.userLocation.latitude, 0.001)
 
@@ -208,6 +229,46 @@ class BuyerViewModelsTest {
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.hasRealLocation)
         assertEquals(20.12, vm.viewState.value.userLocation.latitude, 0.001)
+    }
+
+    @Test
+    fun buyerMap_restoresSavedLayerImmediately_fromWarmCacheAndSqlCipher() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
+
+        val (warmGet, warmSave) = createMapLayerUseCases(cached = MapLayer.SATELLITE, stored = MapLayer.SATELLITE)
+        val warmVm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, warmGet, warmSave)
+        assertEquals(MapLayerStyle.SATELLITE, warmVm.viewState.value.selectedLayer)
+
+        val (coldGet, coldSave) = createMapLayerUseCases(cached = null, stored = MapLayer.DARK)
+        val coldVm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, coldGet, coldSave)
+        assertEquals(MapLayerStyle.STANDARD, coldVm.viewState.value.selectedLayer)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(MapLayerStyle.DARK, coldVm.viewState.value.selectedLayer)
+    }
+
+    @Test
+    fun buyerMap_manualLayerSelection_winsOverLateInitialLoad() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
+
+        val deferredLayer = CompletableDeferred<MapLayer>()
+        val getUseCase = mockk<GetPreferredMapLayerUseCase>()
+        val saveUseCase = mockk<SavePreferredMapLayerUseCase>(relaxed = true)
+        every { getUseCase.peekCached() } returns null
+        coEvery { getUseCase() } coAnswers { deferredLayer.await() }
+
+        val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, getUseCase, saveUseCase)
+        vm.dispatchIntent(BuyerMapViewIntent.LayerSelected(MapLayerStyle.TERRAIN))
+        deferredLayer.complete(MapLayer.DARK)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(MapLayerStyle.TERRAIN, vm.viewState.value.selectedLayer)
+        coVerify(exactly = 1) { saveUseCase(MapLayer.TERRAIN) }
     }
 
     @Test
@@ -271,7 +332,7 @@ class BuyerViewModelsTest {
 
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isGuest = false, activeEmail = "r@sensus.com"))
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo)
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("Rodrigo", vm.viewState.value.profile?.nombreCompleto)
 
@@ -291,7 +352,7 @@ class BuyerViewModelsTest {
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns sessionFlow
 
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo)
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.isGuest)
         assertEquals("Invitado Sensus", vm.viewState.value.profile?.nombreCompleto)

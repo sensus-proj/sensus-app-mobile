@@ -3,10 +3,9 @@ package com.example.sensus.data.moderation
 import android.util.Base64
 import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.dto.ModerateImageRequest
+import com.example.sensus.domain.model.ModerationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-import com.example.sensus.domain.model.ModerationResult
 
 class ImageModerationService(
     private val mediaApi: MediaApiService? = null

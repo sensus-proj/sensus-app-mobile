@@ -5,8 +5,8 @@ import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class CommunityViewModel @Inject constructor(
@@ -38,5 +38,5 @@ class CommunityViewModel @Inject constructor(
         }
     }
 
-    override fun processIntent(intent: CommunityViewIntent) {}
+    override fun processIntent(intent: CommunityViewIntent) = Unit
 }

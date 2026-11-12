@@ -10,15 +10,15 @@ import org.junit.Test
 /** UI tests for [com.example.sensus.presentation.main.MainScreen]. */
 class MainScreenTest {
 
-  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-  @Before
-  fun setup() {
-    composeTestRule.setContent { MainScreen() }
-  }
+    @Before
+    fun setup() {
+        composeTestRule.setContent { MainScreen() }
+    }
 
-  @Test
-  fun appLoads_successfully() {
-    composeTestRule.onNodeWithText("Explorar").assertExists()
-  }
+    @Test
+    fun appLoads_successfully() {
+        composeTestRule.onNodeWithText("Explorar").assertExists()
+    }
 }

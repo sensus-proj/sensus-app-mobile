@@ -1,8 +1,11 @@
 package com.example.sensus.domain.model
 
+private const val DEFAULT_TULA_LAT = 20.0536
+private const val DEFAULT_TULA_LNG = -99.3436
+
 data class UserLocation(
-    val latitude: Double = 20.0536,
-    val longitude: Double = -99.3436
+    val latitude: Double = DEFAULT_TULA_LAT,
+    val longitude: Double = DEFAULT_TULA_LNG
 )
 
 object GuestRadiusPolicy {

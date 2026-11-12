@@ -1,60 +1,44 @@
 # PLAN — FT-07 Modo Invitado y Filtro de 2 km
 
 > Derivado de `spec.md`. Rector: `.specify/memory/constitution.md` §2, §4, §5 y §10.
+> Conciliado en **FT-10** (2026-11-11) contra la implementación real en `Movil_Rodrigo`.
 
-## 1. Diseno
+## 1. Diseño real implementado
 
-1. **Sesion invitado.** `GuestSession` con `center` y `radiusMeters = 2000`; no se persiste token ni `userId`.
-2. **Caso de uso de entrada.** `EnterGuestModeUseCase` valida ubicacion y devuelve `GuestSession`; si no hay ubicacion, solicita permiso.
-3. **Consulta cercana.** `GetNearbyOffersUseCase` normaliza el radio a `2000` en invitado y delega en `GuestOfferRepository`.
-4. **Repositorio.** `GuestOfferRepositoryImpl` envia `center` + `radiusMeters` al backend; nunca confia en el filtro de UI.
-5. **UI.** `GuestMapScreen` y `GuestHomeScreen` reutilizan los componentes de `buyer/` con un `GuestModeViewModel`.
-6. **Bloqueo.** `RadiusSelectorModal` recibe `isLocked`; las acciones protegidas emiten `ViewEffect.ShowLoginRequired`.
-7. **Navegacion.** Guardia `GuestRoute` en `SensusNavHost`: rutas de comercio redirigen a `Auth`.
-8. **Transicion.** Al autenticarse, `GuestSession` se descarta y el radio se restablece al valor por defecto.
+1. **Sesión invitado (`StartGuestSessionUseCase`).** Solicita token efímero en `POST /api/v1/auth/guest` y guarda `SessionType.GUEST` en `SecurePreferences` vía `SessionRepository`.
+2. **Política de radio en dominio (`GuestRadiusPolicy`).** Define mínimo de `50 m`, máximo `5000 m` para registrados y límite `2000 m` (`GUEST_MAX_RADIUS_KM = 2.0f`) para invitados.
+3. **Reutilización de pantallas (`buyer/`).** En lugar de duplicar pantallas `GuestMapScreen`/`GuestHomeScreen`, `BuyerMapScreen`, `BuyerHomeScreen`, `BuyerMapViewModel` y `BuyerHomeViewModel` observan `SessionRepository.sessionState` y aplican el comportamiento invitado.
+4. **Selector de radio (`RadiusSelectorBottomSheet`).** Muestra opciones rápidas y control fino de `50 m` a `5 km`, bloqueando radios `> 2 km` cuando `isGuest = true`.
+5. **Bloqueo explícito (`GuestPromptDialog`).** Acciones protegidas (favoritos, comunidad, reservas, chat IA, rutas) disparan el diálogo único hacia Login/Registro.
 
-## 2. UI y navegacion
+## 2. UI y navegación
 
-- `OnboardingLocationScreen` gana la accion `Continuar como invitado`.
-- `RadiusSelectorModal` muestra `2 km` deshabilitado y un texto `Radio fijo en modo invitado`.
-- Dialogo unico `LoginRequiredDialog` en `presentation/common/`.
-- Previews: `GuestMap`, `GuestHome`, `LoginRequired`.
+- `LoginScreen` expone `Explorar como invitado` invocando `LoginViewIntent.ContinueAsGuest`.
+- `RadiusSelectorModal.kt` (`RadiusSelectorBottomSheet`) muestra aviso del límite de `2 km` para invitados.
+- `GuestPromptDialog` centraliza el aviso de cuenta requerida en `presentation/modals/`.
 
 ## 3. DI
 
-| Binding | Implementacion |
+| Binding | Implementación |
 |---|---|
-| `GuestOfferRepository` | `GuestOfferRepositoryImpl` |
-| `EnterGuestModeUseCase` | clase |
-| `GetNearbyOffersUseCase` | clase |
+| `SessionRepository` | `SessionRepositoryImpl` (instancia única vía `SensusContainer` y `AppModule`) |
+| `StartGuestSessionUseCase` | Inyectado vía Hilt (`AppModule.provideStartGuestSessionUseCase`) |
+| `GuestRadiusPolicy` | Objeto puro en `domain/model/` |
 
 ## 4. Gates
 
-- `compileDebugKotlin`, `testDebugUnitTest`, `compileDebugAndroidTestSources` verdes.
-- `lint`, `detekt`, `ktlintCheck` verdes.
-- `koverVerify` ≥80% obligatorio (unitarias, integración y E2E).
+- `compileDebugKotlin`, `testDebugUnitTest`, `compileDebugAndroidTestSources` en verde.
+- `lint`, `detekt`, `ktlintCheck` en verde.
+- `koverVerifyDebug` >= 80% obligatorio.
 - `python scripts/check_layers.py` PASS.
-- `python scripts/check_endpoints.py` PASS (endpoint de ofertas cercanas).
+- `python scripts/check_endpoints.py` PASS.
 
-## 5. Orden de implementacion
+## 5. Prohibiciones
 
-1. `GuestSession` + `GeoPoint` (de FT-06).
-2. `EnterGuestModeUseCase` + tests.
-3. `GetNearbyOffersUseCase` con normalizacion de radio + tests.
-4. `GuestOfferApi` + `GuestOfferRepositoryImpl` + `MockWebServer`.
-5. `GuestModeViewModel`.
-6. `GuestMapScreen` y `GuestHomeScreen`.
-7. `RadiusSelectorModal` bloqueado.
-8. `LoginRequiredDialog` + guardias de navegacion.
-9. Tests de UI y cierre.
-
-## 6. Prohibiciones
-
-- No permitir radio distinto de 2000 en invitado.
-- No enviar token ni `userId` en modo invitado.
-- No habilitar favoritos, comunidad ni publicacion.
-- No duplicar pantallas de `buyer/`; reutilizar componentes.
+- No permitir radio mayor a `2000 m` en modo invitado.
+- No almacenar PII de usuario en sesión invitado.
+- No duplicar pantallas `buyer/` para invitado.
 
 ## Tareas
 
-Ver `tasks.md`.
+Ver `tasks.md` (conciliado; las pantallas finales se implementaron directamente sobre `BuyerMapScreen`, `BuyerHomeScreen`, `StartGuestSessionUseCase` y `GuestRadiusPolicy`).

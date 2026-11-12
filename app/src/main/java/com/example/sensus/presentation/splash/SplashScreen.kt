@@ -20,20 +20,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.sensus.R
 import com.example.sensus.theme.SensusSplashYellow
 
+private const val VIDEO_FALLBACK_DELAY_MS = 300L
+private const val FADE_OUT_MS = 150
+
 /**
- * Splash Screen Sensus con animacin de video real (1080x1920, 30fps).
+ * Splash Screen Sensus con animación de video real (1080x1920, 30fps).
  */
 @Composable
-fun SplashScreen(
-    modifier: Modifier = Modifier,
-    onSplashFinished: () -> Unit
-) {
-    LocalContext.current
+fun SplashScreen(modifier: Modifier = Modifier, onSplashFinished: () -> Unit) {
     var isVideoReady by remember { mutableStateOf(false) }
     var hasFinished by remember { mutableStateOf(false) }
 
@@ -51,55 +49,18 @@ fun SplashScreen(
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
-            ) {
-                finishOnce()
-            },
+            ) { finishOnce() },
         contentAlignment = Alignment.Center
     ) {
-        // Reproductor de video nativo con aceleracin por hardware
-        AndroidView(
-            factory = { ctx ->
-                VideoView(ctx).apply {
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    alpha = 0f
-                    val videoUri = Uri.parse("android.resource://${ctx.packageName}/${R.raw.sensus_splash}")
-                    setVideoURI(videoUri)
-                    setOnPreparedListener { mediaPlayer ->
-                        mediaPlayer.isLooping = false
-                        mediaPlayer.setVolume(0f, 0f)
-                        mediaPlayer.setOnInfoListener { _, what, _ ->
-                            if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                                alpha = 1f
-                                isVideoReady = true
-                            }
-                            false
-                        }
-                        start()
-                        postDelayed({
-                            if (!isVideoReady) {
-                                alpha = 1f
-                                isVideoReady = true
-                            }
-                        }, 300)
-                    }
-                    setOnCompletionListener {
-                        finishOnce()
-                    }
-                    setOnErrorListener { _, _, _ ->
-                        finishOnce()
-                        true
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxSize()
+        SplashVideoPlayer(
+            isVideoReady = isVideoReady,
+            onVideoReady = { isVideoReady = true },
+            onFinished = ::finishOnce
         )
 
         AnimatedVisibility(
             visible = !isVideoReady,
-            exit = fadeOut(animationSpec = tween(150)),
+            exit = fadeOut(animationSpec = tween(FADE_OUT_MS)),
             modifier = Modifier.fillMaxSize()
         ) {
             Box(
@@ -109,4 +70,44 @@ fun SplashScreen(
             )
         }
     }
+}
+
+@Composable
+private fun SplashVideoPlayer(isVideoReady: Boolean, onVideoReady: () -> Unit, onFinished: () -> Unit) {
+    AndroidView(
+        factory = { ctx ->
+            VideoView(ctx).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                alpha = 0f
+                setVideoURI(Uri.parse("android.resource://${ctx.packageName}/${R.raw.sensus_splash}"))
+                setOnPreparedListener { mediaPlayer ->
+                    mediaPlayer.isLooping = false
+                    mediaPlayer.setVolume(0f, 0f)
+                    mediaPlayer.setOnInfoListener { _, what, _ ->
+                        if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                            alpha = 1f
+                            onVideoReady()
+                        }
+                        false
+                    }
+                    start()
+                    postDelayed({
+                        if (!isVideoReady) {
+                            alpha = 1f
+                            onVideoReady()
+                        }
+                    }, VIDEO_FALLBACK_DELAY_MS)
+                }
+                setOnCompletionListener { onFinished() }
+                setOnErrorListener { _, _, _ ->
+                    onFinished()
+                    true
+                }
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }

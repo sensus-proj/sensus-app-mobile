@@ -15,6 +15,7 @@ data class BuyerProfileViewState(
 sealed interface BuyerProfileViewIntent : ViewIntent {
     data object LoadProfile : BuyerProfileViewIntent
     data class UpdateName(val newName: String) : BuyerProfileViewIntent
+    data object Logout : BuyerProfileViewIntent
 }
 
 sealed interface BuyerProfileViewEffect : ViewEffect

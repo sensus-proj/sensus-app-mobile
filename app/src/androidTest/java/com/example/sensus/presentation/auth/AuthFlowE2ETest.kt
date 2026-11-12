@@ -24,10 +24,9 @@ class AuthFlowE2ETest {
         composeTestRule.setContent {
             SensusTheme {
                 LoginScreen(
-                    onLoginSuccess = {},
-                    onNavigateToRegister = {},
-                    onNavigateToOtp = {},
-                    onContinueAsGuest = { guestClicked = true }
+                    callbacks = LoginCallbacks(
+                        onContinueAsGuest = { guestClicked = true }
+                    )
                 )
             }
         }
@@ -41,13 +40,11 @@ class AuthFlowE2ETest {
 
     @Test
     fun registerScreen_rendersFormElements_properly() {
-        var backClicked = false
-
         composeTestRule.setContent {
             SensusTheme {
                 RegisterScreen(
                     onRegisterSuccess = {},
-                    onNavigateToLogin = { backClicked = true },
+                    onNavigateToLogin = {},
                     onNavigateToTerms = {}
                 )
             }

@@ -5,6 +5,22 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.sensus.domain.model.MerchantStore
+
+private const val MIN_NAME_LEN = 3
+private const val MIN_EMAIL_LEN = 5
+private const val PHONE_DIGITS_LEN = 10
+private const val MIN_PASSWORD_LEN = 6
+private const val MAX_BUSINESS_LEN = 150
+private const val MIN_ADDR_LEN = 5
+private const val MAX_ADDR_LEN = 250
+private const val DEFAULT_MERCHANT_RATING = 5.0
+private const val MIN_USER_PARTS = 6
+private const val STORE_PARTS_INDEX = 6
+private const val MIN_STORE_PARTS = 4
+private const val INDEX_PHONE = 3
+private const val INDEX_PASSWORD = 4
+private const val INDEX_MERCHANT_FLAG = 5
 
 data class UserAccount(
     val id: String,
@@ -31,8 +47,6 @@ object SensusAuthManager {
     private const val KEY_USERS_LIST = "all_registered_emails"
 
     private var prefs: SharedPreferences? = null
-
-    // Almacenamiento en memoria de cuentas registradas
     private val registeredUsers = mutableMapOf<String, UserAccount>()
 
     var currentUser by mutableStateOf<UserAccount?>(null)
@@ -55,72 +69,24 @@ object SensusAuthManager {
     fun init(context: Context) {
         val sp = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs = sp
+        seedDefaultAndPersistedUsers(sp)
 
-        // Sembrar usuario demo predeterminado
-        val defaultUser = UserAccount(
-            id = "demo_01",
-            name = "Carlos Alberto",
-            email = "usuario@sensus.app",
-            phone = "5512345678",
-            password = "123456",
-            isMerchant = false
-        )
-        registeredUsers[defaultUser.email.lowercase()] = defaultUser
-
-        // Cargar usuarios registrados previamente en SharedPreferences
-        val emailsSet = sp.getStringSet(KEY_USERS_LIST, emptySet()) ?: emptySet()
-        for (email in emailsSet) {
-            val key = "$KEY_USERS_PREFIX${email.lowercase()}"
-            val serialized = sp.getString(key, null)
-            if (serialized != null) {
-                deserializeUser(serialized)?.let { user ->
-                    registeredUsers[user.email.lowercase()] = user
-                }
-            }
-        }
-
-        // Cargar banderas de estado
         hasLocationPermission = sp.getBoolean(KEY_LOCATION_GRANTED, false)
         hasAcceptedTerms = sp.getBoolean(KEY_TERMS_ACCEPTED, false)
         isSessionActive = sp.getBoolean(KEY_IS_LOGGED_IN, false)
         isGuestUser = sp.getBoolean(KEY_IS_GUEST, false)
 
         val activeEmail = sp.getString(KEY_ACTIVE_USER_EMAIL, null)
-        if (isSessionActive && !isGuestUser && activeEmail != null) {
-            currentUser = registeredUsers[activeEmail.lowercase()]
-        } else if (isSessionActive && isGuestUser) {
-            currentUser = UserAccount("guest", "Invitado Sensus", "invitado@sensus.app", "", "")
-        }
+        currentUser = resolveInitialUserAccount(registeredUsers, isSessionActive, isGuestUser, activeEmail)
     }
 
-    fun registerUser(
-        name: String,
-        email: String,
-        phone: String,
-        password: String
-    ): Pair<Boolean, String?> {
+    fun registerUser(name: String, email: String, phone: String, password: String): Pair<Boolean, String?> {
         val cleanName = name.trim()
         val cleanEmail = email.trim().lowercase()
-        val cleanPhone = phone.trim()
+        val phoneDigits = phone.trim().filter { it.isDigit() }
         val cleanPassword = password.trim()
-
-        if (cleanName.length < 3) {
-            return Pair(false, "El nombre debe tener al menos 3 caracteres")
-        }
-        if (!cleanEmail.contains("@") || !cleanEmail.contains(".") || cleanEmail.length < 5) {
-            return Pair(false, "Ingresa un correo electrónico válido")
-        }
-        val phoneDigits = cleanPhone.filter { it.isDigit() }
-        if (phoneDigits.length != 10) {
-            return Pair(false, "El teléfono debe contener 10 dígitos")
-        }
-        if (cleanPassword.length < 6) {
-            return Pair(false, "La contraseña debe tener al menos 6 caracteres")
-        }
-
-        if (registeredUsers.containsKey(cleanEmail)) {
-            return Pair(false, "Este correo electrónico ya se encuentra registrado")
-        }
+        val error = validateRegistration(cleanName, cleanEmail, phoneDigits, cleanPassword, registeredUsers)
+        if (error != null) return Pair(false, error)
 
         val newUser = UserAccount(
             id = "user_${System.currentTimeMillis()}",
@@ -130,74 +96,34 @@ object SensusAuthManager {
             password = cleanPassword,
             isMerchant = false
         )
-
-        // Guardar en memoria
         registeredUsers[cleanEmail] = newUser
-
-        // Guardar persistente en SharedPreferences
-        prefs?.let { sp ->
-            val serialized = serializeUser(newUser)
-            val emailsSet = (sp.getStringSet(KEY_USERS_LIST, emptySet()) ?: emptySet()).toMutableSet()
-            emailsSet.add(cleanEmail)
-            sp.edit()
-                .putString("$KEY_USERS_PREFIX$cleanEmail", serialized)
-                .putStringSet(KEY_USERS_LIST, emailsSet)
-                .apply()
-        }
-
-        // Iniciar sesión con la cuenta creada
-        currentUser = newUser
-        isSessionActive = true
-        isGuestUser = false
-
-        prefs?.edit()
-            ?.putBoolean(KEY_IS_LOGGED_IN, true)
-            ?.putBoolean(KEY_IS_GUEST, false)
-            ?.putString(KEY_ACTIVE_USER_EMAIL, cleanEmail)
-            ?.apply()
-
+        persistNewUserRecord(prefs, KEY_USERS_PREFIX, KEY_USERS_LIST, cleanEmail, newUser)
+        activateRegisteredSession(newUser)
         return Pair(true, null)
     }
 
     fun loginUser(emailOrPhone: String, password: String): Pair<Boolean, String?> {
         val cleanInput = emailOrPhone.trim().lowercase()
         val cleanPassword = password.trim()
+        val error = validateLoginInputs(cleanInput, cleanPassword)
+        if (error != null) return Pair(false, error)
 
-        if (cleanInput.isBlank()) {
-            return Pair(false, "Ingresa tu correo o teléfono")
-        }
-        if (cleanPassword.isBlank()) {
-            return Pair(false, "Ingresa tu contraseña")
-        }
-
-        // Buscar por email o por teléfono
         val matchedUser = registeredUsers[cleanInput]
             ?: registeredUsers.values.find { it.phone == cleanInput }
             ?: if (cleanInput == "usuario@sensus.app") registeredUsers["usuario@sensus.app"] else null
 
-        if (matchedUser == null) {
-            return Pair(false, "Usuario no encontrado. Verifica tus datos o crea una cuenta")
+        val passwordValid = matchedUser != null && isPasswordMatch(matchedUser, cleanPassword)
+        return if (!passwordValid) {
+            val msg = if (matchedUser == null) {
+                "Usuario no encontrado. Verifica tus datos o crea una cuenta"
+            } else {
+                "Contraseña incorrecta"
+            }
+            Pair(false, msg)
+        } else {
+            activateRegisteredSession(matchedUser)
+            Pair(true, null)
         }
-
-        // Validar contraseña (acepta la registrada, o fallback demo '••••••••' o '123456')
-        val passwordValid = matchedUser.password == cleanPassword ||
-                (matchedUser.email == "usuario@sensus.app" && (cleanPassword == "••••••••" || cleanPassword == "123456"))
-
-        if (!passwordValid) {
-            return Pair(false, "Contraseña incorrecta")
-        }
-
-        currentUser = matchedUser
-        isSessionActive = true
-        isGuestUser = false
-
-        prefs?.edit()
-            ?.putBoolean(KEY_IS_LOGGED_IN, true)
-            ?.putBoolean(KEY_IS_GUEST, false)
-            ?.putString(KEY_ACTIVE_USER_EMAIL, matchedUser.email.lowercase())
-            ?.apply()
-
-        return Pair(true, null)
     }
 
     fun loginAsGuest() {
@@ -242,37 +168,18 @@ object SensusAuthManager {
         prefs?.edit()?.putBoolean(KEY_TERMS_ACCEPTED, accepted)?.apply()
     }
 
-    fun activateMerchant(
-        businessName: String,
-        address: String,
-        postalCode: String
-    ): Pair<Boolean, String?> {
+    fun activateMerchant(businessName: String, address: String, postalCode: String): Pair<Boolean, String?> {
         val cleanBusiness = businessName.trim()
         val cleanAddr = address.trim()
         val cleanPostalCode = postalCode.trim()
-
-        if (cleanBusiness.length < 2) {
-            return Pair(false, "El nombre comercial debe tener al menos 2 caracteres")
-        }
-        if (cleanBusiness.length > 150) {
-            return Pair(false, "El nombre comercial no puede exceder 150 caracteres")
-        }
-        if (cleanAddr.length < 5) {
-            return Pair(false, "La dirección del comercio debe contener al menos 5 caracteres")
-        }
-        if (cleanAddr.length > 250) {
-            return Pair(false, "La dirección no puede exceder 250 caracteres")
-        }
-        val cpRegex = Regex("^[0-9a-zA-Z\\s\\-]{4,10}$")
-        if (!cpRegex.matches(cleanPostalCode)) {
-            return Pair(false, "El código postal no tiene un formato válido (entre 4 y 10 caracteres)")
-        }
+        val error = validateMerchantInput(cleanBusiness, cleanAddr, cleanPostalCode)
+        if (error != null) return Pair(false, error)
 
         val newStore = MerchantStore(
             name = cleanBusiness,
             category = "Comercio Local",
             isOpen = true,
-            rating = 5.0,
+            rating = DEFAULT_MERCHANT_RATING,
             reviewCount = 1,
             activeOffersCount = 0,
             recoveredMoneyToday = 0.0,
@@ -283,74 +190,137 @@ object SensusAuthManager {
             postalCode = cleanPostalCode
         )
 
-        val updatedUser = (currentUser ?: UserAccount(
-            id = "user_${System.currentTimeMillis()}",
-            name = cleanBusiness,
-            email = "comercio@sensus.app",
-            phone = "",
-            password = "••••••••"
-        )).copy(
-            isMerchant = true,
-            merchantStore = newStore
-        )
+        val updatedUser = (
+            currentUser ?: UserAccount(
+                id = "user_${System.currentTimeMillis()}",
+                name = cleanBusiness,
+                email = "comercio@sensus.app",
+                phone = "",
+                password = "••••••••"
+            )
+            ).copy(isMerchant = true, merchantStore = newStore)
 
         currentUser = updatedUser
         registeredUsers[updatedUser.email.lowercase()] = updatedUser
-
-        prefs?.let { sp ->
-            val serialized = serializeUser(updatedUser)
-            sp.edit()
-                .putString("$KEY_USERS_PREFIX${updatedUser.email.lowercase()}", serialized)
-                .apply()
-        }
+        prefs?.edit()
+            ?.putString("$KEY_USERS_PREFIX${updatedUser.email.lowercase()}", serializeUserAccount(updatedUser))
+            ?.apply()
 
         return Pair(true, null)
     }
 
-    @Deprecated("Usar activateMerchant(businessName, address, postalCode) alineado a SE-003")
-    fun activateMerchant(
-        businessName: String,
-        rfc: String,
-        category: String,
-        address: String,
-        phone: String
-    ): Pair<Boolean, String?> = activateMerchant(businessName, address, "42800")
+    private fun seedDefaultAndPersistedUsers(sp: SharedPreferences) {
+        val defaultUser = UserAccount(
+            id = "demo_01",
+            name = "Carlos Alberto",
+            email = "usuario@sensus.app",
+            phone = "5512345678",
+            password = "123456",
+            isMerchant = false
+        )
+        registeredUsers[defaultUser.email.lowercase()] = defaultUser
 
-    private fun serializeUser(user: UserAccount): String {
-        val storeData = if (user.merchantStore != null) {
-            "${user.merchantStore.name}||${user.merchantStore.category}||${user.merchantStore.address}||${user.merchantStore.phone}"
-        } else {
-            ""
-        }
-        return "${user.id}##${user.name}##${user.email}##${user.phone}##${user.password}##${user.isMerchant}##$storeData"
-    }
-
-    private fun deserializeUser(raw: String): UserAccount? {
-        return try {
-            val parts = raw.split("##")
-            if (parts.size >= 6) {
-                val id = parts[0]
-                val name = parts[1]
-                val email = parts[2]
-                val phone = parts[3]
-                val password = parts[4]
-                val isMerchant = parts[5].toBoolean()
-                var store: MerchantStore? = null
-                if (parts.size >= 7 && parts[6].isNotBlank()) {
-                    val sParts = parts[6].split("||")
-                    if (sParts.size >= 4) {
-                        store = MerchantStore(
-                            name = sParts[0],
-                            category = sParts[1],
-                            address = sParts[2],
-                            phone = sParts[3]
-                        )
-                    }
-                }
-                UserAccount(id, name, email, phone, password, isMerchant, store)
-            } else null
-        } catch (_: Exception) {
-            null
+        val emailsSet = sp.getStringSet(KEY_USERS_LIST, emptySet()) ?: emptySet()
+        for (email in emailsSet) {
+            val serialized = sp.getString("$KEY_USERS_PREFIX${email.lowercase()}", null)
+            serialized?.let(::deserializeUserAccount)?.let { user ->
+                registeredUsers[user.email.lowercase()] = user
+            }
         }
     }
+
+    private fun activateRegisteredSession(user: UserAccount) {
+        currentUser = user
+        isSessionActive = true
+        isGuestUser = false
+        prefs?.edit()
+            ?.putBoolean(KEY_IS_LOGGED_IN, true)
+            ?.putBoolean(KEY_IS_GUEST, false)
+            ?.putString(KEY_ACTIVE_USER_EMAIL, user.email.lowercase())
+            ?.apply()
+    }
+}
+
+private fun resolveInitialUserAccount(registeredUsers: Map<String, UserAccount>, active: Boolean, guest: Boolean, activeEmail: String?): UserAccount? = when {
+    active && !guest && activeEmail != null -> registeredUsers[activeEmail.lowercase()]
+    active && guest -> UserAccount("guest", "Invitado Sensus", "invitado@sensus.app", "", "")
+    else -> null
+}
+
+private fun validateRegistration(name: String, email: String, phoneDigits: String, password: String, existing: Map<String, UserAccount>): String? = when {
+    name.length < MIN_NAME_LEN -> "El nombre debe tener al menos $MIN_NAME_LEN caracteres"
+    !email.contains("@") || !email.contains(".") || email.length < MIN_EMAIL_LEN ->
+        "Ingresa un correo electrónico válido"
+    phoneDigits.length != PHONE_DIGITS_LEN -> "El teléfono debe contener $PHONE_DIGITS_LEN dígitos"
+    password.length < MIN_PASSWORD_LEN -> "La contraseña debe tener al menos $MIN_PASSWORD_LEN caracteres"
+    existing.containsKey(email) -> "Este correo electrónico ya se encuentra registrado"
+    else -> null
+}
+
+private fun validateLoginInputs(cleanInput: String, cleanPassword: String): String? = when {
+    cleanInput.isBlank() -> "Ingresa tu correo o teléfono"
+    cleanPassword.isBlank() -> "Ingresa tu contraseña"
+    else -> null
+}
+
+private fun isPasswordMatch(matchedUser: UserAccount, cleanPassword: String): Boolean = matchedUser.password == cleanPassword ||
+    (matchedUser.email == "usuario@sensus.app" && (cleanPassword == "••••••••" || cleanPassword == "123456"))
+
+private fun validateMerchantInput(name: String, address: String, postalCode: String): String? {
+    val cpRegex = Regex("^[0-9a-zA-Z\\s\\-]{4,10}$")
+    return when {
+        name.length < 2 -> "El nombre comercial debe tener al menos 2 caracteres"
+        name.length > MAX_BUSINESS_LEN -> "El nombre comercial no puede exceder $MAX_BUSINESS_LEN caracteres"
+        address.length < MIN_ADDR_LEN -> "La dirección del comercio debe contener al menos $MIN_ADDR_LEN caracteres"
+        address.length > MAX_ADDR_LEN -> "La dirección no puede exceder $MAX_ADDR_LEN caracteres"
+        !cpRegex.matches(postalCode) -> "El código postal no tiene un formato válido (entre 4 y 10 caracteres)"
+        else -> null
+    }
+}
+
+private fun persistNewUserRecord(sp: SharedPreferences?, prefix: String, listKey: String, cleanEmail: String, user: UserAccount) {
+    sp ?: return
+    val emailsSet = (sp.getStringSet(listKey, emptySet()) ?: emptySet()).toMutableSet()
+    emailsSet.add(cleanEmail)
+    sp.edit()
+        .putString("$prefix$cleanEmail", serializeUserAccount(user))
+        .putStringSet(listKey, emailsSet)
+        .apply()
+}
+
+private fun serializeUserAccount(user: UserAccount): String {
+    val store = user.merchantStore
+    val storeData = if (store != null) {
+        "${store.name}||${store.category}||${store.address}||${store.phone}"
+    } else {
+        ""
+    }
+    return "${user.id}##${user.name}##${user.email}##${user.phone}##${user.password}##${user.isMerchant}##$storeData"
+}
+
+private fun deserializeUserAccount(raw: String): UserAccount? {
+    val parts = raw.split("##")
+    if (parts.size < MIN_USER_PARTS) return null
+    val store = parseStoreParts(parts.getOrNull(STORE_PARTS_INDEX))
+    return UserAccount(
+        id = parts[0],
+        name = parts[1],
+        email = parts[2],
+        phone = parts[INDEX_PHONE],
+        password = parts[INDEX_PASSWORD],
+        isMerchant = parts[INDEX_MERCHANT_FLAG].toBoolean(),
+        merchantStore = store
+    )
+}
+
+private fun parseStoreParts(rawStore: String?): MerchantStore? {
+    if (rawStore.isNullOrBlank()) return null
+    val sParts = rawStore.split("||")
+    if (sParts.size < MIN_STORE_PARTS) return null
+    return MerchantStore(
+        name = sParts[0],
+        category = sParts[1],
+        address = sParts[2],
+        phone = sParts[INDEX_PHONE]
+    )
 }

@@ -4,8 +4,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.sensus.domain.repository.CartRepository
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class CartViewModel @Inject constructor(

@@ -29,7 +29,7 @@ specs/FT-XX-<slug>/
 | `FT-07-guest-mode-2km` | Negocio | SE-008 | FT-01, FT-06 | Cerrada | `spec.md`, `StartGuestSessionUseCase.kt`, `GuestRadiusPolicy`, `RadiusSelectorModal.kt` |
 | `FT-08-account-deletion-gps` | Negocio | SE-009 | FT-02, FT-04 | Cerrada | `spec.md`, `DeleteAccountUseCase.kt`, `GetUserLocationUseCase.kt`, `SessionRepositoryImpl.kt` |
 | `FT-09-cicd-devsecops` | Infraestructura / CD | — | FT-03 | Cerrada | `spec.md`, `ci.yml`, `security-scanners.yml`, `release-playstore.yml` |
-| `FT-10-deuda-y-contratos` | Saneamiento / Contratos | Constitución §4, §9, §11 | FT-09 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-10-deuda-y-contratos` | Saneamiento / Contratos | Constitución §4, §9, §11 | FT-09 | En revision | `spec.md`, `LogoutUseCase.kt`, `NavigationKeys.kt`, `detekt`/`ktlintCheck`/`lint` PASS, `100` unit tests / `Kover 93.23%`, 5 `check_*.py` PASS (pendiente PR a `main` y tag `v1.13.0-ft10`) |
 | `FT-11-ofertas-cercanas-mapa` | Negocio (Ola 1) | SE-010..SE-014; P-07..P-11 | FT-10 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-12-detalle-filtros-ruteo` | Negocio (Ola 1) | SE-015..SE-018; P-14, P-17, P-19 | FT-11 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-13-reserva-qr-cliente` | Negocio (Ola 1) | P-16, P-18, P-20, P-21 | FT-12 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
@@ -47,6 +47,7 @@ specs/FT-XX-<slug>/
 | `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-26-resenas-comercio` | Negocio (Ola 5) | P-15, C-28..C-31 | FT-14 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |
 
 Estados permitidos: `Borrador`, `Especificada, sin ejecutar`, `En implementacion`, `En revision`, `Cerrada`.
 Ninguna feature pasa a `Cerrada` sin `checklists/checklist.md` completo y evidencia en `Memoria.md` §6.

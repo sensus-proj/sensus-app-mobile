@@ -5,6 +5,7 @@ import com.example.sensus.data.local.db.DatabaseFactory
 import com.example.sensus.data.local.db.SensusDatabase
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
+import com.example.sensus.data.local.db.dao.UserPreferenceDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
 import com.example.sensus.data.local.security.DatabaseKeyManager
 import dagger.Module
@@ -20,10 +21,7 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSensusDatabase(
-        @ApplicationContext context: Context,
-        keyManager: DatabaseKeyManager
-    ): SensusDatabase {
+    fun provideSensusDatabase(@ApplicationContext context: Context, keyManager: DatabaseKeyManager): SensusDatabase {
         return DatabaseFactory.create(context, keyManager)
     }
 
@@ -43,5 +41,11 @@ object DatabaseModule {
     @Singleton
     fun providePendingSyncDao(database: SensusDatabase): PendingSyncDao {
         return database.pendingSyncDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserPreferenceDao(database: SensusDatabase): UserPreferenceDao {
+        return database.userPreferenceDao()
     }
 }

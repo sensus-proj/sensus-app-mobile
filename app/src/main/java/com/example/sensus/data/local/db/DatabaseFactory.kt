@@ -2,11 +2,14 @@ package com.example.sensus.data.local.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
 import com.example.sensus.data.local.security.DatabaseKeyManager
 import net.sqlcipher.database.SupportFactory
 
 object DatabaseFactory {
     private const val DATABASE_NAME = "sensus_encrypted.db"
+
+    val MIGRATION_1_2: Migration = SensusDatabaseMigrations.MIGRATION_1_2
 
     @Volatile
     private var instance: SensusDatabase? = null
@@ -27,6 +30,7 @@ object DatabaseFactory {
             DATABASE_NAME
         )
             .openHelperFactory(factory)
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 }

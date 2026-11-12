@@ -16,9 +16,20 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
+
+private const val DEFAULT_CDMX_LAT = 19.432608
+private const val DEFAULT_CDMX_LNG = -99.133209
+private const val RECENT_CACHE_AGE_MS = 90_000L
+private const val MAX_ACCURACY_METERS = 120f
+private const val PRIMARY_CACHE_AGE_MS = 60_000L
+private const val PRIMARY_TIMEOUT_MS = 5500L
+private const val BALANCED_FORCE_AGE_MS = 30_000L
+private const val BALANCED_CACHE_AGE_MS = 120_000L
+private const val BALANCED_TIMEOUT_MS = 3500L
+private const val LAST_LOCATION_TIMEOUT_MS = 1500L
 
 class FusedLocationRepository(
     private val context: Context,
@@ -56,58 +67,54 @@ class FusedLocationRepository(
 
     @SuppressLint("MissingPermission")
     private suspend fun fetchLocation(forceFresh: Boolean): UserLocation {
-        if (!hasLocationPermission()) {
-            return DEFAULT_LOCATION
-        }
-
+        if (!hasLocationPermission()) return DEFAULT_LOCATION
         val lastSystem = getBestLastKnownAndroidLocation()
         val hasFine = hasFineLocationPermission()
+        val recent = recentSystemLocationIfValid(forceFresh, lastSystem, hasFine)
+        if (recent != null) return recent
 
-        // En carga inicial rápida, reutilizar una lectura muy reciente (< 90 s) y precisa
-        if (!forceFresh && lastSystem != null) {
-            val ageMs = System.currentTimeMillis() - lastSystem.time
-            val isAccurateEnough = !hasFine || !lastSystem.hasAccuracy() || lastSystem.accuracy <= 120f
-            if (ageMs in 0L..90_000L && isAccurateEnough) {
-                return UserLocation(lastSystem.latitude, lastSystem.longitude)
-            }
+        val live = queryLiveLocation(forceFresh, hasFine)
+        return live ?: resolveFallbackLocation(lastSystem)
+    }
+
+    private fun recentSystemLocationIfValid(forceFresh: Boolean, lastSystem: Location?, hasFine: Boolean): UserLocation? {
+        if (forceFresh || lastSystem == null) return null
+        val ageMs = System.currentTimeMillis() - lastSystem.time
+        val isAccurateEnough = !hasFine || !lastSystem.hasAccuracy() || lastSystem.accuracy <= MAX_ACCURACY_METERS
+        return if (ageMs in 0L..RECENT_CACHE_AGE_MS && isAccurateEnough) {
+            UserLocation(lastSystem.latitude, lastSystem.longitude)
+        } else {
+            null
         }
+    }
 
+    private suspend fun queryLiveLocation(forceFresh: Boolean, hasFine: Boolean): UserLocation? {
+        if (!isLocationEnabled()) return null
         val primaryPriority = if (hasFine) {
             Priority.PRIORITY_HIGH_ACCURACY
         } else {
             Priority.PRIORITY_BALANCED_POWER_ACCURACY
         }
+        val primary = requestFusedCurrentLocation(
+            priority = primaryPriority,
+            maxAgeMillis = if (forceFresh) 0L else PRIMARY_CACHE_AGE_MS,
+            timeoutMs = PRIMARY_TIMEOUT_MS
+        )
+        if (primary != null || primaryPriority != Priority.PRIORITY_HIGH_ACCURACY) return primary
+        return requestFusedCurrentLocation(
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            maxAgeMillis = if (forceFresh) BALANCED_FORCE_AGE_MS else BALANCED_CACHE_AGE_MS,
+            timeoutMs = BALANCED_TIMEOUT_MS
+        )
+    }
 
-        if (isLocationEnabled()) {
-            // 1. Solicitar lectura fresca del proveedor Fused (GPS + Wi-Fi + Red móvil)
-            val freshPrimary = requestFusedCurrentLocation(
-                priority = primaryPriority,
-                maxAgeMillis = if (forceFresh) 0L else 60_000L,
-                timeoutMs = 5500L
-            )
-            if (freshPrimary != null) return freshPrimary
-
-            // 2. Fallback en interiores: intentar precisión balanceada (Wi-Fi / celdas) si GPS satelital tardó
-            if (primaryPriority == Priority.PRIORITY_HIGH_ACCURACY) {
-                val balanced = requestFusedCurrentLocation(
-                    priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                    maxAgeMillis = if (forceFresh) 30_000L else 120_000L,
-                    timeoutMs = 3500L
-                )
-                if (balanced != null) return balanced
-            }
-        }
-
-        // 3. Fallback a última ubicación conocida de FusedLocationProviderClient
+    private suspend fun resolveFallbackLocation(lastSystem: Location?): UserLocation {
         val fusedLast = requestFusedLastLocation()
-        if (fusedLast != null) return fusedLast
-
-        // 4. Fallback a la lectura más reciente conocida por LocationManager
-        if (lastSystem != null) {
-            return UserLocation(lastSystem.latitude, lastSystem.longitude)
+        return when {
+            fusedLast != null -> fusedLast
+            lastSystem != null -> UserLocation(lastSystem.latitude, lastSystem.longitude)
+            else -> DEFAULT_LOCATION
         }
-
-        return DEFAULT_LOCATION
     }
 
     @SuppressLint("MissingPermission")
@@ -126,21 +133,17 @@ class FusedLocationRepository(
             providers.mapNotNull { provider ->
                 try {
                     locationManager.getLastKnownLocation(provider)
-                } catch (_: Exception) {
+                } catch (_: SecurityException) {
                     null
                 }
             }.maxByOrNull { it.time }
-        } catch (_: Exception) {
+        } catch (_: SecurityException) {
             null
         }
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun requestFusedCurrentLocation(
-        priority: Int,
-        maxAgeMillis: Long,
-        timeoutMs: Long
-    ): UserLocation? = withTimeoutOrNull(timeoutMs) {
+    private suspend fun requestFusedCurrentLocation(priority: Int, maxAgeMillis: Long, timeoutMs: Long): UserLocation? = withTimeoutOrNull(timeoutMs) {
         suspendCancellableCoroutine { continuation ->
             val cts = CancellationTokenSource()
             continuation.invokeOnCancellation { cts.cancel() }
@@ -162,14 +165,14 @@ class FusedLocationRepository(
                     }
             } catch (_: SecurityException) {
                 if (continuation.isActive) continuation.resume(null)
-            } catch (_: Exception) {
+            } catch (_: IllegalStateException) {
                 if (continuation.isActive) continuation.resume(null)
             }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun requestFusedLastLocation(): UserLocation? = withTimeoutOrNull(1500L) {
+    private suspend fun requestFusedLastLocation(): UserLocation? = withTimeoutOrNull(LAST_LOCATION_TIMEOUT_MS) {
         suspendCancellableCoroutine { continuation ->
             try {
                 fusedClient.lastLocation
@@ -181,7 +184,9 @@ class FusedLocationRepository(
                     .addOnFailureListener {
                         if (continuation.isActive) continuation.resume(null)
                     }
-            } catch (_: Exception) {
+            } catch (_: SecurityException) {
+                if (continuation.isActive) continuation.resume(null)
+            } catch (_: IllegalStateException) {
                 if (continuation.isActive) continuation.resume(null)
             }
         }
@@ -189,6 +194,6 @@ class FusedLocationRepository(
 
     companion object {
         // Coordenadas base (Ciudad de México) para fallback si no hay permisos o GPS activo
-        val DEFAULT_LOCATION = UserLocation(latitude = 19.432608, longitude = -99.133209)
+        val DEFAULT_LOCATION = UserLocation(latitude = DEFAULT_CDMX_LAT, longitude = DEFAULT_CDMX_LNG)
     }
 }

@@ -13,12 +13,7 @@ object NavigationIntentUtils {
      * En caso de no existir Google Maps instalado, recurre limpiamente a la versión web
      * y notifica al usuario si no hubiera ninguna app de navegación.
      */
-    fun launchGoogleMapsDirections(
-        context: Context,
-        latitude: Double,
-        longitude: Double,
-        destinationName: String = "Comercio"
-    ) {
+    fun launchGoogleMapsDirections(context: Context, latitude: Double, longitude: Double, destinationName: String = "Comercio") {
         val encodedLabel = Uri.encode(destinationName)
         val latStr = String.format(Locale.US, "%.6f", latitude)
         val lngStr = String.format(Locale.US, "%.6f", longitude)

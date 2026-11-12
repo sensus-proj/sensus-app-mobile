@@ -1,5 +1,4 @@
-- Cimentación arquitectónica Clean Architecture + MVI lista.
-- Soporte inicial para perfiles de Consumidor y Comercio.
-- Visualización de mapa interactivo y cálculo de radio de cercanía.
-- Almacenamiento local seguro con SQLCipher (AES-256).
-- Mejoras continuas de rendimiento, estabilidad y seguridad.
+• Selector de distancia personalizado en el mapa (desde 50 m hasta 5 km; hasta 2 km en modo invitado).
+• El mapa recuerda tu vista preferida (Estándar, Satélite, Relieve o Nocturno) de forma cifrada al abrir la app.
+• Detección mejorada de ubicación GPS y acceso directo al Aviso de Privacidad.
+• Cierre de sesión seguro con invalidación remota y mejoras de estabilidad, privacidad y rendimiento.

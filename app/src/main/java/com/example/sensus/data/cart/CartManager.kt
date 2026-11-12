@@ -3,11 +3,10 @@ package com.example.sensus.data.cart
 import com.example.sensus.data.CartItem
 import com.example.sensus.data.ProductOffer
 import com.example.sensus.data.StoreCart
+import com.example.sensus.domain.model.AddToCartResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-import com.example.sensus.domain.model.AddToCartResult
 
 object CartManager {
     private val _cart = MutableStateFlow(StoreCart())

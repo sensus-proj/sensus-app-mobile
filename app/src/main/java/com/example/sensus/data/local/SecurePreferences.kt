@@ -48,13 +48,7 @@ class SecurePreferences(private val context: Context) {
     fun getUserEmail(): String? = prefs.getString(KEY_USER_EMAIL, null)
     fun getUserPhoto(): String? = prefs.getString(KEY_USER_PHOTO, null)?.takeIf { it.isNotBlank() }
 
-    fun getAuthToken(): String? {
-        return prefs.getString(KEY_AUTH_TOKEN, null)
-    }
-
-    fun clearAuthToken() {
-        prefs.edit().remove(KEY_AUTH_TOKEN).apply()
-    }
+    fun getAuthToken(): String? = prefs.getString(KEY_AUTH_TOKEN, null)
 
     fun saveSessionType(type: SessionType) {
         prefs.edit().putString(KEY_SESSION_TYPE, type.name).apply()
@@ -69,11 +63,9 @@ class SecurePreferences(private val context: Context) {
         }
     }
 
-    fun isGuest(): Boolean {
-        return getSessionType() == SessionType.GUEST
-    }
+    fun isGuest(): Boolean = getSessionType() == SessionType.GUEST
 
-    fun saveGuestSession(token: String, maxRadiusMeters: Int = 2000) {
+    fun saveGuestSession(token: String, maxRadiusMeters: Int = DEFAULT_GUEST_RADIUS_METERS) {
         prefs.edit()
             .putString(KEY_AUTH_TOKEN, token)
             .putString(KEY_SESSION_TYPE, SessionType.GUEST.name)
@@ -81,23 +73,20 @@ class SecurePreferences(private val context: Context) {
             .apply()
     }
 
-    fun getGuestRadiusMeters(): Int {
-        return prefs.getInt(KEY_GUEST_RADIUS, 2000)
-    }
+    fun getGuestRadiusMeters(): Int = prefs.getInt(KEY_GUEST_RADIUS, DEFAULT_GUEST_RADIUS_METERS)
 
     fun saveString(key: String, value: String) {
         prefs.edit().putString(key, value).apply()
     }
 
-    fun getString(key: String): String? {
-        return prefs.getString(key, null)
-    }
+    fun getString(key: String): String? = prefs.getString(key, null)
 
     fun clearAll() {
         prefs.edit().clear().apply()
     }
 
     companion object {
+        private const val DEFAULT_GUEST_RADIUS_METERS = 2000
         private const val PREFS_FILENAME = "sensus_secure_prefs"
         private const val KEY_AUTH_TOKEN = "key_auth_token"
         private const val KEY_SESSION_TYPE = "key_session_type"

@@ -35,7 +35,10 @@ class GuestModeAndAccountDialogsE2ETest {
         }
 
         composeTestRule.onNodeWithText("Inicia sesión para continuar").assertExists()
-        composeTestRule.onNodeWithText("Estás navegando en Modo Invitado (2 km). Para apartar ofertas, ampliar tu radio, publicar productos o guardar favoritos necesitas una cuenta Sensus.").assertExists()
+        composeTestRule.onNodeWithText(
+            "Estás navegando en Modo Invitado (2 km). Para apartar ofertas, ampliar tu radio, " +
+                "publicar productos o guardar favoritos necesitas una cuenta Sensus."
+        ).assertExists()
 
         composeTestRule.onNodeWithText("Iniciar Sesión").performClick()
         assertTrue(loginClicked)
@@ -58,7 +61,9 @@ class GuestModeAndAccountDialogsE2ETest {
         }
 
         composeTestRule.onNodeWithText("¿Eliminar cuenta definitivamente?").assertExists()
-        composeTestRule.onNodeWithText("Esta acción es irreversible. Se eliminarán de forma permanente tus ahorros acumulados, historial de apartados y nivel de usuario.").assertExists()
+        composeTestRule.onNodeWithText(
+            "Esta acción es irreversible. Se eliminarán de forma permanente tus ahorros acumulados, historial de apartados y nivel de usuario."
+        ).assertExists()
 
         // Type password to enable delete button
         composeTestRule.onNodeWithText("Contraseña actual").performTextInput("Pass1234!")

@@ -8,6 +8,5 @@ interface ProfileRepository {
     suspend fun getProfile(): Result<UserProfile>
     suspend fun updateProfile(nombreCompleto: String, fotoPerfilUrl: String?): Result<UserProfile>
     suspend fun requestPhotoSignature(): Result<Pair<String, Long>>
-    suspend fun uploadProfilePhoto(imageBytes: ByteArray): Result<String> =
-        Result.Failure(AppError.Generic("No implementado"))
+    suspend fun uploadProfilePhoto(imageBytes: ByteArray): Result<String> = Result.Failure(AppError.Generic("No implementado"))
 }

@@ -12,14 +12,14 @@ config:
 complexity:
   CyclomaticComplexMethod:
     active: true
-    allowedComplexity: 10
+    threshold: 10
   LongMethod:
     active: true
-    allowedLines: 60
+    threshold: 60
   TooManyFunctions:
     active: true
-    allowedFunctionsPerFile: 20
-    allowedFunctionsPerClass: 15
+    thresholdInFiles: 20
+    thresholdInClasses: 15
 
 style:
   MaxLineLength:
