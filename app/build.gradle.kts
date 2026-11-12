@@ -18,11 +18,16 @@ plugins {
 android {
     namespace = "com.example.sensus"
     compileSdk = 36
+    val ciVersionCode =
+        providers.gradleProperty("SENSUS_VERSION_CODE").orNull?.toIntOrNull()
+            ?: providers.environmentVariable("SENSUS_VERSION_CODE").orNull?.toIntOrNull()
+    val baseVersionCode = 5
+
     defaultConfig {
         applicationId = "sensus.com"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
+        versionCode = maxOf(baseVersionCode, ciVersionCode ?: baseVersionCode)
         versionName = "1.3.0"
     }
 

@@ -61,10 +61,10 @@ flowchart TD
 * **Consolidación:** Sube reportes SARIF a la pestaña de Seguridad (`Security > Code scanning`) de GitHub.
 
 ### C. Despliegue Continuo a Google Play Console (`.github/workflows/release-playstore.yml`)
-* **Disparador:** Manual vía `workflow_dispatch` (seleccionando pista y fracción de rollout) o activado automáticamente por tags de versión formal `v*.*.*`.
+* **Disparador:** Automático en cada `push`/merge a `main` y tags `v*.*.*` (directo a pista `production`), o manual vía `workflow_dispatch` (seleccionando pista y fracción de rollout).
 * **Políticas clave:**
-  1. **Quality Gate Estricto:** Si `pre-flight-gates` falla en cualquier prueba o escáner, el despliegue a Google Play Console se cancela.
-  2. **Tolerancia a Entorno No Listo:** Si los secretos de producción aún no han sido cargados en GitHub Secrets, el workflow valida la compilación de Release y pausa la publicación de forma limpia.
+  1. **Quality Gate Estricto:** Si `pre-flight-gates` falla en cualquier gate (`check_*.py`, Gitleaks, Semgrep, `lint`, `detekt`, `ktlintCheck`, `testDebugUnitTest`, `koverVerifyDebug >= 80%`, `compileDebugAndroidTestSources`, `compileReleaseKotlin`), el despliegue a Google Play Console se cancela.
+  2. **Versionado y Notas BCP-47:** Calcula `SENSUS_VERSION_CODE` incremental automáticamente en CI (`maxOf(baseVersionCode, 4 + github.run_number)`), normaliza `distribution/whatsnew/whatsnew-*` sin extensión `.txt` para `upload-google-play@v1.1.5`, y omite `userFraction` en lanzamientos al `100%` (`status: completed`).
   3. **Firma Efímera:** El Keystore se decodifica en la memoria del runner (`${{ runner.temp }}`) y se destruye en el paso de limpieza al terminar el job.
 
 ---
