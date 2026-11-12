@@ -174,9 +174,8 @@ FT-00 -> FT-01 -> FT-02 -> FT-03 -> FT-04 -> FT-05 -> FT-06 -> FT-07 -> FT-08
 - **Gates SDD Locales:** `check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py --min 80`.
 - **CI (`.github/workflows/ci.yml`):** `validate-wrapper -> sdd-gates -> security-scan -> static-analysis -> unit-test -> instrumentation-compile -> build(main)`. Valida compilación limpia sin emitir APK ni AAB.
 - **CD a Play Store (`.github/workflows/release-playstore.yml`):**
-  - Despliegue automatizado por GitHub Actions con control de acceso en entorno `play-store-release`.
-  - Disparado vía `workflow_dispatch` (pistas `internal`, `alpha`, `beta`, `production` con rollout gradual `user_fraction`) o tags `v*.*.*`.
-  - Construye `./gradlew bundleRelease`, firma efímeramente con `KEYSTORE_BASE64` y sube el `.aab`, `mapping.txt` y `distribution/whatsnew` a Google Play Console vía Service Account GCP.
+  - Despliegue automatizado a Google Play Console (`production`) en cada `push` a `main`, tag `v*.*.*` o vía `workflow_dispatch` (pistas `production`, `internal`, `alpha`, `beta` con rollout gradual `user_fraction`), dentro del environment `play-store-release` y bloqueado estrictamente a que `pre-flight-gates` pase en verde.
+  - Construye `./gradlew bundleRelease` con `SENSUS_VERSION_CODE` incremental, firma efímeramente con `KEYSTORE_BASE64` y sube el `.aab`, `mapping.txt` y `distribution/whatsnew` (BCP-47) vía Service Account GCP.
 - **Deuda actual:** detekt, ktlint y Kover estan configurados/documentados pero aun no cableados en `app/build.gradle.kts` (FT-00).
 
 ---

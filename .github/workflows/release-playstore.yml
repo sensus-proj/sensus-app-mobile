@@ -6,13 +6,13 @@ on:
       track:
         description: "Pista de Google Play Console (internal, alpha, beta, production)"
         required: true
-        default: "internal"
+        default: "production"
         type: choice
         options:
+          - "production"
           - "internal"
           - "alpha"
           - "beta"
-          - "production"
       user_fraction:
         description: "Fracción de usuarios para rollout gradual (ej: 0.1, 0.25, 0.5, 1.0)"
         required: false
@@ -24,6 +24,8 @@ on:
         default: false
         type: boolean
   push:
+    branches:
+      - "main"
     tags:
       - "v*.*.*"
 
@@ -41,7 +43,7 @@ env:
 jobs:
   # =========================================================================
   # 1. COMPUERTA ESTRICTA PRE-LANZAMIENTO (Quality & Security Gate)
-  # Si CUALQUIER verificación falla, el despliegue a Play Store se CANCELA.
+  # Si CUALQUIER pipeline/gate falla, el despliegue a Play Store se CANCELA.
   # =========================================================================
   pre-flight-gates:
     name: "Validación estricta pre-lanzamiento"
@@ -75,7 +77,6 @@ jobs:
           python scripts/check_layers.py
           python scripts/check_endpoints.py
           python scripts/check_secrets.py
-          python scripts/check_coverage.py --min 80
 
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
@@ -108,17 +109,20 @@ jobs:
             p/owasp-top-ten
             p/mobile
 
-      - name: Análisis estático oficial (Android SDK Lint)
-        run: ./gradlew lint --no-daemon
+      - name: Análisis estático (Android Lint, Detekt, Ktlint)
+        run: ./gradlew lint detekt ktlintCheck --no-daemon
 
-      - name: Pruebas unitarias
-        run: ./gradlew testDebugUnitTest --no-daemon
+      - name: Pruebas unitarias y verificación de cobertura Kover (>= 80%)
+        run: |
+          ./gradlew testDebugUnitTest koverXmlReportDebug koverVerifyDebug --no-daemon
+          python scripts/check_coverage.py --min 80
+
+      - name: Compilación instrumentada y verificación de build
+        run: ./gradlew compileDebugAndroidTestSources compileDebugKotlin compileReleaseKotlin --no-daemon
 
   # =========================================================================
-  # 2. COMPILACIÓN DE RELEASE Y DESPLIEGUE A GOOGLE PLAY CONSOLE
+  # 2. COMPILACIÓN DE RELEASE Y DESPLIEUE A GOOGLE PLAY CONSOLE
   # Solo se ejecuta si pre-flight-gates está en VERDE.
-  # Si el entorno aún no tiene credenciales en GitHub Secrets, pausa el envío
-  # y reporta diagnóstico sin fallar el pipeline ni subir artefactos corruptos.
   # =========================================================================
   build-and-deploy:
     name: "Compilación de AAB y Despliegue a Play Store"
@@ -130,10 +134,10 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Validar rama autorizada para despliegue (Exclusivamente main)
+      - name: Validar rama autorizada para despliegue (Exclusivamente main o tags)
         run: |
           if [ "${{ github.ref }}" != "refs/heads/main" ] && [[ "${{ github.ref }}" != refs/tags/v* ]]; then
-            echo "::error::Despliegue rechazado: Solo la rama 'main' tiene autorización para desplegar o publicar en Google Play."
+            echo "::error::Despliegue rechazado: Solo la rama 'main' (o tags oficiales 'v*.*.*') tiene autorización para desplegar o publicar en Google Play."
             exit 1
           fi
 
@@ -203,6 +207,14 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 --decode > "${{ runner.temp }}/release.keystore"
           echo "$PLAY_ACCOUNT_JSON" > "${{ runner.temp }}/play-service-account.json"
 
+      - name: Calcular versionCode incremental para Play Console
+        if: steps.check-env.outputs.ready == 'true'
+        id: version-config
+        run: |
+          COMPUTED_VERSION_CODE=$((4 + GITHUB_RUN_NUMBER))
+          echo "version_code=$COMPUTED_VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Using SENSUS_VERSION_CODE=$COMPUTED_VERSION_CODE"
+
       - name: Compilar Android App Bundle de Release firmado (AAB)
         if: steps.check-env.outputs.ready == 'true'
         env:
@@ -210,35 +222,52 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SENSUS_VERSION_CODE: ${{ steps.version-config.outputs.version_code }}
         run: |
           ./gradlew bundleRelease --no-daemon
 
-      - name: Determinar pista y fracción de rollout
+      - name: Determinar pista, estado y notas BCP-47 para Play Console
         if: steps.check-env.outputs.ready == 'true'
         id: release-config
         run: |
           TRACK="${{ inputs.track }}"
           FRACTION="${{ inputs.user_fraction }}"
           if [ -z "$TRACK" ]; then
-            TRACK="internal"
+            TRACK="production"
           fi
-          if [ -z "$FRACTION" ]; then
-            FRACTION="1.0"
+
+          STATUS="completed"
+          OUT_FRACTION=""
+          if [ -n "$FRACTION" ] && [ "$FRACTION" != "1" ] && [ "$FRACTION" != "1.0" ]; then
+            STATUS="inProgress"
+            OUT_FRACTION="$FRACTION"
           fi
+
+          WHATSNEW_DIR="${{ runner.temp }}/whatsnew"
+          mkdir -p "$WHATSNEW_DIR"
+          for f in distribution/whatsnew/whatsnew-*; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f" .txt)"
+            cp "$f" "$WHATSNEW_DIR/$base"
+          done
+
           echo "track=$TRACK" >> $GITHUB_OUTPUT
-          echo "fraction=$FRACTION" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "fraction=$OUT_FRACTION" >> $GITHUB_OUTPUT
+          echo "whatsnew_dir=$WHATSNEW_DIR" >> $GITHUB_OUTPUT
 
       - name: Publicar AAB en Google Play Console
         if: steps.check-env.outputs.ready == 'true'
-        uses: r0adkll/upload-google-play@v4
+        uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJson: "${{ runner.temp }}/play-service-account.json"
           packageName: "sensus.com"
           releaseFiles: "app/build/outputs/bundle/release/*.aab"
           track: ${{ steps.release-config.outputs.track }}
+          status: ${{ steps.release-config.outputs.status }}
           userFraction: ${{ steps.release-config.outputs.fraction }}
           mappingFile: "app/build/outputs/mapping/release/mapping.txt"
-          whatsNewDirectory: "distribution/whatsnew"
+          whatsNewDirectory: ${{ steps.release-config.outputs.whatsnew_dir }}
 
       - name: Limpieza higiénica de credenciales efímeras
         if: always()
@@ -253,8 +282,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Compuertas de Calidad (Quality Gate):** ✅ APROBADO (Bloqueo terminante si algo falla)" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.check-env.outputs.ready }}" = "true" ]; then
-            echo "- **Publicación en Google Play:** 🟢 PUBLICADO exitosamente en la pista \`${{ steps.release-config.outputs.track }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Publicación en Google Play:** 🟢 PUBLICADO exitosamente en la pista \`${{ steps.release-config.outputs.track }}\` (estado \`${{ steps.release-config.outputs.status }}\`, versionCode \`${{ steps.version-config.outputs.version_code }}\`)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- **Publicación en Google Play:** ⏸️ EN PAUSA (Entorno no aprovisionado)" >> $GITHUB_STEP_SUMMARY
-            echo "- **Detalle:** El pipeline CI/CD está 100% preparado. La publicación real se activará automáticamente en cuanto crees la Service Account y agregues los secretos \`PLAY_STORE_SERVICE_ACCOUNT_JSON\` y \`KEYSTORE_BASE64\` en GitHub Secrets." >> $GITHUB_STEP_SUMMARY
+            echo "- **Publicación en Google Play:** ⏸️ EN PAUSA (Entorno no aprovisionado o dry_run)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Detalle:** El pipeline CI/CD está 100% preparado." >> $GITHUB_STEP_SUMMARY
           fi
