@@ -655,6 +655,10 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
      - Inyección mediante `AppModule.provideImageModerationRepository`.
      - Refactor de complejidad ciclomática en `ImageModerationService` para cumplir umbral de Detekt (`<= 10`).
      - Todas las compuertas SDD (`check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py`) aprobadas al 100%.
+  6. **Comprobación de CI en GitHub Actions y Resolución Fail-Closed:**
+     - Verificada la ejecución exitosa de los workflows remotos en GitHub Actions para la rama `Movil_Rodrigo`.
+     - Resuelto el conflicto de integración en `ImageModerationService.kt` con la rama `develop`, ratificando la política mandatoria de *Fail-Closed* (`ModerationResult.Rejected(SECURITY_POLICY_MESSAGE)`) en caso de ausencia de cliente de moderación o fallas de red/timeout.
+     - Corregido `settings.gradle.kts` excluyendo `com.google.dagger.*` del repositorio de Google Maven para dirigir la resolución de Hilt directamente a Maven Central sin fallbacks fallidos, y añadido caché de Gradle en `actions/setup-java` en `.github/workflows/ci.yml`.
                                                                                                               
 ### HU de ofertas y comunidad — implementación local (2026-11-13)
 
