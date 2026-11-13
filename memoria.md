@@ -651,3 +651,8 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
      - Actualizado `baseVersionCode` a `8` en `app/build.gradle.kts`.
      - Verificación completa de compilación y pruebas unitarias (`./gradlew.bat testDebugUnitTest` exitoso, 109 tests pasando).
      - Generación de APK debug (`assembleDebug`) e instalación vía ADB en dispositivo físico Samsung Galaxy S23 Ultra (`SM-S918U`, serial `R5CW90LY07N`).
+  5. **Arquitectura Clean y Compuertas SDD (`check_layers.py`, `detekt`, `ktlint`):**
+     - Creada la interfaz `ImageModerationRepository` en `domain/repository/` desacoplando `MerchantNewOfferViewModel` de `data/moderation/` conforme a la regla `RF-03-05`.
+     - Inyección mediante `AppModule.provideImageModerationRepository`.
+     - Refactor de complejidad ciclomática en `ImageModerationService` para cumplir umbral de Detekt (`<= 10`).
+     - Todas las compuertas SDD (`check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py`) aprobadas al 100%.

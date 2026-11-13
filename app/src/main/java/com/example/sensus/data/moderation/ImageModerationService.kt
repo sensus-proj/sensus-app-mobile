@@ -5,18 +5,19 @@ import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.dto.ModerateImageRequest
 import com.example.sensus.data.remote.dto.ModerateImageResponse
 import com.example.sensus.domain.model.ModerationResult
+import com.example.sensus.domain.repository.ImageModerationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Response
 
 class ImageModerationService(
     private val mediaApi: MediaApiService? = null
-) {
+) : ImageModerationRepository {
     companion object {
         const val SECURITY_POLICY_MESSAGE = "No se pudo subir la imagen por políticas de seguridad."
     }
 
-    suspend fun moderateImage(imageBytes: ByteArray, textContext: String? = null): ModerationResult = withContext(Dispatchers.IO) {
+    override suspend fun moderateImage(imageBytes: ByteArray, textContext: String?): ModerationResult = withContext(Dispatchers.IO) {
         if (imageBytes.isEmpty()) {
             return@withContext ModerationResult.Rejected("La imagen no puede estar vacía.")
         }

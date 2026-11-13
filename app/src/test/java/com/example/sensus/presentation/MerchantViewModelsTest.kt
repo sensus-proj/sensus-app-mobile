@@ -3,6 +3,7 @@ package com.example.sensus.presentation
 import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.repository.ImageModerationRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.StoreRepository
@@ -45,7 +46,8 @@ class MerchantViewModelsTest {
     @Test
     fun merchantNewOffer_publishesOffer() {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
-        val vm = MerchantNewOfferViewModel(offersRepo)
+        val moderationRepo = mockk<ImageModerationRepository>(relaxed = true)
+        val vm = MerchantNewOfferViewModel(offersRepo, moderationRepo)
 
         val offer = ProductOffer("1", "Offer 1", "Mi Tienda", "Todo", 10.0, 5.0, 50, 10, 100)
         vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(offer))
@@ -54,16 +56,16 @@ class MerchantViewModelsTest {
     }
 
     @Test
-    fun merchantNewOffer_moderatesImage_delegatesToService() = kotlinx.coroutines.test.runTest {
+    fun merchantNewOffer_moderatesImage_delegatesToService() = runTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
-        val moderationService = mockk<com.example.sensus.data.moderation.ImageModerationService>()
-        coEvery { moderationService.moderateImage(any(), any()) } returns ModerationResult.Approved
+        val moderationRepo = mockk<ImageModerationRepository>()
+        coEvery { moderationRepo.moderateImage(any(), any()) } returns ModerationResult.Approved
 
-        val vm = MerchantNewOfferViewModel(offersRepo, moderationService)
+        val vm = MerchantNewOfferViewModel(offersRepo, moderationRepo)
         val result = vm.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test")
 
         assertEquals(ModerationResult.Approved, result)
-        coVerify(exactly = 1) { moderationService.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test") }
+        coVerify(exactly = 1) { moderationRepo.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test") }
     }
 
     @Test

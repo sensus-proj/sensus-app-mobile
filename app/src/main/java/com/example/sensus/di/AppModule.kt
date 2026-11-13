@@ -4,10 +4,10 @@ import android.content.Context
 import com.example.sensus.data.di.SensusContainer
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.db.dao.PendingSyncDao
-import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.network.ConnectivityNetworkMonitor
 import com.example.sensus.data.sync.DefaultSyncManager
 import com.example.sensus.domain.network.NetworkMonitor
+import com.example.sensus.domain.repository.ImageModerationRepository
 import com.example.sensus.domain.sync.SyncManager
 import dagger.Module
 import dagger.Provides
@@ -34,7 +34,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideImageModerationService(container: SensusContainer): ImageModerationService {
+    fun provideImageModerationRepository(container: SensusContainer): ImageModerationRepository {
         return container.moderationService
     }
 
