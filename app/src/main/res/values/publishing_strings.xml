@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="community_tab">Comunidad</string>
+    <string name="community_friends_tab">Amigos y QR</string>
+    <string name="community_title">Tu comunidad</string>
+    <string name="community_new_post">Nueva publicación</string>
+    <string name="community_more">Ver más</string>
+    <string name="community_refresh">Actualizar comunidad</string>
+    <string name="community_cached">Mostrando publicaciones guardadas. Desliza para actualizar.</string>
+    <string name="community_empty">Todavía no hay publicaciones cerca de ti.</string>
+    <string name="community_post_photo">Foto de la publicación</string>
+    <string name="community_merchant_offers">Ver ofertas del comercio</string>
+    <string name="community_create_post">Crear publicación</string>
+    <string name="community_share_label">Comparte con tu comunidad</string>
+    <string name="community_change_photo">Cambiar foto</string>
+    <string name="community_add_photo">Agregar foto</string>
+    <string name="community_remove_photo">Quitar foto</string>
+    <string name="community_tag_merchant">Etiquetar un comercio cercano (opcional)</string>
+    <string name="community_no_merchant">Sin comercio</string>
+    <string name="community_publishing">Publicando…</string>
+    <string name="community_publish">Publicar</string>
+    <string name="offer_expiration_label">Fecha y hora límite de recolección / caducidad</string>
+    <string name="offer_pick_time">Elegir hora</string>
+    <string name="publishing_cancel">Cancelar</string>
+    <string name="publishing_confirm">Confirmar</string>
+    <string name="community_all_merchants">Ver ofertas de todos los comercios</string>
+</resources>

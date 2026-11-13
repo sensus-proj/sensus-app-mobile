@@ -85,4 +85,17 @@ class RegisterViewModelTest {
             assertFalse(viewModel.viewState.value.isLoading)
         }
     }
+
+    @Test
+    fun confirmPasswordChanged_afterMismatch_shouldClearErrorAndStoreValue() = runTest(testDispatcher) {
+        viewModel.dispatchIntent(RegisterViewIntent.PasswordChanged("Pass123#"))
+        viewModel.dispatchIntent(RegisterViewIntent.ConfirmPasswordChanged("Otra123#"))
+        viewModel.dispatchIntent(RegisterViewIntent.SubmitRegister)
+        assertEquals("Las contraseñas no coinciden.", viewModel.viewState.value.errorMessage)
+
+        viewModel.dispatchIntent(RegisterViewIntent.ConfirmPasswordChanged("Pass123#"))
+
+        assertEquals("Pass123#", viewModel.viewState.value.confirmPassword)
+        assertEquals(null, viewModel.viewState.value.errorMessage)
+    }
 }

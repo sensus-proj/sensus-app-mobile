@@ -93,6 +93,8 @@ private val categoryKeywords = mapOf(
 
 @ComposeUiModel
 data class BuyerHomeCallbacks(
+    val merchantId: String? = null,
+    val onClearMerchantFilter: () -> Unit = {},
     val isGuest: Boolean = false,
     val onRequireAuth: () -> Unit = {},
     val onProductClick: (ProductOffer) -> Unit = {},
@@ -134,6 +136,7 @@ fun BuyerHomeScreen(
     callbacks: BuyerHomeCallbacks,
     modifier: Modifier = Modifier
 ) {
+    val merchantId = callbacks.merchantId
     val context = LocalContext.current
     val homeState by homeViewModel.viewState.collectAsState()
     val cartState by cartViewModel.viewState.collectAsState()
@@ -154,27 +157,30 @@ fun BuyerHomeScreen(
         locationLabel = OsmMapUtils.resolveLocationLabel(context, homeState.userLocation)
     }
 
-    val filteredOffers = remember(searchQuery, selectedCategory, homeState.userLocation, homeState.offers, effectiveRadiusKm) {
+    val filteredOffers = remember(searchQuery, selectedCategory, homeState.userLocation, homeState.offers, effectiveRadiusKm, merchantId) {
         filterHomeOffers(homeState.userLocation, homeState.offers, effectiveRadiusKm, searchQuery, selectedCategory)
+            .filter { merchantId == null || it.merchantId == merchantId }
     }
 
-    BuyerHomeHost(
-        data = HomeContentData(
-            searchState = HomeSearchProps(searchQuery, effectiveIsGuest, effectiveRadiusKm, locationLabel, selectedCategory),
-            filteredOffers = filteredOffers,
-            cart = cartState.storeCart,
-            showRadiusSheet = showRadiusSheet
-        ),
-        callbacks = callbacks,
-        actions = HomeHostActions(
-            onRefreshLocation = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshLocation) },
-            onSearchChange = { searchQuery = it },
-            onCategoryToggle = { clicked -> selectedCategory = if (selectedCategory == clicked) StoreCategory.ALL else clicked },
-            onToggleRadiusSheet = { showRadiusSheet = it },
-            onRadiusSelected = { km -> homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km)) }
-        ),
-        modifier = modifier
-    )
+    MerchantOfferFilter(merchantId, callbacks.onClearMerchantFilter, modifier) {
+        BuyerHomeHost(
+            data = HomeContentData(
+                searchState = HomeSearchProps(searchQuery, effectiveIsGuest, effectiveRadiusKm, locationLabel, selectedCategory),
+                filteredOffers = filteredOffers,
+                cart = cartState.storeCart,
+                showRadiusSheet = showRadiusSheet
+            ),
+            callbacks = callbacks,
+            actions = HomeHostActions(
+                onRefreshLocation = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshLocation) },
+                onSearchChange = { searchQuery = it },
+                onCategoryToggle = { clicked -> selectedCategory = if (selectedCategory == clicked) StoreCategory.ALL else clicked },
+                onToggleRadiusSheet = { showRadiusSheet = it },
+                onRadiusSelected = { km -> homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km)) }
+            ),
+            modifier = Modifier
+        )
+    }
 }
 
 @Composable
@@ -509,4 +515,14 @@ private fun matchesHomeSearch(offer: ProductOffer, query: String): Boolean = que
 private fun matchesCategoryKeyword(offer: ProductOffer, category: StoreCategory): Boolean {
     val keyword = categoryKeywords[category] ?: return true
     return offer.category.contains(keyword, ignoreCase = true)
+}
+
+@Composable
+private fun MerchantOfferFilter(merchantId: String?, onClear: () -> Unit, modifier: Modifier, content: @Composable () -> Unit) {
+    Column(modifier = modifier.fillMaxSize()) {
+        if (merchantId != null) {
+            androidx.compose.material3.TextButton(onClick = onClear) { Text("Ver ofertas de todos los comercios") }
+        }
+        Box(modifier = Modifier.weight(1f)) { content() }
+    }
 }

@@ -70,6 +70,8 @@ import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
 private const val DEFAULT_UNITS_COUNT = 3
+private const val DEFAULT_EXPIRATION_LEAD_MILLIS = 3_600_000L
+private const val MAX_STOCK_UNITS = 999
 private const val DESC_MAX_LINES = 3
 private const val PERCENT_SCALE = 100
 private const val EDIT_BTN_ALPHA = 0.9f
@@ -85,13 +87,16 @@ internal data class NewOfferFormState(
     val discountPrice: String = "",
     val unitsCount: Int = DEFAULT_UNITS_COUNT,
     val selectedCategory: StoreCategory = StoreCategory.GROCERY,
-    val expirationDate: String = "Hoy 20:00 hrs"
+    val expiresAtMillis: Long = System.currentTimeMillis() + DEFAULT_EXPIRATION_LEAD_MILLIS
 )
 
 @ComposeUiModel
 internal data class NewOfferErrors(
     val productNameError: String? = null,
-    val priceError: String? = null
+    val priceError: String? = null,
+    val descriptionError: String? = null,
+    val stockError: String? = null,
+    val expirationError: String? = null
 ) {
     val hasErrors: Boolean get() = productNameError != null || priceError != null
 }
@@ -200,7 +205,7 @@ private fun EmptyOfferPhotoPlaceholder() {
 }
 
 @Composable
-internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFormChange: (NewOfferFormState, NewOfferErrors) -> Unit) {
+internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFormChange: (NewOfferFormState) -> Unit) {
     val discountPercent = calculateOfferDiscountPercent(form.originalPrice, form.discountPrice)
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -210,24 +215,33 @@ internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFo
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             OfferTextField(
                 spec = OfferTextFieldSpec("Título del producto", form.productName, "Ej. Leche Entera 1 L, Pan artesanal...", errors.productNameError),
-                onValueChange = { onFormChange(form.copy(productName = it), errors.copy(productNameError = null)) }
+                onValueChange = { onFormChange(form.copy(productName = it)) }
             )
             OfferTextField(
                 spec = OfferTextFieldSpec("Descripción del producto", form.description, "Detalla el estado, empaque o motivo...", maxLines = DESC_MAX_LINES),
-                onValueChange = { onFormChange(form.copy(description = it), errors) }
+                onValueChange = { onFormChange(form.copy(description = it)) }
             )
-            OfferCategoryPicker(selected = form.selectedCategory, onSelect = { onFormChange(form.copy(selectedCategory = it), errors) })
+            OfferCategoryPicker(selected = form.selectedCategory, onSelect = { onFormChange(form.copy(selectedCategory = it)) })
             OfferPriceRow(form = form, errors = errors, onFormChange = onFormChange)
-            if (discountPercent > 0) DiscountPreviewChip(discountPercent = discountPercent)
+            if (discountPercent > 0) {
+                DiscountPreviewChip(
+                    discountPercent = discountPercent,
+                    savings = com.example.sensus.domain.model.OfferPublishingPolicy.savedAmount(
+                        form.originalPrice.toDoubleOrNull() ?: 0.0,
+                        form.discountPrice.toDoubleOrNull() ?: 0.0
+                    )
+                )
+            }
             OfferStockStepperRow(
                 unitsCount = form.unitsCount,
-                onDecrement = { if (form.unitsCount > 1) onFormChange(form.copy(unitsCount = form.unitsCount - 1), errors) },
-                onIncrement = { onFormChange(form.copy(unitsCount = form.unitsCount + 1), errors) }
+                onDecrement = { if (form.unitsCount > 1) onFormChange(form.copy(unitsCount = form.unitsCount - 1)) },
+                onIncrement = { if (form.unitsCount < MAX_STOCK_UNITS) onFormChange(form.copy(unitsCount = form.unitsCount + 1)) }
             )
-            OfferTextField(
-                spec = OfferTextFieldSpec("Fecha y hora límite de recolección / caducidad", form.expirationDate, "Ej. Hoy 21:00 hrs"),
-                onValueChange = { onFormChange(form.copy(expirationDate = it), errors) }
-            )
+            OfferExpirationField(form.expiresAtMillis, errors.expirationError) {
+                onFormChange(form.copy(expiresAtMillis = it))
+            }
+            errors.stockError?.let { Text(it, color = SensusRed) }
+            errors.descriptionError?.let { Text(it, color = SensusRed) }
         }
     }
 }
@@ -286,7 +300,7 @@ private fun OfferCategoryPicker(selected: StoreCategory, onSelect: (StoreCategor
 }
 
 @Composable
-private fun OfferPriceRow(form: NewOfferFormState, errors: NewOfferErrors, onFormChange: (NewOfferFormState, NewOfferErrors) -> Unit) {
+private fun OfferPriceRow(form: NewOfferFormState, errors: NewOfferErrors, onFormChange: (NewOfferFormState) -> Unit) {
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PriceInputColumn(
@@ -294,14 +308,14 @@ private fun OfferPriceRow(form: NewOfferFormState, errors: NewOfferErrors, onFor
                 value = form.originalPrice,
                 placeholder = "180.00",
                 modifier = Modifier.weight(1f),
-                onValueChange = { onFormChange(form.copy(originalPrice = it), errors.copy(priceError = null)) }
+                onValueChange = { onFormChange(form.copy(originalPrice = it)) }
             )
             PriceInputColumn(
                 label = "Precio Oferta ($)",
                 value = form.discountPrice,
                 placeholder = "90.00",
                 modifier = Modifier.weight(1f),
-                onValueChange = { onFormChange(form.copy(discountPrice = it), errors.copy(priceError = null)) }
+                onValueChange = { onFormChange(form.copy(discountPrice = it)) }
             )
         }
         errors.priceError?.let { err ->
@@ -329,12 +343,17 @@ private fun PriceInputColumn(label: String, value: String, placeholder: String, 
 }
 
 @Composable
-private fun DiscountPreviewChip(discountPercent: Int) {
+private fun DiscountPreviewChip(discountPercent: Int, savings: Double) {
     Surface(color = SensusSuccess.copy(alpha = SUCCESS_CHIP_ALPHA), shape = RoundedCornerShape(8.dp)) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Descuento del $discountPercent% para el comprador", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SensusSuccess)
+            Text(
+                text = "Descuento del $discountPercent% · Ahorro: $" + java.lang.String.format(java.util.Locale.getDefault(), "%.2f", savings),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = SensusSuccess
+            )
         }
     }
 }
@@ -364,10 +383,10 @@ private fun StepperCircleButton(icon: ImageVector, description: String, onClick:
 }
 
 @Composable
-internal fun PublishOfferButton(isLoading: Boolean, onClick: () -> Unit) {
+internal fun PublishOfferButton(isLoading: Boolean, isEnabled: Boolean = true, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        enabled = !isLoading,
+        enabled = !isLoading && isEnabled,
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
@@ -435,4 +454,9 @@ internal fun calculateOfferDiscountPercent(originalPrice: String, discountPrice:
     } else {
         0
     }
+}
+
+@Composable
+private fun OfferExpirationField(value: Long, error: String?, onChange: (Long) -> Unit) {
+    OfferExpirationPicker(value, error, onChange)
 }

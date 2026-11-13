@@ -100,3 +100,12 @@
 - [ ] Dependabot activo.
 - [ ] `keys.properties` gitignored; `SIGNING_*` solo en CI.
 - [ ] Gate `python scripts/check_secrets.py` PASS.
+
+### Evidencia acotada FT-15 / FT-18 — 2026-11-13
+
+- Moderación de imágenes fail-closed: sin cliente, aprobación explícita o respuesta válida, se rechaza la publicación.
+- Un rechazo 400/422 de publicación no crea contenido local ni dispara navegación de éxito.
+- Validación de precios finitos, stock positivo y vencimiento futuro en dominio.
+- Nuevos clientes de publicación sin registro de cuerpos HTTP; autenticación compartida conservada.
+- Caché de lectura del feed dentro de la base SQLCipher existente; migración 2 a 3 sin DROP/DELETE de datos existentes.
+- Pendiente: validación de moderación y cuotas en backend real, y ejecución instrumentada en dispositivo.

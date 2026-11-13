@@ -262,6 +262,8 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
         )
         1 -> BuyerHomeScreen(
             callbacks = BuyerHomeCallbacks(
+                merchantId = state.communityMerchantId,
+                onClearMerchantFilter = { state.communityMerchantId = null },
                 isGuest = isGuest,
                 onRequireAuth = { state.showGuestPrompt = true },
                 onProductClick = { state.selectedProductForDetail = it },
@@ -271,10 +273,16 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
             )
         )
         TAB_SENSI -> SensiChatScreen(onApartarComboClick = openApartadoGuarded)
-        TAB_COMMUNITY -> CommunityScreen()
+        TAB_COMMUNITY -> CommunityScreen(
+            onRequireAuth = { state.showGuestPrompt = true },
+            onMerchantClick = { id ->
+                state.communityMerchantId = id
+                state.buyerTabIndex = 1
+            }
+        )
         TAB_PROFILE -> BuyerProfileScreen(
             callbacks = BuyerProfileCallbacks(
-                isMerchantMode = state.isMerchantRegistered || state.isMerchantMode,
+                isMerchantMode = state.isMerchantMode,
                 onToggleMerchantMode = { enableMerchant -> toggleMerchantMode(state, isGuest, enableMerchant) },
                 onLogoutClick = { state.showConfirmLogout = true },
                 onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
@@ -309,7 +317,7 @@ private fun MerchantTabContent(state: MainAppState) {
     }
 }
 
-private fun toggleMerchantMode(state: MainAppState, isGuest: Boolean, enableMerchant: Boolean) {
+internal fun toggleMerchantMode(state: MainAppState, isGuest: Boolean, enableMerchant: Boolean) {
     when {
         isGuest -> state.showGuestPrompt = true
         enableMerchant && state.isMerchantRegistered -> {
