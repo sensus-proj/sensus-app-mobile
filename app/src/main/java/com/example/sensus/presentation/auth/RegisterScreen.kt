@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -62,6 +64,7 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
@@ -80,6 +83,9 @@ private data class RegisterFormState(
     val email: String = "",
     val phone: String = "",
     val password: String = "",
+    val confirmPassword: String = "",
+    val isPasswordVisible: Boolean = false,
+    val isConfirmPasswordVisible: Boolean = false,
     val acceptTerms: Boolean = true
 )
 
@@ -89,10 +95,11 @@ private data class RegisterValidationErrors(
     val emailError: String? = null,
     val phoneError: String? = null,
     val passwordError: String? = null,
+    val confirmPasswordError: String? = null,
     val generalError: String? = null
 ) {
     val hasErrors: Boolean
-        get() = nameError != null || emailError != null || phoneError != null || passwordError != null || generalError != null
+        get() = listOf(nameError, emailError, phoneError, passwordError, confirmPasswordError, generalError).any { it != null }
 }
 
 @ComposeUiModel
@@ -117,7 +124,17 @@ private data class RegisterFieldSpec(
     val icon: ImageVector,
     val error: String?,
     val keyboardOptions: KeyboardOptions,
-    val visualTransformation: VisualTransformation = VisualTransformation.None
+    val visualTransformation: VisualTransformation = VisualTransformation.None,
+    val trailingIcon: (@Composable () -> Unit)? = null
+)
+
+@ComposeUiModel
+private data class RegisterPasswordFieldSpec(
+    val value: String,
+    val label: String,
+    val error: String?,
+    val isVisible: Boolean,
+    val imeAction: ImeAction
 )
 
 @Composable
@@ -277,20 +294,59 @@ private fun RegisterSecurityFields(
             }
         }
     )
-    RegisterValidatedField(
-        spec = RegisterFieldSpec(
+    RegisterPasswordField(
+        spec = RegisterPasswordFieldSpec(
             value = form.password,
             label = "Contraseña (mínimo 6 caracteres)",
-            icon = Icons.Default.Lock,
             error = errors.passwordError,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            visualTransformation = PasswordVisualTransformation()
+            isVisible = form.isPasswordVisible,
+            imeAction = ImeAction.Next
         ),
         onValueChange = { input ->
             if (input.length <= MAX_PASSWORD_LENGTH) {
-                onFormChange(form.copy(password = input), errors.copy(passwordError = null))
+                onFormChange(form.copy(password = input), errors.copy(passwordError = null, confirmPasswordError = null))
             }
-        }
+        },
+        onToggleVisibility = { onFormChange(form.copy(isPasswordVisible = !form.isPasswordVisible), errors) }
+    )
+    RegisterPasswordField(
+        spec = RegisterPasswordFieldSpec(
+            value = form.confirmPassword,
+            label = "Confirmar contraseña",
+            error = errors.confirmPasswordError,
+            isVisible = form.isConfirmPasswordVisible,
+            imeAction = ImeAction.Done
+        ),
+        onValueChange = { input ->
+            if (input.length <= MAX_PASSWORD_LENGTH) {
+                onFormChange(form.copy(confirmPassword = input), errors.copy(confirmPasswordError = null))
+            }
+        },
+        onToggleVisibility = { onFormChange(form.copy(isConfirmPasswordVisible = !form.isConfirmPasswordVisible), errors) }
+    )
+}
+
+@Composable
+private fun RegisterPasswordField(spec: RegisterPasswordFieldSpec, onValueChange: (String) -> Unit, onToggleVisibility: () -> Unit) {
+    RegisterValidatedField(
+        spec = RegisterFieldSpec(
+            value = spec.value,
+            label = spec.label,
+            icon = Icons.Default.Lock,
+            error = spec.error,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = spec.imeAction),
+            visualTransformation = if (spec.isVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = onToggleVisibility) {
+                    Icon(
+                        imageVector = if (spec.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (spec.isVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                        tint = SensusTextMuted
+                    )
+                }
+            }
+        ),
+        onValueChange = onValueChange
     )
 }
 
@@ -303,6 +359,7 @@ private fun RegisterValidatedField(spec: RegisterFieldSpec, onValueChange: (Stri
             label = { Text(spec.label) },
             isError = spec.error != null,
             leadingIcon = { Icon(spec.icon, contentDescription = null, tint = SensusPurple) },
+            trailingIcon = spec.trailingIcon,
             visualTransformation = spec.visualTransformation,
             singleLine = true,
             keyboardOptions = spec.keyboardOptions,
@@ -369,6 +426,11 @@ private fun validateRegistrationForm(form: RegisterFormState): RegisterValidatio
         null
     },
     passwordError = if (form.password.length < MIN_PASSWORD_LENGTH) "La contraseña debe tener al menos 6 caracteres" else null,
+    confirmPasswordError = when {
+        form.confirmPassword.isEmpty() -> "Confirma tu contraseña"
+        form.confirmPassword != form.password -> "Las contraseñas no coinciden"
+        else -> null
+    },
     generalError = if (!form.acceptTerms) "Debes aceptar los Términos y Privacidad para continuar" else null
 )
 
@@ -376,6 +438,6 @@ private fun submitRegistration(viewModel: RegisterViewModel, form: RegisterFormS
     viewModel.dispatchIntent(RegisterViewIntent.NameChanged(form.name.trim()))
     viewModel.dispatchIntent(RegisterViewIntent.EmailChanged(form.email.trim()))
     viewModel.dispatchIntent(RegisterViewIntent.PasswordChanged(form.password))
-    viewModel.dispatchIntent(RegisterViewIntent.ConfirmPasswordChanged(form.password))
+    viewModel.dispatchIntent(RegisterViewIntent.ConfirmPasswordChanged(form.confirmPassword))
     viewModel.dispatchIntent(RegisterViewIntent.SubmitRegister)
 }

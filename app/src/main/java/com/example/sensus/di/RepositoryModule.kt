@@ -2,9 +2,7 @@ package com.example.sensus.di
 
 import com.example.sensus.data.DefaultDataRepository
 import com.example.sensus.data.di.SensusContainer
-import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.repository.CartRepositoryImpl
-import com.example.sensus.data.repository.OffersRepositoryImpl
 import com.example.sensus.data.repository.StoreRepositoryImpl
 import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.CartRepository
@@ -12,7 +10,6 @@ import com.example.sensus.domain.repository.DataRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.MerchantRepository
-import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.StoreRepository
@@ -53,10 +50,6 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideCartRepository(): CartRepository = CartRepositoryImpl()
-
-    @Provides
-    @Singleton
-    fun provideOffersRepository(offerDao: OfferDao): OffersRepository = OffersRepositoryImpl(offerDao)
 
     @Provides
     @Singleton

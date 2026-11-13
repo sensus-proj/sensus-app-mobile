@@ -68,3 +68,11 @@
 
 Medir latencia real por endpoint cuando exista backend; hoy no hay integracion (datos simulados y `MockWebServer`).
 Los valores de esta tabla pasan a `Medido` con fecha y evidencia en `Memoria.md` §6.
+
+### Evidencia cliente FT-15 / FT-18 (2026-11-13)
+
+La implementación reutiliza el timeout central actual de `NetworkClient` (15 s) y el interceptor de autenticación.
+Los clientes nuevos de ofertas, feed y subida no incluyen el logger de cuerpos HTTP, para no registrar texto,
+fotos ni coordenadas. No se añadieron reintentos de publicación desde los casos de uso; los límites del servidor
+siguen pendientes de validación con los contratos desplegados. Las propuestas de la tabla no implican cambios
+en los flujos existentes de FT-16 ni FT-19.

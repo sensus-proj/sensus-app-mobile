@@ -10,16 +10,20 @@ import com.example.sensus.data.local.db.dao.UserPreferenceDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
 import com.example.sensus.data.local.security.DatabaseKeyManager
 import com.example.sensus.data.location.FusedLocationRepository
+import com.example.sensus.data.media.AndroidImageCompressor
 import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.repository.MapPreferencesRepositoryImpl
+import com.example.sensus.data.repository.MediaRepositoryImpl
 import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.data.repository.RetrofitProfileRepository
 import com.example.sensus.data.repository.SessionRepositoryImpl
+import com.example.sensus.domain.media.ImageCompressor
 import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
+import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -117,6 +121,12 @@ class SensusContainer(
     val merchantRepository: MerchantRepository by lazy {
         RetrofitMerchantRepository(networkClient.merchantApi)
     }
+
+    val mediaRepository: MediaRepository by lazy {
+        MediaRepositoryImpl(networkClient.mediaUploadApi)
+    }
+
+    val imageCompressor: ImageCompressor by lazy { AndroidImageCompressor() }
 
     val locationRepository: LocationRepository by lazy {
         FusedLocationRepository(context.applicationContext)

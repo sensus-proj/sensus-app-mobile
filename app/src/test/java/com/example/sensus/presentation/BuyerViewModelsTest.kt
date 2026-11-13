@@ -379,11 +379,17 @@ class BuyerViewModelsTest {
 
     @Test
     fun community_loadsData() = runTest {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(activeEmail = "test@sensus.com"))
 
-        val vm = CommunityViewModel(storeRepo, sessionRepo)
+        val vm = CommunityViewModel(
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            sessionRepo,
+            mockk(relaxed = true)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("test@sensus.com", vm.viewState.value.currentUserName)
     }
 

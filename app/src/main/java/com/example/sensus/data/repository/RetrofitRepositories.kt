@@ -52,21 +52,22 @@ private const val HTTP_TOO_MANY_REQUESTS = 429
 private const val HTTP_SERVER_ERROR = 500
 private const val CLOUDINARY_TIMEOUT_SECONDS = 30L
 
-private suspend inline fun <T> safeNetworkCall(unexpectedMessage: String, crossinline block: suspend () -> Result<T>): Result<T> = withContext(Dispatchers.IO) {
-    try {
-        block()
-    } catch (e: IOException) {
-        Result.Failure(AppError.Network("No se pudo conectar con el servidor: ${e.localizedMessage}"))
-    } catch (e: HttpException) {
-        Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
-    } catch (e: SerializationException) {
-        Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
-    } catch (e: IllegalStateException) {
-        Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
+internal suspend inline fun <T> safeNetworkCall(unexpectedMessage: String, crossinline block: suspend () -> Result<T>): Result<T> =
+    withContext(Dispatchers.IO) {
+        try {
+            block()
+        } catch (e: IOException) {
+            Result.Failure(AppError.Network("No se pudo conectar con el servidor: ${e.localizedMessage}"))
+        } catch (e: HttpException) {
+            Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
+        } catch (e: SerializationException) {
+            Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
+        } catch (e: IllegalStateException) {
+            Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
+        }
     }
-}
 
-private fun parseBackendErrorMessage(raw: String?): String? {
+internal fun parseBackendErrorMessage(raw: String?): String? {
     if (raw.isNullOrBlank()) return null
     return try {
         val json = Json.parseToJsonElement(raw).jsonObject
@@ -90,7 +91,7 @@ private val httpDefaultErrorMessages = mapOf(
     HTTP_SERVER_ERROR to "Error interno en el servidor."
 )
 
-private fun mapCommonHttpStatus(code: Int, message: String?, default401: String, default404: String): AppError {
+internal fun mapCommonHttpStatus(code: Int, message: String?, default401: String, default404: String): AppError {
     val resolved = message ?: when (code) {
         HTTP_UNAUTHORIZED -> default401
         HTTP_NOT_FOUND -> default404

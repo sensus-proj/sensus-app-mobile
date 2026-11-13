@@ -52,7 +52,8 @@ data class ProductOffer(
     val description: String =
         "Excedente de inventario en perfecto estado con empaque sellado de fábrica. Calidad y ahorro garantizados.",
     val expirationDate: String = "Hoy 20:00 hrs",
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val merchantId: String? = null
 ) {
     val formattedDistance: String
         get() = if (distanceMeters < METERS_PER_KM) {

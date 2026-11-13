@@ -629,7 +629,6 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - Configurado `.github/workflows/release-playstore.yml` para dispararse automáticamente en `push` a `main` (además de tags `v*.*.*` y `workflow_dispatch`) apuntando a la pista `production` **únicamente si `pre-flight-gates` pasa al 100%** (SDD scripts, Gitleaks, Semgrep, `lint`, `detekt`, `ktlintCheck`, `testDebugUnitTest`, `koverXmlReportDebug`, `koverVerifyDebug >= 80%`, `check_coverage.py --min 80`, `compileDebugAndroidTestSources`, `compileDebugKotlin`, `compileReleaseKotlin`).
   - Corregido `upload-google-play@v4` (inexistente) a `@v1.1.5`, ajustado `status: completed` sin `userFraction` en lanzamientos al `100%`, normalizado `whatsnew-es-419.txt` → `whatsnew-es-419` (BCP-47 en runner temp) y parametrizado `SENSUS_VERSION_CODE` en `app/build.gradle.kts` (`baseVersionCode = 5`, incremental en CI vía `4 + github.run_number`). Sincronizados `constitution.md`, `.specify/memory/constitution.md`, `AGENTS.md` y `docs/cicd-pipeline.md`.
 
----
 
 ## Bitácora - Moderación Multimodal Real, Eliminación de Mocks y Lógica de 3 Bandas (`Quarantine`)
 
@@ -656,3 +655,32 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
      - Inyección mediante `AppModule.provideImageModerationRepository`.
      - Refactor de complejidad ciclomática en `ImageModerationService` para cumplir umbral de Detekt (`<= 10`).
      - Todas las compuertas SDD (`check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py`) aprobadas al 100%.
+                                                                                                              
+### HU de ofertas y comunidad — implementación local (2026-11-13)
+
+- Alcance autorizado: SE-019/020/021 y SE-027/028; se conservan los cambios locales previos de registro y alternancia de rol.
+- FT-15: CreateOfferUseCase y reglas puras, compresor JPEG <= 4.5 MB, subida multipart con aprobación explícita,
+  creación remota de ofertas, stock/fecha persistidos, errores por campo y selector de fecha/hora Material 3.
+- FT-18: feed por proximidad con paginación y refresh, creación de posts y fotos moderadas, bloqueo de invitados,
+  etiqueta de comercio cercano y filtro reversible de sus ofertas. Amigos/QR conserva su contenido en una sección propia.
+- Arquitectura conservada: domain/data/presentation, contratos MVI, Hilt y SQLCipher. Los bindings nuevos están en
+  PublishingModule y CommunityModule. La migración 2 a 3 agrega feed_posts, unitsLeft y expirationDate sin destruir datos.
+- Privacidad: los clientes nuevos usan la autenticación y timeouts existentes, sin el logger HTTP de cuerpos.
+- Evidencia: 146 tests unitarios (0 fallos/errores/omisiones); Kover global 89.85%, umbral 80%; compilación principal e
+  instrumentada, detekt, ktlint y lint validados. SDD/capas/endpoints/secretos PASS; Semgrep local sin hallazgos.
+- Se agregaron únicamente pruebas de las HU (dominio, ViewModels/Turbine, MockWebServer, migración, Compose y caché).
+  Las pruebas instrumentadas están compiladas pero no ejecutadas; no se generaron APK/AAB.
+- Pendiente: ejecución instrumentada, contrato OpenAPI/backend desplegado y revisión formal de las checklists.
+- Sin cambios de constitución, Gradle, CI, exclusiones o umbrales; sin commit, push, PR ni tag.
+
+### Logo de aplicación y publicación en rama de Rocío — 2026-11-13
+
+- Se reemplazó el logo por la imagen adjunta del gato blanco con bolsa morada, conservando su composición y colores.
+- Recursos actualizados: logo compartido con login, iconos legacy en cinco densidades, iconos circulares,
+  capas adaptativas y máscara monocromática. El margen evita recortes de la figura.
+- El cambio visual se limita al logo; no se modificó el video de splash ni el diseño de otras pantallas.
+- La usuaria autorizó subir los cambios locales acumulados (registro, cambio de rol, HU de ofertas/comunidad y logo)
+  a `movil_Rocio`. Cuenta autenticada y con permisos de escritura verificada: `RocioCruzCer`.
+- No se generaron APK/AAB ni se modificaron gates, configuración de CI o exclusiones de análisis.
+
+- Validación posterior al logo: compilación Debug/Release e instrumentada, pruebas unitarias, Kover >=80%, detekt, ktlint y lint: BUILD SUCCESSFUL; scripts SDD/capas/endpoints/secretos en PASS.

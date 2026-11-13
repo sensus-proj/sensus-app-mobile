@@ -6,7 +6,7 @@ import kotlin.math.roundToInt
 
 object OfferMapper {
 
-    fun OfferEntity.toDomain(defaultUnitsLeft: Int = 5, defaultDistanceMeters: Int = 350): ProductOffer {
+    fun OfferEntity.toDomain(defaultDistanceMeters: Int = 350): ProductOffer {
         val computedDiscountPercent = if (originalPrice > 0.0 && originalPrice >= price) {
             (((originalPrice - price) / originalPrice) * 100.0).roundToInt()
         } else {
@@ -20,16 +20,18 @@ object OfferMapper {
             originalPrice = originalPrice,
             discountPrice = price,
             discountPercent = computedDiscountPercent,
-            unitsLeft = defaultUnitsLeft,
+            unitsLeft = unitsLeft,
             distanceMeters = defaultDistanceMeters,
             latitude = latitude,
             longitude = longitude,
             description = description ?: "",
-            imageUrl = imageUrl
+            imageUrl = imageUrl,
+            expirationDate = expirationDate ?: "Sin fecha límite",
+            merchantId = merchantId
         )
     }
 
-    fun ProductOffer.toEntity(merchantId: String = storeName, cachedAt: Long = System.currentTimeMillis()): OfferEntity {
+    fun ProductOffer.toEntity(merchantId: String? = this.merchantId, cachedAt: Long = System.currentTimeMillis()): OfferEntity {
         return OfferEntity(
             id,
             name,
@@ -43,6 +45,9 @@ object OfferMapper {
             merchantId,
             storeName,
             cachedAt
-        )
+        ).also { entity ->
+            entity.unitsLeft = unitsLeft
+            entity.expirationDate = expirationDate
+        }
     }
 }

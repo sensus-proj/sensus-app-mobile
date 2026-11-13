@@ -1,9 +1,7 @@
 package com.example.sensus.presentation
 
 import com.example.sensus.domain.model.MerchantStore
-import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.ProductOffer
-import com.example.sensus.domain.repository.ImageModerationRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.StoreRepository
@@ -17,10 +15,9 @@ import com.example.sensus.presentation.merchant.MerchantProfileViewModel
 import com.example.sensus.presentation.merchant.MerchantRegisterViewIntent
 import com.example.sensus.presentation.merchant.MerchantRegisterViewModel
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -43,29 +40,30 @@ class MerchantViewModelsTest {
         assertEquals("Mi Tienda", vm.viewState.value.store.name)
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test
-    fun merchantNewOffer_publishesOffer() {
-        val offersRepo = mockk<OffersRepository>(relaxed = true)
-        val moderationRepo = mockk<ImageModerationRepository>(relaxed = true)
-        val vm = MerchantNewOfferViewModel(offersRepo, moderationRepo)
-
-        val offer = ProductOffer("1", "Offer 1", "Mi Tienda", "Todo", 10.0, 5.0, 50, 10, 100)
-        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(offer))
-
-        verify(exactly = 1) { offersRepo.addOffer(offer) }
-    }
-
-    @Test
-    fun merchantNewOffer_moderatesImage_delegatesToService() = runTest {
-        val offersRepo = mockk<OffersRepository>(relaxed = true)
-        val moderationRepo = mockk<ImageModerationRepository>()
-        coEvery { moderationRepo.moderateImage(any(), any()) } returns ModerationResult.Approved
-
-        val vm = MerchantNewOfferViewModel(offersRepo, moderationRepo)
-        val result = vm.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test")
-
-        assertEquals(ModerationResult.Approved, result)
-        coVerify(exactly = 1) { moderationRepo.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test") }
+    fun merchantNewOffer_publishesOffer() = kotlinx.coroutines.test.runTest {
+        kotlinx.coroutines.Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler))
+        try {
+            val useCase = mockk<com.example.sensus.domain.usecase.CreateOfferUseCase>()
+            val input = com.example.sensus.domain.model.CreateOfferInput(
+                "Oferta",
+                "",
+                com.example.sensus.domain.model.StoreCategory.FOOD,
+                10.0,
+                5.0,
+                3,
+                Long.MAX_VALUE
+            )
+            val offer = ProductOffer("1", "Oferta", "Mi Tienda", "Comida", 10.0, 5.0, 50, 3, 0)
+            coEvery { useCase(input, null) } returns com.example.sensus.common.Result.Success(offer)
+            val vm = MerchantNewOfferViewModel(useCase)
+            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input))
+            io.mockk.coVerify(exactly = 1) { useCase(input, null) }
+            org.junit.Assert.assertFalse(vm.viewState.value.isPublishing)
+        } finally {
+            kotlinx.coroutines.Dispatchers.resetMain()
+        }
     }
 
     @Test

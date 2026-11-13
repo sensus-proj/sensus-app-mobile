@@ -22,7 +22,7 @@ class ImageModerationService(
             return@withContext ModerationResult.Rejected("La imagen no puede estar vacía.")
         }
 
-        val api = mediaApi ?: return@withContext ModerationResult.Approved
+        val api = mediaApi ?: return@withContext ModerationResult.Rejected(SECURITY_POLICY_MESSAGE)
 
         try {
             val base64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP)

@@ -17,3 +17,12 @@ data class ModerateImageResponse(
     val decision: String = "Approved",
     val categoryScores: Map<String, Double>? = null
 )
+
+/** Respuesta de `POST /api/v1/media/upload` (FT-15, spec backend 022). */
+@Serializable
+data class UploadMediaResponse(
+    val mediaId: String,
+    val url: String,
+    val approved: Boolean = false,
+    val message: String? = null
+)

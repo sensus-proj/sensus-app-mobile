@@ -2,8 +2,10 @@ package com.example.sensus.data.remote
 
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.remote.api.AuthApiService
+import com.example.sensus.data.remote.api.FeedApiService
 import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.MerchantApiService
+import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
 import java.util.concurrent.TimeUnit
@@ -56,4 +58,13 @@ class NetworkClient(
     val profileApi: ProfileApiService by lazy { retrofit.create(ProfileApiService::class.java) }
     val merchantApi: MerchantApiService by lazy { retrofit.create(MerchantApiService::class.java) }
     val mediaApi: MediaApiService by lazy { retrofit.create(MediaApiService::class.java) }
+    val feedApi: FeedApiService by lazy { publishingService<FeedApiService>() }
+    val offersApi: OffersApiService by lazy { publishingService<OffersApiService>() }
+    val mediaUploadApi: MediaApiService by lazy { publishingService<MediaApiService>() }
+
+    /** Keep publication text, images and location out of HTTP body logs. */
+    private inline fun <reified T> publishingService(): T {
+        val client = okHttpClient.newBuilder().apply { interceptors().remove(loggingInterceptor) }.build()
+        return retrofit.newBuilder().client(client).build().create(T::class.java)
+    }
 }
