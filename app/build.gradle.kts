@@ -21,7 +21,7 @@ android {
     val ciVersionCode =
         providers.gradleProperty("SENSUS_VERSION_CODE").orNull?.toIntOrNull()
             ?: providers.environmentVariable("SENSUS_VERSION_CODE").orNull?.toIntOrNull()
-    val baseVersionCode = 5
+    val baseVersionCode = 8
 
     defaultConfig {
         applicationId = "sensus.com"

@@ -23,4 +23,16 @@ public final class SensusDatabaseMigrations {
             db.execSQL(MIGRATION_1_2_DDL);
         }
     };
+    private static final String MIGRATION_2_3_DDL =
+        "CREATE TABLE IF NOT EXISTS `feed_posts` (`id` TEXT NOT NULL, `queryKey` TEXT NOT NULL, "
+            + "`page` INTEGER NOT NULL, `position` INTEGER NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`id`, `queryKey`))";
+
+    public static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(MIGRATION_2_3_DDL);
+            db.execSQL("ALTER TABLE `offers` ADD COLUMN `unitsLeft` INTEGER NOT NULL DEFAULT 5");
+            db.execSQL("ALTER TABLE `offers` ADD COLUMN `expirationDate` TEXT");
+        }
+    };
 }

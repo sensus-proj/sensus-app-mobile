@@ -5,6 +5,7 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google.*")
+                excludeGroupByRegex("com\\.google\\.dagger.*")
             }
         }
         mavenCentral()
@@ -19,6 +20,7 @@ dependencyResolutionManagement {
                 includeGroupByRegex("androidx.*")
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google.*")
+                excludeGroupByRegex("com\\.google\\.dagger.*")
             }
         }
         mavenCentral()

@@ -79,6 +79,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: "gradle"
       - run: chmod +x ./gradlew
       # CodeQL necesita trazar la compilacion. Se compila sin generar APK (regla del proyecto).
       - run: ./gradlew compileDebugKotlin --no-daemon
@@ -94,6 +95,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: "gradle"
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -115,6 +117,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: "gradle"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -140,6 +143,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: "gradle"
       - run: chmod +x ./gradlew
       - run: ./gradlew compileDebugAndroidTestSources --no-daemon
 
@@ -153,6 +157,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: "gradle"
       - run: chmod +x ./gradlew
       # Sin APK: solo se valida la compilacion. El AAB firmado se genera en el release manual.
       - run: ./gradlew compileDebugKotlin --no-daemon

@@ -158,10 +158,10 @@ class CartAndModerationTest {
     }
 
     @Test
-    fun moderationService_shouldApprove_whenNoBackendConfigured() = runTest {
+    fun moderationService_shouldReject_whenNoBackendConfigured() = runTest {
         val service = ImageModerationService(mediaApi = null)
         val res = service.moderateImage(byteArrayOf(1, 2, 3))
-        assertTrue(res is ModerationResult.Approved)
+        assertTrue(res is ModerationResult.Rejected)
     }
 
     @Test
