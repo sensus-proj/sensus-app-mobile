@@ -34,10 +34,10 @@ specs/FT-XX-<slug>/
 | `FT-12-detalle-filtros-ruteo` | Negocio (Ola 1) | SE-015..SE-018; P-14, P-17, P-19 | FT-11 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-13-reserva-qr-cliente` | Negocio (Ola 1) | P-16, P-18, P-20, P-21 | FT-12 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-14-canje-qr-comercio` | Negocio (Ola 1) | P-33, C-48 | FT-13 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
-| `FT-15-oferta-creacion-comercio` | Negocio (Ola 2) | SE-019..SE-022; P-32 | FT-10 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-15-oferta-creacion-comercio` | Negocio (Ola 2) | SE-019..SE-022; P-32 | FT-10 | Cliente implementado localmente; E2E/backend pendiente | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-16-inventario-ciclo-vida` | Negocio (Ola 2) | SE-023..SE-026, SE-045; P-30, P-31 | FT-15 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-17-favoritos` | Negocio (Ola 3) | SE-036; P-23 | FT-12 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
-| `FT-18-feed-comunidad` | Negocio (Ola 3) | SE-027..SE-029; P-24 | FT-11, FT-15 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-18-feed-comunidad` | Negocio (Ola 3) | SE-027..SE-029; P-24 | FT-11, FT-15 | Cliente implementado localmente; E2E/backend pendiente | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-19-interacciones-reportes` | Negocio (Ola 3) | SE-030..SE-033; P-22 | FT-18 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-20-busqueda-recomendaciones-ml` | Negocio (Ola 3) | SE-034, SE-035, SE-037, SE-038; P-12, P-13 | FT-12, FT-17 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-21-push-fcm-ajustes` | Negocio / Push (Ola 3) | SE-039..SE-041; P-04, P-26 | FT-10 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |

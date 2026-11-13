@@ -137,6 +137,7 @@ enum class MerchantNavTab(val title: String, val icon: ImageVector) {
 @ComposeUiModel
 @Stable
 internal class MainAppState {
+    var communityMerchantId by mutableStateOf<String?>(null)
     var isMerchantMode by mutableStateOf(false)
     var buyerTabIndex by mutableIntStateOf(0)
     var merchantTabIndex by mutableIntStateOf(0)

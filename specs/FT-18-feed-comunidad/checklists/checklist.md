@@ -33,15 +33,15 @@
 
 ## Gates automatizados
 
-- [ ] `./gradlew.bat compileDebugKotlin` verde
-- [ ] `./gradlew.bat compileDebugAndroidTestSources` verde
-- [ ] `./gradlew.bat detekt ktlintCheck lint` verdes
-- [ ] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
-- [ ] `python scripts/check_sdd.py` PASS
-- [ ] `python scripts/check_layers.py` PASS
-- [ ] `python scripts/check_endpoints.py` PASS
-- [ ] `python scripts/check_secrets.py` PASS
-- [ ] `python scripts/check_coverage.py --min 80` PASS
+- [x] `./gradlew.bat compileDebugKotlin` verde
+- [x] `./gradlew.bat compileDebugAndroidTestSources` verde
+- [x] `./gradlew.bat detekt ktlintCheck lint` verdes
+- [x] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
+- [x] `python scripts/check_sdd.py` PASS
+- [x] `python scripts/check_layers.py` PASS
+- [x] `python scripts/check_endpoints.py` PASS
+- [x] `python scripts/check_secrets.py` PASS
+- [x] `python scripts/check_coverage.py --min 80` PASS
 
 ## Cierre SDD
 
@@ -49,3 +49,11 @@
 - [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
 - [ ] `CHECKLIST_PR.md` completo
 - [ ] Tag `v1.21.0-ft18`
+
+### Evidencia local de las HU — 2026-11-13
+
+146 pruebas unitarias: 0 fallos, 0 errores, 0 omisiones. Kover global 89.85% (umbral 80%).
+La app y las pruebas instrumentadas compilan; detekt, ktlint, lint y los scripts locales pasan.
+Las pruebas instrumentadas están pendientes de ejecución, al igual que la validación con el backend desplegado.
+No se declara cierre formal de la slice, aprobación, merge ni tag. El alcance ejecutado corresponde a las HU solicitadas;
+las condiciones globales sobre eliminación de mocks legacy y otras HU no se modifican ni se declaran cumplidas.

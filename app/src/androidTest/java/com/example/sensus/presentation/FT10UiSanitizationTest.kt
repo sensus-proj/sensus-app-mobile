@@ -20,8 +20,7 @@ import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.presentation.auth.OtpVerificationScreen
 import com.example.sensus.presentation.auth.PRIVACY_POLICY_URL
 import com.example.sensus.presentation.auth.TermsScreen
-import com.example.sensus.presentation.buyer.CommunityScreen
-import com.example.sensus.presentation.buyer.CommunityViewModel
+import com.example.sensus.presentation.buyer.FriendsCommunityScreen
 import com.example.sensus.theme.SensusTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,11 +59,9 @@ class FT10UiSanitizationTest {
 
     @Test
     fun communityScreen_omitsWhatsAppAndRendersGenericInvite() {
-        val viewModel = CommunityViewModel(FakeStoreRepository(), FakeSessionRepository())
-
         composeTestRule.setContent {
             SensusTheme {
-                CommunityScreen(viewModel = viewModel)
+                FriendsCommunityScreen(friendsList = FakeStoreRepository().getSampleFriends())
             }
         }
 

@@ -38,15 +38,15 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `GET /api/v1/offers/claims` | `GetMyClaimsUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-13) |
 | `PATCH /api/v1/offers/claims/{id}/cancel` | `CancelClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | 10/min por usuario | Propuesto / por confirmar backend (FT-13) |
 | `POST /api/v1/offers/claims/{code}/redeem` | `RedeemClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-14, spec 033) |
-| `POST /api/v1/media/upload` | `MediaRepository` -> `MediaApiService` (`@Multipart <= 4.5 MB`, moderado) | Bearer | 20/dia por usuario | Pendiente (FT-15, spec 022) |
-| `POST /api/v1/offers` | `CreateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 20/hora por usuario | Pendiente (FT-15, spec 034) |
+| `POST /api/v1/media/upload` | `MediaRepository` -> `MediaApiService` (`@Multipart <= 4.5 MB`, moderado) | Bearer | 20/dia por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 022) |
+| `POST /api/v1/offers` | `CreateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 20/hora por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 034) |
 | `GET /api/v1/merchants/my-offers` | `GetMerchantInventoryUseCase` -> `OffersRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 037) |
 | `PUT /api/v1/offers/{id}` | `UpdateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 035) |
 | `PUT /api/v1/offers/{id}/status` | `ChangeOfferStatusUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 036) |
 | `POST /api/v1/users/favorites/{id}` | `ToggleFavoriteUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-17, spec 038) |
 | `GET /api/v1/users/favorites` | `GetFavoritesUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-17) |
-| `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Pendiente (FT-18, spec 026) |
-| `POST /api/v1/feed/posts` | `CreateFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 10/hora por usuario | Pendiente (FT-18, spec 024) |
+| `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-18, spec 026) |
+| `POST /api/v1/feed/posts` | `CreateFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 10/hora por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-18, spec 024) |
 | `DELETE /api/v1/feed/posts/{id}` | `DeletePostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer autor | 20/hora por usuario | Pendiente (FT-19, spec 024) |
 | `POST /api/v1/feed/posts/{id}/like` | `TogglePostLikeUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-19, spec 039) |
 | `GET /api/v1/feed/posts/{id}/comments` | `GetPostCommentsUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Pendiente (FT-19, spec 025) |
