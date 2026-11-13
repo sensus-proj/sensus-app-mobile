@@ -1,6 +1,7 @@
 package com.example.sensus.presentation
 
 import com.example.sensus.domain.model.MerchantStore
+import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -15,8 +16,10 @@ import com.example.sensus.presentation.merchant.MerchantProfileViewModel
 import com.example.sensus.presentation.merchant.MerchantRegisterViewIntent
 import com.example.sensus.presentation.merchant.MerchantRegisterViewModel
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -48,6 +51,19 @@ class MerchantViewModelsTest {
         vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(offer))
 
         verify(exactly = 1) { offersRepo.addOffer(offer) }
+    }
+
+    @Test
+    fun merchantNewOffer_moderatesImage_delegatesToService() = kotlinx.coroutines.test.runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val moderationService = mockk<com.example.sensus.data.moderation.ImageModerationService>()
+        coEvery { moderationService.moderateImage(any(), any()) } returns ModerationResult.Approved
+
+        val vm = MerchantNewOfferViewModel(offersRepo, moderationService)
+        val result = vm.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test")
+
+        assertEquals(ModerationResult.Approved, result)
+        coVerify(exactly = 1) { moderationService.moderateImage(byteArrayOf(1, 2, 3), "Oferta Test") }
     }
 
     @Test

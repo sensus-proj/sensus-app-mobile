@@ -161,10 +161,22 @@ private fun submitOfferPublication(uiState: NewOfferScreenState, viewModel: Merc
 
     handlers.launchTask {
         handlers.onStateUpdate(uiState.copy(errors = validation, isCheckingModeration = true))
-        when (val modRes = evaluateImageModeration(uiState.imageBytes)) {
+        val textContext = listOf(uiState.form.productName.trim(), uiState.form.description.trim())
+            .filter { it.isNotEmpty() }
+            .joinToString(" - ")
+        val modRes = if (uiState.imageBytes != null && uiState.imageBytes.isNotEmpty()) {
+            viewModel.moderateImage(uiState.imageBytes, textContext)
+        } else {
+            ModerationResult.Approved
+        }
+        when (modRes) {
             is ModerationResult.Rejected -> {
                 handlers.onStateUpdate(uiState.copy(errors = validation, isCheckingModeration = false))
                 handlers.onModerationRejected(modRes.reason)
+            }
+            is ModerationResult.Quarantine -> {
+                handlers.onStateUpdate(uiState.copy(errors = validation, isCheckingModeration = false))
+                handlers.onModerationRejected("Tu oferta quedó en revisión preventiva: ${modRes.reason}")
             }
             is ModerationResult.Approved -> {
                 viewModel.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(buildNewOffer(uiState.form)))
@@ -186,11 +198,6 @@ private fun validateNewOfferForm(form: NewOfferFormState): NewOfferErrors {
         else -> null
     }
     return NewOfferErrors(productNameError = nameError, priceError = priceError)
-}
-
-private fun evaluateImageModeration(imageBytes: ByteArray?): ModerationResult {
-    if (imageBytes == null || imageBytes.isEmpty()) return ModerationResult.Approved
-    return ModerationResult.Approved
 }
 
 private fun buildNewOffer(form: NewOfferFormState): ProductOffer {

@@ -628,3 +628,26 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Automatización CD de `main` a Producción en Google Play Console (`2026-11-12`):**
   - Configurado `.github/workflows/release-playstore.yml` para dispararse automáticamente en `push` a `main` (además de tags `v*.*.*` y `workflow_dispatch`) apuntando a la pista `production` **únicamente si `pre-flight-gates` pasa al 100%** (SDD scripts, Gitleaks, Semgrep, `lint`, `detekt`, `ktlintCheck`, `testDebugUnitTest`, `koverXmlReportDebug`, `koverVerifyDebug >= 80%`, `check_coverage.py --min 80`, `compileDebugAndroidTestSources`, `compileDebugKotlin`, `compileReleaseKotlin`).
   - Corregido `upload-google-play@v4` (inexistente) a `@v1.1.5`, ajustado `status: completed` sin `userFraction` en lanzamientos al `100%`, normalizado `whatsnew-es-419.txt` → `whatsnew-es-419` (BCP-47 en runner temp) y parametrizado `SENSUS_VERSION_CODE` en `app/build.gradle.kts` (`baseVersionCode = 5`, incremental en CI vía `4 + github.run_number`). Sincronizados `constitution.md`, `.specify/memory/constitution.md`, `AGENTS.md` y `docs/cicd-pipeline.md`.
+
+---
+
+## Bitácora - Moderación Multimodal Real, Eliminación de Mocks y Lógica de 3 Bandas (`Quarantine`)
+
+- **Fecha:** 2026-11-13
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`)
+- **Alcance ejecutado y verificado:**
+  1. **Eliminación total de mocks de moderación (`MerchantNewOfferScreen.kt`):**
+     - Removida la función stub `evaluateImageModeration` que retornaba `ModerationResult.Approved` en duro sin consultar la red.
+     - Inyectado `ImageModerationService` en `MerchantNewOfferViewModel` mediante Hilt.
+     - Conectada la acción `submitOfferPublication` para invocar de forma asíncrona `viewModel.moderateImage(uiState.imageBytes, textContext)`.
+  2. **Moderación Multimodal y Contextual (`ImageModerationService.kt`, `MediaDto.kt`, `MerchantNewOfferScreen.kt`):**
+     - Extendidos los contratos de red `ModerateImageRequest` y `ModerateImageResponse` para incorporar `textContext: String?`, `decision: String` y `categoryScores: Map<String, Double>?`.
+     - Concatenación del contexto textual de la oferta (`"${uiState.form.productName} - ${uiState.form.description}"`) enviado junto con los bytes codificados en Base64 al endpoint `/api/v1/media/moderate`.
+  3. **Lógica de 3 Bandas y Revisión Preventiva (`Quarantine`):**
+     - Añadido el estado `data class Quarantine(val reason: String, val scores: Map<String, Double> = emptyMap()) : ModerationResult` en `StoreModels.kt`.
+     - Integración en `ImageModerationService` para mapear respuestas `decision == "quarantine"` hacia `ModerationResult.Quarantine`.
+     - Manejo exhaustivo en UI (`MerchantNewOfferScreen.kt` y `RetrofitProfileRepository.kt`): las ofertas en cuarentena muestran un diálogo preventivo informando al comerciante y bloqueando la publicación inmediata hasta resolución administrativa.
+  4. **Ajuste de versión y despliegue físico:**
+     - Actualizado `baseVersionCode` a `8` en `app/build.gradle.kts`.
+     - Verificación completa de compilación y pruebas unitarias (`./gradlew.bat testDebugUnitTest` exitoso, 109 tests pasando).
+     - Generación de APK debug (`assembleDebug`) e instalación vía ADB en dispositivo físico Samsung Galaxy S23 Ultra (`SM-S918U`, serial `R5CW90LY07N`).

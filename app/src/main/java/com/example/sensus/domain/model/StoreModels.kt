@@ -209,4 +209,5 @@ sealed interface AddToCartResult {
 sealed interface ModerationResult {
     data object Approved : ModerationResult
     data class Rejected(val reason: String) : ModerationResult
+    data class Quarantine(val reason: String, val scores: Map<String, Double> = emptyMap()) : ModerationResult
 }
