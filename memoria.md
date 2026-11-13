@@ -630,6 +630,36 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - Corregido `upload-google-play@v4` (inexistente) a `@v1.1.5`, ajustado `status: completed` sin `userFraction` en lanzamientos al `100%`, normalizado `whatsnew-es-419.txt` → `whatsnew-es-419` (BCP-47 en runner temp) y parametrizado `SENSUS_VERSION_CODE` en `app/build.gradle.kts` (`baseVersionCode = 5`, incremental en CI vía `4 + github.run_number`). Sincronizados `constitution.md`, `.specify/memory/constitution.md`, `AGENTS.md` y `docs/cicd-pipeline.md`.
 
 
+## Bitácora - Moderación Multimodal Real, Eliminación de Mocks y Lógica de 3 Bandas (`Quarantine`)
+
+- **Fecha:** 2026-11-13
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`)
+- **Alcance ejecutado y verificado:**
+  1. **Eliminación total de mocks de moderación (`MerchantNewOfferScreen.kt`):**
+     - Removida la función stub `evaluateImageModeration` que retornaba `ModerationResult.Approved` en duro sin consultar la red.
+     - Inyectado `ImageModerationService` en `MerchantNewOfferViewModel` mediante Hilt.
+     - Conectada la acción `submitOfferPublication` para invocar de forma asíncrona `viewModel.moderateImage(uiState.imageBytes, textContext)`.
+  2. **Moderación Multimodal y Contextual (`ImageModerationService.kt`, `MediaDto.kt`, `MerchantNewOfferScreen.kt`):**
+     - Extendidos los contratos de red `ModerateImageRequest` y `ModerateImageResponse` para incorporar `textContext: String?`, `decision: String` y `categoryScores: Map<String, Double>?`.
+     - Concatenación del contexto textual de la oferta (`"${uiState.form.productName} - ${uiState.form.description}"`) enviado junto con los bytes codificados en Base64 al endpoint `/api/v1/media/moderate`.
+  3. **Lógica de 3 Bandas y Revisión Preventiva (`Quarantine`):**
+     - Añadido el estado `data class Quarantine(val reason: String, val scores: Map<String, Double> = emptyMap()) : ModerationResult` en `StoreModels.kt`.
+     - Integración en `ImageModerationService` para mapear respuestas `decision == "quarantine"` hacia `ModerationResult.Quarantine`.
+     - Manejo exhaustivo en UI (`MerchantNewOfferScreen.kt` y `RetrofitProfileRepository.kt`): las ofertas en cuarentena muestran un diálogo preventivo informando al comerciante y bloqueando la publicación inmediata hasta resolución administrativa.
+  4. **Ajuste de versión y despliegue físico:**
+     - Actualizado `baseVersionCode` a `8` en `app/build.gradle.kts`.
+     - Verificación completa de compilación y pruebas unitarias (`./gradlew.bat testDebugUnitTest` exitoso, 109 tests pasando).
+     - Generación de APK debug (`assembleDebug`) e instalación vía ADB en dispositivo físico Samsung Galaxy S23 Ultra (`SM-S918U`, serial `R5CW90LY07N`).
+  5. **Arquitectura Clean y Compuertas SDD (`check_layers.py`, `detekt`, `ktlint`):**
+     - Creada la interfaz `ImageModerationRepository` en `domain/repository/` desacoplando `MerchantNewOfferViewModel` de `data/moderation/` conforme a la regla `RF-03-05`.
+     - Inyección mediante `AppModule.provideImageModerationRepository`.
+     - Refactor de complejidad ciclomática en `ImageModerationService` para cumplir umbral de Detekt (`<= 10`).
+     - Todas las compuertas SDD (`check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py`) aprobadas al 100%.
+  6. **Comprobación de CI en GitHub Actions y Resolución Fail-Closed:**
+     - Verificada la ejecución exitosa de los workflows remotos en GitHub Actions para la rama `Movil_Rodrigo`.
+     - Resuelto el conflicto de integración en `ImageModerationService.kt` con la rama `develop`, ratificando la política mandatoria de *Fail-Closed* (`ModerationResult.Rejected(SECURITY_POLICY_MESSAGE)`) en caso de ausencia de cliente de moderación o fallas de red/timeout.
+     - Corregido `settings.gradle.kts` excluyendo `com.google.dagger.*` del repositorio de Google Maven para dirigir la resolución de Hilt directamente a Maven Central sin fallbacks fallidos, y añadido caché de Gradle en `actions/setup-java` en `.github/workflows/ci.yml`.
+                                                                                                              
 ### HU de ofertas y comunidad — implementación local (2026-11-13)
 
 - Alcance autorizado: SE-019/020/021 y SE-027/028; se conservan los cambios locales previos de registro y alternancia de rol.

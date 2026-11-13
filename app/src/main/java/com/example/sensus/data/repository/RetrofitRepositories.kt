@@ -256,9 +256,12 @@ class RetrofitProfileRepository(
     }
 
     override suspend fun uploadProfilePhoto(imageBytes: ByteArray): Result<String> = withContext(Dispatchers.IO) {
-        val moderationResult = moderationService.moderateImage(imageBytes)
+        val moderationResult = moderationService.moderateImage(imageBytes, "Foto de perfil de usuario")
         if (moderationResult is ModerationResult.Rejected) {
             return@withContext Result.Failure(AppError.Validation(moderationResult.reason))
+        }
+        if (moderationResult is ModerationResult.Quarantine) {
+            return@withContext Result.Failure(AppError.Validation("La imagen está en revisión preventiva: ${moderationResult.reason}"))
         }
         safeNetworkCall("Error al procesar la subida de foto.") {
             val sigResponse = profileApi.generatePhotoSignature()
