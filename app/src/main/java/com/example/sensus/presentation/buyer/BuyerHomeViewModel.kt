@@ -46,7 +46,9 @@ class BuyerHomeViewModel @Inject constructor(
                     updateState { copy(selectedRadiusKm = GuestRadiusPolicy.GUEST_MAX_RADIUS_KM) }
                     emitEffect(BuyerHomeViewEffect.RequireAuthForRadius)
                 } else {
-                    updateState { copy(selectedRadiusKm = GuestRadiusPolicy.clampRadius(intent.radiusKm, isGuest = false)) }
+                    val safeRadius = GuestRadiusPolicy.clampRadius(intent.radiusKm, isGuest = false)
+                    updateState { copy(selectedRadiusKm = safeRadius) }
+                    loadOffers()
                 }
             }
             is BuyerHomeViewIntent.RefreshLocation -> refreshLocation(forceFresh = true)
@@ -63,6 +65,7 @@ class BuyerHomeViewModel @Inject constructor(
                     locationRepository.getCurrentLocation()
                 }
                 updateState { copy(userLocation = loc) }
+                loadOffers()
             }
         }
     }
@@ -70,7 +73,18 @@ class BuyerHomeViewModel @Inject constructor(
     private fun loadOffers() {
         updateState { copy(isLoading = true) }
         viewModelScope.launch {
-            val offers = offersRepository.getOffers()
+            val loc = viewState.value.userLocation
+            val radiusKm = viewState.value.selectedRadiusKm.toDouble()
+            val remoteRes = offersRepository.fetchNearbyOffers(
+                latitude = loc.latitude,
+                longitude = loc.longitude,
+                radiusKm = radiusKm
+            )
+            val offers = when (remoteRes) {
+                is com.example.sensus.common.Result.Success ->
+                    remoteRes.data.filter { it.isPubliclyVisible }.ifEmpty { offersRepository.getOffers().filter { it.isPubliclyVisible } }
+                is com.example.sensus.common.Result.Failure -> offersRepository.getOffers().filter { it.isPubliclyVisible }
+            }
             updateState { copy(offers = offers, isLoading = false) }
         }
     }

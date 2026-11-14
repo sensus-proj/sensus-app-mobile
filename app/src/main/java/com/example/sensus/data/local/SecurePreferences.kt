@@ -11,6 +11,13 @@ enum class SessionType {
     REGISTERED
 }
 
+data class StoredMerchantStatus(
+    val isRegistered: Boolean = false,
+    val storeName: String? = null,
+    val address: String? = null,
+    val postalCode: String? = null
+)
+
 class SecurePreferences(private val context: Context) {
 
     private val prefs: SharedPreferences by lazy {
@@ -81,6 +88,30 @@ class SecurePreferences(private val context: Context) {
 
     fun getString(key: String): String? = prefs.getString(key, null)
 
+    var storedMerchantStatus: StoredMerchantStatus
+        get() = StoredMerchantStatus(
+            isRegistered = prefs.getBoolean(KEY_MERCHANT_REGISTERED, false),
+            storeName = prefs.getString(KEY_MERCHANT_STORE_NAME, null),
+            address = prefs.getString(KEY_MERCHANT_ADDRESS, null),
+            postalCode = prefs.getString(KEY_MERCHANT_POSTAL_CODE, null)
+        )
+        set(value) {
+            prefs.edit().apply {
+                putBoolean(KEY_MERCHANT_REGISTERED, value.isRegistered)
+                val normalizedName = value.storeName?.trim()?.takeIf { it.isNotBlank() }
+                if (value.isRegistered && normalizedName != null) {
+                    putString(KEY_MERCHANT_STORE_NAME, normalizedName)
+                    value.address?.trim()?.takeIf { it.isNotBlank() }?.let { putString(KEY_MERCHANT_ADDRESS, it) }
+                    value.postalCode?.trim()?.takeIf { it.isNotBlank() }?.let { putString(KEY_MERCHANT_POSTAL_CODE, it) }
+                } else {
+                    remove(KEY_MERCHANT_STORE_NAME)
+                    remove(KEY_MERCHANT_ADDRESS)
+                    remove(KEY_MERCHANT_POSTAL_CODE)
+                }
+                apply()
+            }
+        }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -94,5 +125,9 @@ class SecurePreferences(private val context: Context) {
         private const val KEY_USER_NAME = "key_user_name"
         private const val KEY_USER_EMAIL = "key_user_email"
         private const val KEY_USER_PHOTO = "key_user_photo"
+        private const val KEY_MERCHANT_REGISTERED = "key_merchant_registered"
+        private const val KEY_MERCHANT_STORE_NAME = "key_merchant_store_name"
+        private const val KEY_MERCHANT_ADDRESS = "key_merchant_address"
+        private const val KEY_MERCHANT_POSTAL_CODE = "key_merchant_postal_code"
     }
 }

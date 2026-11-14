@@ -15,7 +15,7 @@ import com.example.sensus.data.local.db.entity.UserSessionEntity;
 
 @Database(
     entities = {OfferEntity.class, UserSessionEntity.class, PendingSyncEntity.class, UserPreferenceEntity.class, FeedPostEntity.class},
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 public abstract class SensusDatabase extends RoomDatabase {

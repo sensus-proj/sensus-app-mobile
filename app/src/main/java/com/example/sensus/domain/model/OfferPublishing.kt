@@ -17,6 +17,20 @@ data class CreateOfferInput(
     val expiresAtMillis: Long
 )
 
+/** Datos para editar una oferta existente (FT-16, Spec 035). */
+data class UpdateOfferInput(
+    val offerId: String,
+    val title: String,
+    val description: String,
+    val category: StoreCategory = StoreCategory.ALL,
+    val originalPrice: Double,
+    val discountPrice: Double,
+    val stock: Int,
+    val expiresAtMillis: Long,
+    val imageUrl: String? = null,
+    val expectedVersion: Int = 1
+)
+
 /** Imagen aprobada por la moderacion del backend y almacenada (FT-15, RF-15-03). */
 data class UploadedMedia(
     val mediaId: String,
@@ -44,6 +58,19 @@ object OfferPublishingPolicy {
             else -> validatePrices(input) ?: validateStockAndExpiration(input, nowMillis)
         }
     }
+
+    fun validateUpdate(input: UpdateOfferInput, nowMillis: Long): OfferValidationError? = validate(
+        CreateOfferInput(
+            title = input.title,
+            description = input.description,
+            category = input.category,
+            originalPrice = input.originalPrice,
+            discountPrice = input.discountPrice,
+            stock = input.stock,
+            expiresAtMillis = input.expiresAtMillis
+        ),
+        nowMillis
+    )
 
     fun discountPercent(originalPrice: Double, discountPrice: Double): Int = if (originalPrice > 0.0 && discountPrice > 0.0 && discountPrice < originalPrice) {
         (((originalPrice - discountPrice) / originalPrice) * PERCENT_SCALE).toInt()

@@ -30,7 +30,7 @@ object DatabaseFactory {
             DATABASE_NAME
         )
             .openHelperFactory(factory)
-            .addMigrations(MIGRATION_1_2, SensusDatabaseMigrations.MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, SensusDatabaseMigrations.MIGRATION_2_3, SensusDatabaseMigrations.MIGRATION_3_4)
             .build()
     }
 }

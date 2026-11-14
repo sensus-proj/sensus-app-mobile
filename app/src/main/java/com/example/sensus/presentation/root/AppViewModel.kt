@@ -80,7 +80,8 @@ private fun AppViewState.applySessionUpdate(session: SessionState): AppViewState
         isGuest = session.isGuest,
         hasAcceptedTerms = session.hasAcceptedTerms,
         hasLocationPermission = session.hasLocationPermission,
-        hasCompletedSplash = session.hasCompletedSplash
+        hasCompletedSplash = session.hasCompletedSplash,
+        isMerchantRegistered = session.isMerchantRegistered
     )
 }
 

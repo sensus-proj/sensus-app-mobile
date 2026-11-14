@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
@@ -60,10 +62,17 @@ private const val CAMERA_ICON_ALPHA = 0.8f
 private const val CAMERA_HINT_ALPHA = 0.7f
 private const val SUCCESS_BG_ALPHA = 0.15f
 
+@ComposeUiModel
+private data class ValidatedRedemptionEntry(
+    val code: String,
+    val statusText: String
+)
+
 @Composable
 fun MerchantSalesScreen(modifier: Modifier = Modifier) {
     var manualCode by remember { mutableStateOf("") }
     var validatedResult by remember { mutableStateOf<String?>(null) }
+    val redemptionsToday = remember { mutableStateListOf<ValidatedRedemptionEntry>() }
 
     LazyColumn(
         modifier = modifier
@@ -76,7 +85,7 @@ fun MerchantSalesScreen(modifier: Modifier = Modifier) {
         item {
             QrScannerCard(
                 onScanSimulated = {
-                    validatedResult = "Código SNS-A7K9-24 validado: Cobrar $90 MXN por Detergente 1 L."
+                    validatedResult = "Ingresa el código del cliente en el campo inferior o apunta la cámara al código QR de apartado."
                 }
             )
         }
@@ -85,8 +94,11 @@ fun MerchantSalesScreen(modifier: Modifier = Modifier) {
                 manualCode = manualCode,
                 onCodeChange = { manualCode = it },
                 onValidateClick = {
-                    if (manualCode.isNotBlank()) {
-                        validatedResult = "Código $manualCode validado: Cobrar $90 MXN."
+                    val trimmed = manualCode.trim()
+                    if (trimmed.isNotBlank()) {
+                        validatedResult = "Código $trimmed verificado en sistema."
+                        redemptionsToday.add(0, ValidatedRedemptionEntry(code = trimmed, statusText = "Reciente"))
+                        manualCode = ""
                     }
                 }
             )
@@ -97,7 +109,7 @@ fun MerchantSalesScreen(modifier: Modifier = Modifier) {
         item {
             Text(text = "Canjes completados hoy", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         }
-        item { RecentRedemptionsCard() }
+        item { RecentRedemptionsCard(redemptions = redemptionsToday) }
     }
 }
 
@@ -204,7 +216,7 @@ private fun ManualCodeEntryCard(manualCode: String, onCodeChange: (String) -> Un
                 OutlinedTextField(
                     value = manualCode,
                     onValueChange = onCodeChange,
-                    placeholder = { Text("Ej. SNS-A7K9-24", fontSize = 13.sp) },
+                    placeholder = { Text("Ej. SNS-XXXX-XX", fontSize = 13.sp) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = sensusOutlinedTextFieldColors(),
@@ -239,18 +251,34 @@ private fun ValidationSuccessBanner(message: String) {
 }
 
 @Composable
-private fun RecentRedemptionsCard() {
+private fun RecentRedemptionsCard(redemptions: List<ValidatedRedemptionEntry>) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            RecentRedemptionItem("Detergente - 1 L", "$90.00 MXN", "Hace 15 min", "SNS-A7K9-24")
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = SensusBackground)
-            Spacer(modifier = Modifier.height(10.dp))
-            RecentRedemptionItem("Arroz - 1 kg", "$24.00 MXN", "Hace 45 min", "SNS-ARR-50")
+            if (redemptions.isEmpty()) {
+                Text(
+                    text = "Aún no hay canjes registrados hoy.",
+                    fontSize = 13.sp,
+                    color = SensusTextMuted
+                )
+            } else {
+                redemptions.forEachIndexed { idx, entry ->
+                    if (idx > 0) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = SensusBackground)
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    RecentRedemptionItem(
+                        product = "Apartado validado",
+                        amount = "Verificado",
+                        time = entry.statusText,
+                        code = entry.code
+                    )
+                }
+            }
         }
     }
 }

@@ -35,8 +35,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.sensus.domain.model.GuestRadiusPolicy
+import com.example.sensus.domain.model.MapStoreCluster
+import com.example.sensus.domain.model.MapStoreClusterBuilder
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
+import com.example.sensus.domain.model.StoreClusterQuery
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.OsmMapUtils
@@ -48,7 +51,6 @@ import org.osmdroid.events.ZoomEvent
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
-private const val METERS_PER_KM = 1000
 private const val MAP_BG_HEX = 0xFFE5E7EB
 private const val FOCUS_ZOOM = 16.5
 private const val SHORT_RADIUS_ZOOM = 17.6
@@ -60,23 +62,12 @@ private const val ZOOM_STEP = 0.8
 private const val ZOOM_EPSILON = 0.05
 private const val ZOOM_CLAMP_EPSILON = 0.01
 
-private val mapCategoryKeywords = mapOf(
-    StoreCategory.GROCERY to "Abarrotes",
-    StoreCategory.CLEANING to "Limpieza",
-    StoreCategory.PERISHABLES to "Perecederos",
-    StoreCategory.DAIRY to "Lácteos",
-    StoreCategory.FOOD to "Comida",
-    StoreCategory.BAKERY to "Panadería",
-    StoreCategory.BEVERAGES to "Bebidas",
-    StoreCategory.PETS to "Mascotas",
-    StoreCategory.PHARMACY to "Farmacia"
-)
-
 @ComposeUiModel
 data class BuyerMapCallbacks(
     val isGuest: Boolean = false,
     val onRequireAuth: () -> Unit = {},
     val onProductClick: (ProductOffer) -> Unit = {},
+    val onOpenStoreCatalog: (MapStoreCluster) -> Unit = {},
     val onRouteClick: (ProductOffer) -> Unit = {},
     val onListToggle: () -> Unit = {},
     val onOpenCart: (() -> Unit)? = null
@@ -87,7 +78,7 @@ data class BuyerMapCallbacks(
 private class BuyerMapUiStateHolder {
     var searchQuery by mutableStateOf("")
     var selectedCategory by mutableStateOf(StoreCategory.ALL)
-    var selectedOffer by mutableStateOf<ProductOffer?>(null)
+    var selectedStore by mutableStateOf<MapStoreCluster?>(null)
     var showRadiusSheet by mutableStateOf(false)
     var showLayersMenu by mutableStateOf(false)
     var locationNotice by mutableStateOf<Pair<String, Boolean>?>(null)
@@ -99,7 +90,7 @@ private class BuyerMapUiStateHolder {
 private data class BuyerMapHostInput(
     val mapState: BuyerMapViewState,
     val cartItemCount: Int,
-    val localizedOffers: List<ProductOffer>,
+    val storeClusters: List<MapStoreCluster>,
     val effectiveIsGuest: Boolean,
     val effectiveRadiusKm: Float,
     val hasRuntimePermission: Boolean
@@ -138,20 +129,25 @@ fun BuyerMapScreen(
     )
     OsmMapUtils.BindMapLifecycle(uiHolder.mapViewRef, lifecycleOwner)
 
-    val localizedOffers = remember(mapState.userLocation, uiHolder.searchQuery, uiHolder.selectedCategory, mapState.offers, effectiveRadiusKm) {
-        computeLocalizedMapOffers(mapState.userLocation, mapState.offers, uiHolder.searchQuery, uiHolder.selectedCategory, effectiveRadiusKm)
+    val storeClusters = remember(
+        mapState.userLocation,
+        mapState.offers,
+        mapState.nearbyMerchants,
+        uiHolder.searchQuery,
+        uiHolder.selectedCategory,
+        effectiveRadiusKm
+    ) {
+        buildMapStoreClusters(mapState, uiHolder, effectiveRadiusKm)
     }
-    LaunchedEffect(localizedOffers) {
-        if (uiHolder.selectedOffer != null && localizedOffers.none { it.id == uiHolder.selectedOffer?.id }) {
-            uiHolder.selectedOffer = null
-        }
+    LaunchedEffect(storeClusters) {
+        uiHolder.selectedStore?.storeKey?.let { key -> uiHolder.selectedStore = storeClusters.find { it.storeKey == key } }
     }
 
     BuyerMapScreenScaffold(
         hostInput = BuyerMapHostInput(
             mapState = mapState,
             cartItemCount = cartState.storeCart.totalItemsCount,
-            localizedOffers = localizedOffers,
+            storeClusters = storeClusters,
             effectiveIsGuest = effectiveIsGuest,
             effectiveRadiusKm = effectiveRadiusKm,
             hasRuntimePermission = hasRuntimePermission
@@ -180,7 +176,7 @@ private fun BuyerMapScreenScaffold(hostInput: BuyerMapHostInput, deps: BuyerMapS
     val mapState = hostInput.mapState
     val uiHolder = deps.uiHolder
     val controlsBottomPadding by animateDpAsState(
-        targetValue = if (uiHolder.selectedOffer != null) 276.dp else 28.dp,
+        targetValue = if (uiHolder.selectedStore != null) 292.dp else 28.dp,
         label = "MapControlsBottomPadding"
     )
 
@@ -192,15 +188,15 @@ private fun BuyerMapScreenScaffold(hostInput: BuyerMapHostInput, deps: BuyerMapS
                 userLocation = mapState.userLocation,
                 effectiveRadiusKm = hostInput.effectiveRadiusKm,
                 selectedLayer = mapState.selectedLayer,
-                localizedOffers = hostInput.localizedOffers,
-                selectedOfferId = uiHolder.selectedOffer?.id,
+                storeClusters = hostInput.storeClusters,
+                selectedStoreKey = uiHolder.selectedStore?.storeKey,
                 onEmptyTap = {
                     if (uiHolder.showLayersMenu) uiHolder.showLayersMenu = false
-                    if (uiHolder.selectedOffer != null) uiHolder.selectedOffer = null
+                    if (uiHolder.selectedStore != null) uiHolder.selectedStore = null
                 },
-                onMarkerTap = { offer ->
+                onStoreMarkerTap = { cluster ->
                     uiHolder.showLayersMenu = false
-                    uiHolder.selectedOffer = offer
+                    uiHolder.selectedStore = cluster
                 }
             ),
             onMapCreated = { uiHolder.mapViewRef = it },
@@ -316,15 +312,11 @@ private fun BuyerMapBottomOverlaySection(
             )
         }
 
-        uiHolder.selectedOffer?.let { offer ->
-            SelectedOfferBottomCard(
-                offer = offer,
-                onClose = { uiHolder.selectedOffer = null },
-                onRouteClick = callbacks.onRouteClick,
-                onProductClick = callbacks.onProductClick,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
-        }
+        BuyerSelectedBottomCard(
+            selectedStore = uiHolder.selectedStore,
+            onClearStore = { uiHolder.selectedStore = null },
+            callbacks = callbacks
+        )
 
         if (uiHolder.showRadiusSheet) {
             RadiusSelectorBottomSheet(
@@ -335,6 +327,23 @@ private fun BuyerMapBottomOverlaySection(
                 onDismiss = { uiHolder.showRadiusSheet = false }
             )
         }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.BuyerSelectedBottomCard(
+    selectedStore: MapStoreCluster?,
+    onClearStore: () -> Unit,
+    callbacks: BuyerMapCallbacks
+) {
+    selectedStore?.let { cluster ->
+        SelectedStoreBottomCard(
+            cluster = cluster,
+            onClose = onClearStore,
+            onRouteClick = callbacks.onRouteClick,
+            onViewMoreClick = callbacks.onOpenStoreCatalog,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -394,6 +403,7 @@ private fun BuyerMapLifecycleEffects(
     }
 
     LaunchedEffect(Unit) {
+        mapViewModel.dispatchIntent(BuyerMapViewIntent.RefreshNearby)
         if (hasMapLocationPermission(context)) {
             mapViewModel.dispatchIntent(BuyerMapViewIntent.LocationPermissionGranted(true))
         } else {
@@ -453,24 +463,17 @@ private fun stepMapZoom(map: MapView, delta: Double): Double {
     return next
 }
 
-private fun computeLocalizedMapOffers(
-    userLocation: UserLocation,
-    offers: List<ProductOffer>,
-    searchQuery: String,
-    selectedCategory: StoreCategory,
-    effectiveRadiusKm: Float
-): List<ProductOffer> {
-    val keyword = mapCategoryKeywords[selectedCategory]
-    val filtered = offers.filter { offer ->
-        val matchesCategory = keyword == null || offer.category.contains(keyword, ignoreCase = true)
-        val matchesSearch = searchQuery.isBlank() ||
-            offer.name.contains(searchQuery, ignoreCase = true) ||
-            offer.storeName.contains(searchQuery, ignoreCase = true)
-        matchesCategory && matchesSearch
-    }
-    val maxRadiusMeters = (effectiveRadiusKm * METERS_PER_KM).toInt()
-    return OsmMapUtils.localizeAndMeasureOffers(userLocation, filtered).filter { it.distanceMeters <= maxRadiusMeters }
-}
+private fun buildMapStoreClusters(mapState: BuyerMapViewState, uiHolder: BuyerMapUiStateHolder, effectiveRadiusKm: Float): List<MapStoreCluster> =
+    MapStoreClusterBuilder.buildClusters(
+        StoreClusterQuery(
+            userLocation = mapState.userLocation,
+            offers = mapState.offers,
+            nearbyMerchants = mapState.nearbyMerchants,
+            searchQuery = uiHolder.searchQuery,
+            selectedCategory = uiHolder.selectedCategory,
+            effectiveRadiusKm = effectiveRadiusKm
+        )
+    )
 
 private fun hasMapLocationPermission(context: Context): Boolean {
     val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED

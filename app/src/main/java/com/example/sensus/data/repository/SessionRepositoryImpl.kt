@@ -34,6 +34,7 @@ class SessionRepositoryImpl(
         val isActive = isGuest || (hasToken && sessionType == SessionType.REGISTERED) || isLegacyManager
 
         val identity = resolveSessionIdentity(isActive, isGuest)
+        val (isMerchant, storeName) = resolveMerchantState(isActive, isGuest)
         return SessionState(
             isSessionActive = isActive,
             isGuest = isGuest,
@@ -43,8 +44,20 @@ class SessionRepositoryImpl(
             activeEmail = identity.first,
             activeName = identity.second,
             activePhotoUrl = identity.third,
-            activeToken = token
+            activeToken = token,
+            isMerchantRegistered = isMerchant,
+            merchantStoreName = storeName
         )
+    }
+
+    private fun resolveMerchantState(isActive: Boolean, isGuest: Boolean): Pair<Boolean, String?> {
+        if (!isActive || isGuest) return false to null
+        val status = securePreferences.storedMerchantStatus
+        return if (status.isRegistered) {
+            true to status.storeName?.takeIf { it.isNotBlank() }
+        } else {
+            false to null
+        }
     }
 
     private fun resolveSessionIdentity(isActive: Boolean, isGuest: Boolean): Triple<String?, String?, String?> {
@@ -111,6 +124,11 @@ class SessionRepositoryImpl(
 
     override suspend fun setSplashCompleted(completed: Boolean) {
         SensusAuthManager.hasCompletedSplash = completed
+        syncState()
+    }
+
+    override suspend fun setMerchantStatus(isRegistered: Boolean, storeName: String?) {
+        securePreferences.storedMerchantStatus = com.example.sensus.data.local.StoredMerchantStatus(isRegistered, storeName)
         syncState()
     }
 }

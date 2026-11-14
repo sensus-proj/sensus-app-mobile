@@ -11,6 +11,7 @@ import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
+import com.example.sensus.domain.repository.ReverseGeocodingRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.StoreRepository
 import dagger.Module
@@ -42,6 +43,10 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideLocationRepository(container: SensusContainer): LocationRepository = container.locationRepository
+
+    @Provides
+    @Singleton
+    fun provideReverseGeocodingRepository(container: SensusContainer): ReverseGeocodingRepository = container.reverseGeocodingRepository
 
     @Provides
     @Singleton

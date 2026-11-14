@@ -35,4 +35,13 @@ public final class SensusDatabaseMigrations {
             db.execSQL("ALTER TABLE `offers` ADD COLUMN `expirationDate` TEXT");
         }
     };
+
+    public static final Migration MIGRATION_3_4 = new Migration(3, 4) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("ALTER TABLE `offers` ADD COLUMN `status` TEXT DEFAULT 'Published'");
+            db.execSQL("ALTER TABLE `offers` ADD COLUMN `version` INTEGER NOT NULL DEFAULT 1");
+            db.execSQL("ALTER TABLE `offers` ADD COLUMN `expiresAtMillis` INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 }

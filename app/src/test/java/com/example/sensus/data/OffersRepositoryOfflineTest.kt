@@ -8,6 +8,7 @@ import com.example.sensus.data.local.db.entity.OfferEntity
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
 import com.example.sensus.data.repository.OffersRepositoryImpl
 import com.example.sensus.data.repository.SessionRepositoryImpl
+import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
 import io.mockk.every
 import io.mockk.just
@@ -55,16 +56,15 @@ class OffersRepositoryOfflineTest {
     }
 
     @Test
-    fun `getOffers seeds OfferDao when Room is empty`() {
+    fun `getOffers returns empty list when Room is empty without seeding fake data`() {
         val dao = mockk<OfferDao>()
         every { dao.getOffers() } returns emptyList()
-        every { dao.insertOffers(any()) } just runs
 
         val repo = OffersRepositoryImpl(dao)
         val offers = repo.getOffers()
 
-        assertTrue(offers.isNotEmpty())
-        verify(exactly = 1) { dao.insertOffers(any()) }
+        assertTrue(offers.isEmpty())
+        verify(exactly = 0) { dao.insertOffers(any()) }
     }
 
     @Test
@@ -166,5 +166,54 @@ class OffersRepositoryOfflineTest {
         verify(exactly = 1) { userSessionDao.clearSession() }
         verify(exactly = 1) { pendingSyncDao.clearAll() }
         verify(exactly = 1) { offerDao.clearOffers() }
+    }
+
+    @Test
+    fun `getOffers excludes Paused Archived Expired and zero-stock offers from public cache`() {
+        val dao = mockk<OfferDao>()
+        val active = OfferEntity("o1", "Pan", "Desc", 20.0, 40.0, "Panadería", null, 20.0, -99.0, "m1", "T1", 50L).apply {
+            unitsLeft = 3
+            status = "Published"
+        }
+        val paused = OfferEntity("o2", "Leche", "Desc", 15.0, 30.0, "Lácteos", null, 20.0, -99.0, "m1", "T1", 50L).apply {
+            unitsLeft = 5
+            status = "Paused"
+        }
+        val archived = OfferEntity("o3", "Café", "Desc", 30.0, 60.0, "Bebidas", null, 20.0, -99.0, "m1", "T1", 50L).apply {
+            unitsLeft = 4
+            status = "Archived"
+        }
+        val zeroStock = OfferEntity("o4", "Jugo", "Desc", 10.0, 20.0, "Bebidas", null, 20.0, -99.0, "m1", "T1", 50L).apply {
+            unitsLeft = 0
+            status = "Published"
+        }
+        every { dao.getOffers() } returns listOf(active, paused, archived, zeroStock)
+
+        val repo = OffersRepositoryImpl(dao)
+        val offers = repo.getOffers()
+
+        assertEquals(1, offers.size)
+        assertEquals("o1", offers.single().id)
+        assertEquals(OfferLifecycleStatus.ACTIVE, offers.single().status)
+    }
+
+    @Test
+    fun `AuthInterceptor does not clear session on 401 for public nearby endpoints`() {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(401))
+        server.start()
+
+        val prefs = mockk<SecurePreferences>(relaxed = true)
+        var unauthorizedTriggered = false
+        val interceptor = AuthInterceptor(prefs) { unauthorizedTriggered = true }
+        val client = OkHttpClient.Builder().addInterceptor(interceptor).build()
+
+        client.newCall(Request.Builder().url(server.url("/api/v1/comercios/nearby?lat=20&lng=-99&radiusMeters=2000")).build()).execute()
+        client.newCall(Request.Builder().url(server.url("/api/v1/merchants/nearby?lat=20&lng=-99&radiusMeters=2000")).build()).execute()
+
+        assertEquals(false, unauthorizedTriggered)
+        verify(exactly = 0) { prefs.clearAll() }
+        server.shutdown()
     }
 }

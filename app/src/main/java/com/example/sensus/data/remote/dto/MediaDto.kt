@@ -21,8 +21,23 @@ data class ModerateImageResponse(
 /** Respuesta de `POST /api/v1/media/upload` (FT-15, spec backend 022). */
 @Serializable
 data class UploadMediaResponse(
-    val mediaId: String,
-    val url: String,
+    val mediaId: String = "",
+    val url: String? = null,
+    val secureUrl: String? = null,
     val approved: Boolean = false,
-    val message: String? = null
-)
+    val status: String? = null,
+    val moderationDecision: String? = null,
+    val message: String? = null,
+    val moderationMessage: String? = null
+) {
+    val resolvedUrl: String
+        get() = secureUrl?.takeIf { it.isNotBlank() } ?: url.orEmpty()
+
+    val isApproved: Boolean
+        get() = approved ||
+            status.equals("Approved", ignoreCase = true) ||
+            moderationDecision.equals("Approved", ignoreCase = true)
+
+    val resolvedMessage: String?
+        get() = moderationMessage?.takeIf { it.isNotBlank() } ?: message?.takeIf { it.isNotBlank() }
+}

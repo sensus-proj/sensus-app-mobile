@@ -24,15 +24,26 @@ class AuthInterceptor(
 
         val response = chain.proceed(requestBuilder.build())
         val path = originalRequest.url.encodedPath
-        val isPublicAuthRoute = path.endsWith("/auth/login") ||
-            path.endsWith("/auth/register") ||
-            path.endsWith("/auth/guest")
 
-        if (response.code == HTTP_UNAUTHORIZED && !isPublicAuthRoute) {
+        if (response.code == HTTP_UNAUTHORIZED && !isNonSessionClearingRoute(path)) {
             securePreferences.clearAll()
             onUnauthorizedCallback?.invoke()
         }
 
         return response
+    }
+
+    private fun isNonSessionClearingRoute(path: String): Boolean = nonClearingSuffixes.any { path.endsWith(it) } || path.contains("/feed")
+
+    companion object {
+        private val nonClearingSuffixes = listOf(
+            "/auth/login",
+            "/auth/register",
+            "/auth/guest",
+            "/offers/nearby",
+            "/comercios/nearby",
+            "/merchants/nearby",
+            "/merchants/my-offers"
+        )
     }
 }

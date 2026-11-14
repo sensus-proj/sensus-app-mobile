@@ -201,6 +201,7 @@ private fun EntryProviderScope<NavKey>.registerMainEntry(
     entry<SensusRoute.Main> {
         MainAppContainer(
             isGuest = appState.isGuest,
+            isMerchantRegistered = appState.isMerchantRegistered,
             onLogout = { onIntent(AppViewIntent.Logout) },
             onNavigateToTerms = {
                 onSetPreviousTermsScreen(AppScreen.MAIN)

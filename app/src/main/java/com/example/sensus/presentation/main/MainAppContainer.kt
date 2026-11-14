@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +37,10 @@ import com.example.sensus.presentation.buyer.ProductDetailCallbacks
 import com.example.sensus.presentation.buyer.ProductDetailScreen
 import com.example.sensus.presentation.buyer.RouteMapScreen
 import com.example.sensus.presentation.buyer.SensiChatScreen
+import com.example.sensus.presentation.buyer.StoreCatalogScreen
+import com.example.sensus.presentation.merchant.MerchantDashboardCallbacks
 import com.example.sensus.presentation.merchant.MerchantDashboardScreen
+import com.example.sensus.presentation.merchant.MerchantEditOfferScreen
 import com.example.sensus.presentation.merchant.MerchantNewOfferScreen
 import com.example.sensus.presentation.merchant.MerchantProfileScreen
 import com.example.sensus.presentation.merchant.MerchantRegisterScreen
@@ -67,9 +71,23 @@ private val defaultFallbackOffer = ProductOffer(
 )
 
 @Composable
-fun MainAppContainer(modifier: Modifier = Modifier, isGuest: Boolean = false, onLogout: () -> Unit = {}, onNavigateToTerms: () -> Unit = {}) {
+fun MainAppContainer(
+    modifier: Modifier = Modifier,
+    isGuest: Boolean = false,
+    isMerchantRegistered: Boolean = false,
+    onLogout: () -> Unit = {},
+    onNavigateToTerms: () -> Unit = {}
+) {
     val state = rememberMainAppState()
     val context = LocalContext.current
+
+    LaunchedEffect(isMerchantRegistered) {
+        if (isMerchantRegistered) {
+            state.isMerchantRegistered = true
+        } else if (!state.isMerchantMode) {
+            state.isMerchantRegistered = false
+        }
+    }
 
     BackHandler(enabled = true) {
         handleMainBackNavigation(state, context)
@@ -88,13 +106,27 @@ fun MainAppContainer(modifier: Modifier = Modifier, isGuest: Boolean = false, on
 }
 
 @Composable
-private fun renderFullscreenOverlay(state: MainAppState, isGuest: Boolean): Boolean {
+private fun renderFullscreenOverlay(state: MainAppState, isGuest: Boolean): Boolean =
+    renderPrimaryOverlay(state, isGuest) || renderSecondaryOverlay(state, isGuest)
+
+@Composable
+private fun renderPrimaryOverlay(state: MainAppState, isGuest: Boolean): Boolean {
     when {
         state.showNotifications -> RenderNotificationsOverlay(state, isGuest)
         state.activeRouteOffer != null -> RenderRouteOverlay(state, isGuest)
         state.activeApartadoOrder != null -> RenderApartadoOrderOverlay(state)
         state.activeApartadoOffer != null -> RenderApartadoOfferOverlay(state)
+        else -> return false
+    }
+    return true
+}
+
+@Composable
+private fun renderSecondaryOverlay(state: MainAppState, isGuest: Boolean): Boolean {
+    when {
         state.selectedProductForDetail != null -> RenderProductDetailOverlay(state, isGuest)
+        state.selectedStoreCatalog != null -> RenderStoreCatalogOverlay(state)
+        state.selectedOfferForEdit != null -> RenderMerchantEditOfferOverlay(state)
         state.showMerchantRegister -> RenderMerchantRegisterOverlay(state)
         else -> return false
     }
@@ -190,6 +222,26 @@ private fun RenderProductDetailOverlay(state: MainAppState, isGuest: Boolean) {
 }
 
 @Composable
+private fun RenderStoreCatalogOverlay(state: MainAppState) {
+    val cluster = state.selectedStoreCatalog ?: return
+    StoreCatalogScreen(
+        cluster = cluster,
+        onNavigateBack = { state.selectedStoreCatalog = null },
+        onProductClick = { state.selectedProductForDetail = it }
+    )
+}
+
+@Composable
+private fun RenderMerchantEditOfferOverlay(state: MainAppState) {
+    val offer = state.selectedOfferForEdit ?: return
+    MerchantEditOfferScreen(
+        offer = offer,
+        onNavigateBack = { state.selectedOfferForEdit = null },
+        onOfferChanged = { state.selectedOfferForEdit = null }
+    )
+}
+
+@Composable
 private fun RenderMerchantRegisterOverlay(state: MainAppState) {
     MerchantRegisterScreen(
         onNavigateBack = { state.showMerchantRegister = false },
@@ -255,6 +307,7 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
                 isGuest = isGuest,
                 onRequireAuth = { state.showGuestPrompt = true },
                 onProductClick = { state.selectedProductForDetail = it },
+                onOpenStoreCatalog = { state.selectedStoreCatalog = it },
                 onRouteClick = { state.activeRouteOffer = it },
                 onListToggle = { state.buyerTabIndex = 1 },
                 onOpenCart = openCartGuarded
@@ -283,6 +336,8 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
         TAB_PROFILE -> BuyerProfileScreen(
             callbacks = BuyerProfileCallbacks(
                 isMerchantMode = state.isMerchantMode,
+                hasActiveMerchant = state.isMerchantRegistered,
+                onMerchantStatusSynced = { active -> if (active) state.isMerchantRegistered = true },
                 onToggleMerchantMode = { enableMerchant -> toggleMerchantMode(state, isGuest, enableMerchant) },
                 onLogoutClick = { state.showConfirmLogout = true },
                 onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
@@ -302,9 +357,12 @@ private fun runWhenAuthenticated(state: MainAppState, isGuest: Boolean, action: 
 private fun MerchantTabContent(state: MainAppState) {
     when (state.merchantTabIndex) {
         0 -> MerchantDashboardScreen(
-            onNewOfferClick = { state.merchantTabIndex = 1 },
-            onScanQrClick = { state.merchantTabIndex = MERCHANT_TAB_SALES },
-            onSwitchToBuyer = { state.isMerchantMode = false }
+            callbacks = MerchantDashboardCallbacks(
+                onNewOfferClick = { state.merchantTabIndex = 1 },
+                onScanQrClick = { state.merchantTabIndex = MERCHANT_TAB_SALES },
+                onSwitchToBuyer = { state.isMerchantMode = false },
+                onEditOfferClick = { offer -> state.selectedOfferForEdit = offer }
+            )
         )
         1 -> MerchantNewOfferScreen(
             onNavigateBack = { state.merchantTabIndex = 0 },

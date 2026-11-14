@@ -11,11 +11,22 @@ data class HorarioDiaDto(
 )
 
 @Serializable
+data class ActivateMerchantRequest(
+    val nombreComercial: String,
+    val direccion: String,
+    val codigoPostal: String,
+    val latitud: Double? = null,
+    val longitud: Double? = null
+)
+
+@Serializable
 data class UpdateMerchantProfileRequest(
     val nombreComercial: String? = null,
     val direccion: String,
     val codigoPostal: String,
-    val horarios: List<HorarioDiaDto>? = null
+    val horarios: List<HorarioDiaDto>? = null,
+    val latitud: Double? = null,
+    val longitud: Double? = null
 )
 
 @Serializable
@@ -30,4 +41,16 @@ data class ComercioDto(
     val activo: Boolean = true,
     val fechaRegistro: String? = null,
     val horarios: List<HorarioDiaDto>? = null
+)
+
+@Serializable
+data class RegisterComercioResponseDto(
+    val mensaje: String = "",
+    val comercioId: String = "",
+    val esComerciante: Boolean = true,
+    val roles: List<String> = emptyList(),
+    val comercio: ComercioDto,
+    val token: String = "",
+    val tokenType: String = "Bearer",
+    val expiresAtUtc: String? = null
 )

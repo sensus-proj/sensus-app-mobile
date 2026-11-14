@@ -6,16 +6,16 @@ private const val DEFAULT_COLLECT_MINUTES = 45
 private const val DEFAULT_RATING = 4.8
 private const val DEFAULT_MERCHANT_RATING = 4.9
 private const val DEFAULT_REVIEW_COUNT = 120
-private const val DEFAULT_LAT = 20.0545
-private const val DEFAULT_LNG = -99.3420
+private const val DEFAULT_LAT = 20.0536
+private const val DEFAULT_LNG = -99.3436
 private const val METERS_PER_KM = 1000
 private const val METERS_PER_KM_DOUBLE = 1000.0
 private const val COUPON_SUFFIX_LENGTH = 4
 private const val RANDOM_CART_MIN = 1000
 private const val RANDOM_CART_MAX = 9999
-private const val DEFAULT_ACTIVE_OFFERS = 12
-private const val DEFAULT_RECOVERED_TODAY = 480.0
-private const val DEFAULT_REDEEMED_TODAY = 12
+private const val DEFAULT_ACTIVE_OFFERS = 0
+private const val DEFAULT_RECOVERED_TODAY = 0.0
+private const val DEFAULT_REDEEMED_TODAY = 0
 
 enum class StoreCategory(val displayName: String) {
     ALL("Todo"),
@@ -53,8 +53,14 @@ data class ProductOffer(
         "Excedente de inventario en perfecto estado con empaque sellado de fábrica. Calidad y ahorro garantizados.",
     val expirationDate: String = "Hoy 20:00 hrs",
     val imageUrl: String? = null,
-    val merchantId: String? = null
+    val merchantId: String? = null,
+    val status: OfferLifecycleStatus = OfferLifecycleStatus.ACTIVE,
+    val version: Int = 1,
+    val expiresAtMillis: Long? = null
 ) {
+    val isPubliclyVisible: Boolean
+        get() = status == OfferLifecycleStatus.ACTIVE && unitsLeft > 0
+
     val formattedDistance: String
         get() = if (distanceMeters < METERS_PER_KM) {
             "$distanceMeters m"
@@ -161,17 +167,17 @@ data class ApartadoOrder(
 }
 
 data class MerchantStore(
-    val name: String = "Bodega A. - Centro",
-    val category: String = "Abarrotes y Limpieza",
+    val name: String = "Mi Comercio",
+    val category: String = "Comercio Local",
     val isOpen: Boolean = true,
     val rating: Double = DEFAULT_MERCHANT_RATING,
     val reviewCount: Int = DEFAULT_REVIEW_COUNT,
     val activeOffersCount: Int = DEFAULT_ACTIVE_OFFERS,
     val recoveredMoneyToday: Double = DEFAULT_RECOVERED_TODAY,
     val redeemedTodayCount: Int = DEFAULT_REDEEMED_TODAY,
-    val address: String = "Dirección: Av. Universidad 412, Tula de Allende, Hgo.",
-    val schedule: String = "Horarios: Lun - Sáb 09:00 - 20:00",
-    val phone: String = "+52 55 1234 5678",
+    val address: String = "",
+    val schedule: String = "Lun - Sáb 09:00 - 20:00",
+    val phone: String = "",
     val latitude: Double = DEFAULT_LAT,
     val longitude: Double = DEFAULT_LNG,
     val postalCode: String = ""
