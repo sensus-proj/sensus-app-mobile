@@ -3,7 +3,7 @@ package com.example.sensus.presentation.buyer
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.graphics.drawable.BitmapDrawable
-import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.MapLayerStyle
@@ -37,10 +37,10 @@ internal data class MapRenderConfig(
     val userLocation: UserLocation,
     val effectiveRadiusKm: Float,
     val selectedLayer: MapLayerStyle,
-    val localizedOffers: List<ProductOffer>,
-    val selectedOfferId: String?,
+    val storeClusters: List<MapStoreCluster>,
+    val selectedStoreKey: String?,
     val onEmptyTap: () -> Unit,
-    val onMarkerTap: (ProductOffer) -> Unit
+    val onStoreMarkerTap: (MapStoreCluster) -> Unit
 )
 
 internal fun renderBuyerMapOverlays(mapView: MapView, config: MapRenderConfig) {
@@ -57,8 +57,9 @@ internal fun renderBuyerMapOverlays(mapView: MapView, config: MapRenderConfig) {
     val highContrast = config.selectedLayer == MapLayerStyle.SATELLITE || config.selectedLayer == MapLayerStyle.DARK
     mapView.overlays.add(createRadiusPolygon(mapView, config.context, userGeoPoint, config.effectiveRadiusKm, highContrast))
 
-    config.localizedOffers.forEach { offer ->
-        mapView.overlays.add(createStoreMarker(mapView, config.context, offer, offer.id == config.selectedOfferId, config.onMarkerTap))
+    config.storeClusters.forEach { cluster ->
+        val selected = cluster.storeKey == config.selectedStoreKey
+        mapView.overlays.add(createStoreClusterMarker(mapView, config.context, cluster, selected, config.onStoreMarkerTap))
     }
 
     mapView.overlays.add(createCatUserMarker(mapView, config.context, userGeoPoint))
@@ -90,25 +91,35 @@ private fun createRadiusPolygon(mapView: MapView, context: Context, center: GeoP
         outlinePaint.strokeWidth = CIRCLE_STROKE_MULTIPLIER * context.resources.displayMetrics.density
     }
 
-private fun createStoreMarker(mapView: MapView, context: Context, offer: ProductOffer, isSelected: Boolean, onMarkerTap: (ProductOffer) -> Unit): Marker =
-    Marker(mapView).apply {
-        position = GeoPoint(offer.latitude, offer.longitude)
-        val pinBitmap = OsmMapUtils.createStorePinBitmap(
-            context = context,
-            storeName = offer.storeName,
-            price = "$${offer.discountPrice.toInt()}",
-            isSelected = isSelected
-        )
-        icon = BitmapDrawable(context.resources, pinBitmap)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        title = offer.storeName
-        snippet = offer.name
-        setOnMarkerClickListener { _, _ ->
-            onMarkerTap(offer)
-            mapView.controller.animateTo(position)
-            true
-        }
+private fun createStoreClusterMarker(
+    mapView: MapView,
+    context: Context,
+    cluster: MapStoreCluster,
+    isSelected: Boolean,
+    onStoreTap: (MapStoreCluster) -> Unit
+): Marker = Marker(mapView).apply {
+    position = GeoPoint(cluster.latitude, cluster.longitude)
+    val rightBadge = when (cluster.matchingOffers.size) {
+        0 -> "Tienda"
+        1 -> "$${cluster.matchingOffers.first().discountPrice.toInt()}"
+        else -> "${cluster.matchingOffers.size} ofertas"
     }
+    val pinBitmap = OsmMapUtils.createStorePinBitmap(
+        context = context,
+        storeName = cluster.storeName,
+        price = rightBadge,
+        isSelected = isSelected
+    )
+    icon = BitmapDrawable(context.resources, pinBitmap)
+    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+    title = cluster.storeName
+    snippet = cluster.featuredOffer?.name ?: cluster.address
+    setOnMarkerClickListener { _, _ ->
+        onStoreTap(cluster)
+        mapView.controller.animateTo(position)
+        true
+    }
+}
 
 private fun createCatUserMarker(mapView: MapView, context: Context, userGeoPoint: GeoPoint): Marker = Marker(mapView).apply {
     position = userGeoPoint

@@ -3,6 +3,7 @@ package com.example.sensus.domain.usecase
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.HorarioDia
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.repository.MerchantRepository
 
@@ -10,7 +11,13 @@ private const val MIN_ADDRESS_LENGTH = 5
 private const val MAX_ADDRESS_LENGTH = 250
 
 class UpdateMerchantProfileUseCase(private val merchantRepository: MerchantRepository) {
-    suspend operator fun invoke(nombreComercial: String?, direccion: String, codigoPostal: String, horarios: List<HorarioDia>): Result<MerchantProfile> {
+    suspend operator fun invoke(
+        nombreComercial: String?,
+        direccion: String,
+        codigoPostal: String,
+        horarios: List<HorarioDia>,
+        coordinates: MerchantCoordinates? = null
+    ): Result<MerchantProfile> {
         val trimmedDireccion = direccion.trim()
         val trimmedCp = codigoPostal.trim()
 
@@ -23,12 +30,20 @@ class UpdateMerchantProfileUseCase(private val merchantRepository: MerchantRepos
         }
         return if (error != null) {
             Result.Failure(AppError.Validation(error))
-        } else {
+        } else if (coordinates == null) {
             merchantRepository.updateMerchantProfile(
                 nombreComercial = nombreComercial?.trim(),
                 direccion = trimmedDireccion,
                 codigoPostal = trimmedCp,
                 horarios = horarios
+            )
+        } else {
+            merchantRepository.updateMerchantProfile(
+                nombreComercial = nombreComercial?.trim(),
+                direccion = trimmedDireccion,
+                codigoPostal = trimmedCp,
+                horarios = horarios,
+                coordinates = coordinates
             )
         }
     }

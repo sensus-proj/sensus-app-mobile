@@ -7,4 +7,12 @@ class GetUserLocationUseCase(private val locationRepository: LocationRepository)
     suspend operator fun invoke(): UserLocation {
         return locationRepository.getCurrentLocation()
     }
+
+    suspend fun fresh(): UserLocation {
+        return locationRepository.getFreshLocation()
+    }
+
+    fun hasPermission(): Boolean {
+        return locationRepository.hasLocationPermission()
+    }
 }

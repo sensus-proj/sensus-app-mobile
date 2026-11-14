@@ -9,6 +9,7 @@ import com.example.sensus.data.local.db.dao.PendingSyncDao
 import com.example.sensus.data.local.db.dao.UserPreferenceDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
 import com.example.sensus.data.local.security.DatabaseKeyManager
+import com.example.sensus.data.location.AndroidReverseGeocodingRepository
 import com.example.sensus.data.location.FusedLocationRepository
 import com.example.sensus.data.media.AndroidImageCompressor
 import com.example.sensus.data.moderation.ImageModerationService
@@ -26,8 +27,12 @@ import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
+import com.example.sensus.domain.repository.ReverseGeocodingRepository
 import com.example.sensus.domain.repository.SessionRepository
+import com.example.sensus.domain.usecase.ActivateMerchantUseCase
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
+import com.example.sensus.domain.usecase.GetMyMerchantUseCase
+import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.LoginUseCase
@@ -35,6 +40,7 @@ import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.domain.usecase.RegisterUseCase
 import com.example.sensus.domain.usecase.RequestPasswordResetUseCase
 import com.example.sensus.domain.usecase.ResetPasswordUseCase
+import com.example.sensus.domain.usecase.ResolveAddressFromCoordinatesUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
@@ -119,17 +125,29 @@ class SensusContainer(
     }
 
     val merchantRepository: MerchantRepository by lazy {
-        RetrofitMerchantRepository(networkClient.merchantApi)
+        RetrofitMerchantRepository(
+            merchantApi = networkClient.merchantApi,
+            securePreferences = securePreferences,
+            onSessionUpdated = { notifySessionUpdated() }
+        )
     }
 
     val mediaRepository: MediaRepository by lazy {
-        MediaRepositoryImpl(networkClient.mediaUploadApi)
+        MediaRepositoryImpl(
+            mediaApi = networkClient.mediaUploadApi,
+            moderationService = moderationService,
+            profileApi = networkClient.profileApi
+        )
     }
 
     val imageCompressor: ImageCompressor by lazy { AndroidImageCompressor() }
 
     val locationRepository: LocationRepository by lazy {
         FusedLocationRepository(context.applicationContext)
+    }
+
+    val reverseGeocodingRepository: ReverseGeocodingRepository by lazy {
+        AndroidReverseGeocodingRepository(context.applicationContext)
     }
 
     val mapPreferencesRepository: MapPreferencesRepository by lazy {
@@ -145,8 +163,14 @@ class SensusContainer(
     val startGuestSessionUseCase by lazy { StartGuestSessionUseCase(authRepository, sessionRepository) }
     val deleteAccountUseCase by lazy { DeleteAccountUseCase(authRepository, sessionRepository) }
     val updateProfileUseCase by lazy { UpdateProfileUseCase(profileRepository) }
+    val activateMerchantUseCase by lazy { ActivateMerchantUseCase(merchantRepository) }
+    val getMyMerchantUseCase by lazy { GetMyMerchantUseCase(merchantRepository) }
+    val getNearbyMerchantsUseCase by lazy { GetNearbyMerchantsUseCase(merchantRepository) }
     val updateMerchantProfileUseCase by lazy { UpdateMerchantProfileUseCase(merchantRepository) }
     val getUserLocationUseCase by lazy { GetUserLocationUseCase(locationRepository) }
+    val resolveAddressFromCoordinatesUseCase by lazy {
+        ResolveAddressFromCoordinatesUseCase(reverseGeocodingRepository)
+    }
     val getPreferredMapLayerUseCase by lazy { GetPreferredMapLayerUseCase(mapPreferencesRepository) }
     val savePreferredMapLayerUseCase by lazy { SavePreferredMapLayerUseCase(mapPreferencesRepository) }
 

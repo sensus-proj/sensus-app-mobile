@@ -22,6 +22,7 @@ data class AppViewState(
     val hasAcceptedTerms: Boolean = false,
     val hasLocationPermission: Boolean = false,
     val hasCompletedSplash: Boolean = false,
+    val isMerchantRegistered: Boolean = false,
     val activeResetToken: String? = null
 ) : ViewState
 

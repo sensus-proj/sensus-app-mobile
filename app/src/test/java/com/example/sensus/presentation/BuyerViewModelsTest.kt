@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.MapLayer
+import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.domain.model.StoreCategory
@@ -16,6 +17,7 @@ import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.repository.StoreRepository
+import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
@@ -332,7 +334,8 @@ class BuyerViewModelsTest {
 
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isGuest = false, activeEmail = "r@sensus.com"))
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true))
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>(relaxed = true)
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true), getMyMerchantUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("Rodrigo", vm.viewState.value.profile?.nombreCompleto)
 
@@ -352,7 +355,8 @@ class BuyerViewModelsTest {
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns sessionFlow
 
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true))
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>(relaxed = true)
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true), getMyMerchantUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.isGuest)
         assertEquals("Invitado Sensus", vm.viewState.value.profile?.nombreCompleto)
@@ -364,17 +368,46 @@ class BuyerViewModelsTest {
             isGuest = false,
             activeName = "Rodrigo Pérez",
             activeEmail = "rodrigo@sensus.app",
-            activeToken = "jwt-1"
+            activeToken = "jwt-1",
+            isMerchantRegistered = true,
+            merchantStoreName = "Café Local"
         )
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.viewState.value.isGuest)
         assertEquals("Rodrigo Pérez", vm.viewState.value.profile?.nombreCompleto)
         assertEquals("rodrigo@sensus.app", vm.viewState.value.profile?.correo)
+        assertTrue(vm.viewState.value.hasActiveMerchant)
+        assertEquals("Café Local", vm.viewState.value.merchantStoreName)
 
         // Cierre de sesión limpia el perfil en memoria
         sessionFlow.value = SessionState(isSessionActive = false, isGuest = false)
         testDispatcher.scheduler.advanceUntilIdle()
         assertNull(vm.viewState.value.profile)
+        assertFalse(vm.viewState.value.hasActiveMerchant)
+    }
+
+    @Test
+    fun buyerProfile_syncsMerchantStoreName_whenUserHasMerchantRole() = runTest {
+        val profileRepo = mockk<ProfileRepository>()
+        val updateUseCase = mockk<UpdateProfileUseCase>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>()
+        val sessionFlow = MutableStateFlow(SessionState(isSessionActive = true, isGuest = false, activeEmail = "m@sensus.app"))
+
+        coEvery { sessionRepo.sessionState } returns sessionFlow
+        coEvery { profileRepo.getProfile() } returns Result.Success(
+            UserProfile(id = "u1", nombreCompleto = "Beto", correo = "m@sensus.app", roles = listOf("Consumidor", "Comerciante"))
+        )
+        coEvery { getMyMerchantUseCase() } returns Result.Success(
+            MerchantProfile(id = "c1", usuarioId = "u1", nombreComercial = "Panadería Sensus", direccion = "Av. Centro 1", codigoPostal = "06000")
+        )
+
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true), getMyMerchantUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.viewState.value.hasActiveMerchant)
+        assertEquals("Panadería Sensus", vm.viewState.value.merchantStoreName)
+        coVerify(exactly = 1) { sessionRepo.setMerchantStatus(true, "Panadería Sensus") }
     }
 
     @Test

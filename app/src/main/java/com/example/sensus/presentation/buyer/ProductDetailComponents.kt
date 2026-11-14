@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -51,10 +52,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
@@ -148,10 +151,19 @@ internal fun ProductVisualHeroCard(offer: ProductOffer) {
             .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(imageVector = Icons.Default.CleaningServices, contentDescription = offer.name, tint = SensusPurple, modifier = Modifier.size(80.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = offer.category, fontSize = 13.sp, color = SensusTextMuted)
+        if (!offer.imageUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = offer.imageUrl,
+                contentDescription = offer.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(imageVector = Icons.Default.CleaningServices, contentDescription = offer.name, tint = SensusPurple, modifier = Modifier.size(80.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = offer.category, fontSize = 13.sp, color = SensusTextMuted)
+            }
         }
         Row(
             modifier = Modifier

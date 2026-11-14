@@ -30,8 +30,11 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/users/photo-signature` | `RetrofitProfileRepository` -> `ProfileApiService` | Bearer | 10/min por usuario | OK (FT-10, 2026-11-11; UserEndpoints.cs) |
 | `POST /api/v1/media/moderate` | `ImageModerationService` -> `MediaApiService` (previo a `/media/upload` en FT-15) | Bearer | 20/min por usuario | OK (FT-10, 2026-11-11; MediaEndpoints.cs) |
 | `GET /api/v1/comercios/me` | `MerchantApiService` (legacy espanol; retirado en cliente por `/api/v1/merchants/me`) | Bearer `MERCHANT` | 30/min por usuario | Retirado cliente (FT-10, 2026-11-11; backend transicional) |
-| `GET /api/v1/merchants/me` | `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | OK cliente FT-10 (2026-11-11; backend pendiente Spec 006/008) |
-| `GET /api/v1/offers/nearby` | `GetNearbyOffersUseCase` -> `OffersRepository` -> `OffersApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | Pendiente (FT-11, spec 007) |
+| `GET /api/v1/merchants/me` | `GetMyMerchantUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | OK cliente (`FT-10` / `FT-29`, alineado a `Spec 006`) |
+| `POST /api/v1/merchants/activate` | `ActivateMerchantUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer (usuario registrado) | 10/min por usuario | Implementado cliente / MockWebServer validado (`FT-29`, 2026-11-13; alineado a `Spec 005`) |
+| `PUT /api/v1/merchants/profile` | `UpdateMerchantProfileUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-06` / `FT-29`, 2026-11-13; alineado a `Spec 031`) |
+| `GET /api/v1/merchants/nearby` | `GetNearbyMerchantsUseCase` -> `MerchantRepository` -> `MerchantApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | Implementado cliente (`FT-11`/`SE-008`, alineado a `Spec 008`) |
+| `GET /api/v1/offers/nearby` | `GetNearbyOffersUseCase` -> `OffersRepository` -> `OffersApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | OK cliente (`FT-11`, `Spec 007`) |
 | `GET /api/v1/offers/{id}` | `GetOfferDetailUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-12, spec 032) |
 | `POST /api/v1/offers/{id}/view` | `RegisterOfferViewUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-12, spec 032) |
 | `POST /api/v1/offers/{id}/claim` | `CreateClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer (no invitado) | 20/min por usuario | Pendiente (FT-13, spec 033) |
@@ -40,9 +43,9 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/offers/claims/{code}/redeem` | `RedeemClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-14, spec 033) |
 | `POST /api/v1/media/upload` | `MediaRepository` -> `MediaApiService` (`@Multipart <= 4.5 MB`, moderado) | Bearer | 20/dia por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 022) |
 | `POST /api/v1/offers` | `CreateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 20/hora por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 034) |
-| `GET /api/v1/merchants/my-offers` | `GetMerchantInventoryUseCase` -> `OffersRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 037) |
-| `PUT /api/v1/offers/{id}` | `UpdateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 035) |
-| `PUT /api/v1/offers/{id}/status` | `ChangeOfferStatusUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 036) |
+| `GET /api/v1/merchants/my-offers` | `GetMerchantInventoryUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 037`) |
+| `PUT /api/v1/offers/{id}` | `UpdateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 035`) |
+| `PUT /api/v1/offers/{id}/status` | `ChangeOfferStatusUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 036`) |
 | `POST /api/v1/users/favorites/{id}` | `ToggleFavoriteUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-17, spec 038) |
 | `GET /api/v1/users/favorites` | `GetFavoritesUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-17) |
 | `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-18, spec 026) |
@@ -80,6 +83,7 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | FT-06 | `PUT /api/users/profile`, `PUT /api/merchants/profile` | Recalculo `GEOGRAPHY(POINT, 4326)` en backend. |
 | FT-07 | `GET /api/offers/nearby` | Invitado: `radiusMeters = 2000` estricto. |
 | FT-08 | `DELETE /api/users/account` | 204/404 exito; purga local y remota. |
+| FT-29 | `POST /api/v1/merchants/activate`, `GET /api/v1/merchants/me`, `PUT /api/v1/merchants/profile` | Coordenadas opcionales de mapa interactivo; JWT renovado y estado comercial persistidos. |
 
 ## Plantilla para nuevas filas
 

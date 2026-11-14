@@ -11,7 +11,9 @@ data class SessionState(
     val activeEmail: String? = null,
     val activeName: String? = null,
     val activePhotoUrl: String? = null,
-    val activeToken: String? = null
+    val activeToken: String? = null,
+    val isMerchantRegistered: Boolean = false,
+    val merchantStoreName: String? = null
 )
 
 interface SessionRepository {
@@ -25,4 +27,5 @@ interface SessionRepository {
     suspend fun setTermsAccepted(accepted: Boolean)
     suspend fun setLocationPermission(granted: Boolean)
     suspend fun setSplashCompleted(completed: Boolean)
+    suspend fun setMerchantStatus(isRegistered: Boolean, storeName: String?) {}
 }

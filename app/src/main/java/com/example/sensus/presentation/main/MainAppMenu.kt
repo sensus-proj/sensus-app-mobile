@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.R
 import com.example.sensus.domain.model.ApartadoOrder
+import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.buyer.CartBottomSheet
 import com.example.sensus.presentation.common.ComposeUiModel
@@ -143,6 +144,8 @@ internal class MainAppState {
     var merchantTabIndex by mutableIntStateOf(0)
     var isFamOpen by mutableStateOf(false)
     var selectedProductForDetail by mutableStateOf<ProductOffer?>(null)
+    var selectedStoreCatalog by mutableStateOf<MapStoreCluster?>(null)
+    var selectedOfferForEdit by mutableStateOf<ProductOffer?>(null)
     var activeApartadoOffer by mutableStateOf<ProductOffer?>(null)
     var activeApartadoOrder by mutableStateOf<ApartadoOrder?>(null)
     var showCartSheet by mutableStateOf(false)
@@ -249,6 +252,10 @@ private fun dismissActiveOverlay(state: MainAppState): Boolean = when {
     }
     state.selectedProductForDetail != null -> {
         state.selectedProductForDetail = null
+        true
+    }
+    state.selectedStoreCatalog != null -> {
+        state.selectedStoreCatalog = null
         true
     }
     state.showMerchantRegister -> {

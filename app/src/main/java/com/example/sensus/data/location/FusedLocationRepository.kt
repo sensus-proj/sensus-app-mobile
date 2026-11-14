@@ -20,8 +20,6 @@ import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 
-private const val DEFAULT_CDMX_LAT = 19.432608
-private const val DEFAULT_CDMX_LNG = -99.133209
 private const val RECENT_CACHE_AGE_MS = 90_000L
 private const val MAX_ACCURACY_METERS = 120f
 private const val PRIMARY_CACHE_AGE_MS = 60_000L
@@ -193,7 +191,7 @@ class FusedLocationRepository(
     }
 
     companion object {
-        // Coordenadas base (Ciudad de México) para fallback si no hay permisos o GPS activo
-        val DEFAULT_LOCATION = UserLocation(latitude = DEFAULT_CDMX_LAT, longitude = DEFAULT_CDMX_LNG)
+        // Coordenadas base de UserLocation (Tula / UTTT) para fallback si no hay permisos o GPS activo
+        val DEFAULT_LOCATION = UserLocation()
     }
 }
