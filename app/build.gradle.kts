@@ -283,3 +283,47 @@ ktlint {
     android.set(true)
     ignoreFailures.set(false)
 }
+
+val pitestCli: Configuration by configurations.creating
+
+dependencies {
+    pitestCli("org.pitest:pitest-command-line:${libs.versions.pitest.get()}")
+}
+
+tasks.register<JavaExec>("pitestDebug") {
+    group = "verification"
+    description = "Runs PITest mutation testing on domain classes using debug unit tests."
+    dependsOn("testDebugUnitTest")
+    classpath = pitestCli
+    mainClass.set("org.pitest.mutationtest.commandline.MutationCoverageReport")
+    doFirst {
+        val reportDir = layout.buildDirectory.dir("reports/pitest").get().asFile
+        reportDir.mkdirs()
+        val debugClasses = layout.buildDirectory.dir("intermediates/classes/debug/transformDebugClassesWithAsm/dirs").get().asFile
+        val unitTestClasses = layout.buildDirectory.dir("intermediates/classes/debugUnitTest/transformDebugUnitTestClassesWithAsm/dirs").get().asFile
+        val testClasspath =
+            files(
+                debugClasses,
+                unitTestClasses,
+                configurations.getByName("debugUnitTestRuntimeClasspath"),
+            ).files.filter { it.exists() }.joinToString(",")
+
+        args =
+            listOf(
+                "--reportDir", reportDir.absolutePath,
+                "--targetClasses", "com.example.sensus.domain.*",
+                "--targetTests", "com.example.sensus.domain.*",
+                "--excludedClasses", "*\$*",
+                "--excludedTestClasses", "com.example.sensus.domain.PublishingBoundariesTest",
+                "--mutableCodePaths", debugClasses.absolutePath,
+                "--sourceDirs", file("src/main/java").absolutePath,
+                "--classPath", testClasspath,
+                "--outputFormats", "XML,HTML",
+                "--timestampedReports", "false",
+                "--threads", "4",
+                "--timeoutConst", "1500",
+                "--mutationThreshold", "45",
+                "--useClasspathJar", "true",
+            )
+    }
+}
