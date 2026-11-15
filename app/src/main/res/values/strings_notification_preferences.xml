@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_preferences_title">Preferencias de notificaciones</string>
+    <string name="notification_preferences_back">Regresar</string>
+    <string name="notification_preferences_inbox">La bandeja de notificaciones todavía no está disponible. Aquí puedes administrar tus preferencias.</string>
+    <string name="notification_preferences_push">Notificaciones push</string>
+    <string name="notification_preferences_offers">Alertas de ofertas</string>
+    <string name="notification_preferences_social">Alertas de comunidad</string>
+    <string name="notification_preferences_radius">Radio: %1$d km</string>
+    <string name="notification_preferences_save">Guardar preferencias</string>
+    <string name="notification_preferences_retry">Reintentar carga</string>
+    <string name="notification_preferences_activate">Activar notificaciones en este dispositivo</string>
+    <string name="notification_preferences_loading">Cargando preferencias</string>
+    <string name="notification_preferences_working">Procesando…</string>
+    <string name="notification_preferences_saved">Preferencias guardadas</string>
+    <string name="notification_preferences_registered">
+        Dispositivo registrado. La recepción depende de tus preferencias y de la configuración del servicio push.
+    </string>
+    <string name="notification_preferences_network">No hay conexión. Tus cambios no se han guardado; inténtalo de nuevo.</string>
+    <string name="notification_preferences_session">Inicia sesión con una cuenta registrada para administrar tus notificaciones.</string>
+    <string name="notification_preferences_unavailable">El servicio de preferencias no está disponible.</string>
+    <string name="notification_preferences_validation">Revisa tus preferencias. El radio debe estar entre 1 y 50 km.</string>
+    <string name="notification_preferences_error">No se pudo completar la operación. Inténtalo de nuevo.</string>
+    <string name="notification_preferences_firebase">
+        Las notificaciones push no están disponibles en esta versión. Puedes seguir ajustando tus preferencias.
+    </string>
+    <string name="notification_preferences_permission">
+        Se necesita permiso de notificaciones para activar este dispositivo. Puedes concederlo en los ajustes de Android.
+    </string>
+    <string name="notification_preferences_activation_note">
+        Guardar preferencias no activa las notificaciones de este dispositivo. Usa Activar notificaciones para solicitar el permiso y registrar este dispositivo.
+    </string>
+</resources>

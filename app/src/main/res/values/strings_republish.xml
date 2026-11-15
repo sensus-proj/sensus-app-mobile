@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="republish_action">Republicar</string>
+    <string name="republish_schedule_hint">Elige nuevo stock y vencimiento. La vigencia comenzará un minuto después de confirmar.</string>
+    <string name="republish_failed">No se pudo confirmar la republicación. Revisa tu conexión, el estado de la oferta, el stock y el vencimiento futuro antes de intentarlo de nuevo.</string>
+</resources>
