@@ -26,6 +26,7 @@
 - [x] T15.11 Añadir `CreateOfferUseCaseTest`, tests de `MockWebServer` para subida multipart (`200`, `413`, `422`) y `POST /api/v1/offers` (`201`) — verif: `./gradlew.bat testDebugUnitTest`
 - [x] T15.12 Añadir tests Compose UI para formulario de oferta nueva y bloqueo por moderación/precios — verif: `./gradlew.bat compileDebugAndroidTestSources`
 - [x] T15.13 Actualizar `docs/endpoints-internos.md`, `docs/rate-matrix.md`, `docs/asvs-l2-checklist.md`, `Memoria.md` §6 y validar todos los gates — verif: `python scripts/check_endpoints.py`
+- [x] T15.14 Alinear clientes HTTP de publicación con `docs/rate-matrix.md`: `POST /api/v1/offers` 20 s / 0 reintentos y `POST /api/v1/media/upload` 45 s / 1 reintento solo ante fallo de transporte; pruebas en `PublishingApiTest` — verif: `./gradlew.bat testDebugUnitTest`
 
 ## Evidencia local — 2026-11-13
 

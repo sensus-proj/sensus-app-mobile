@@ -65,6 +65,13 @@ presentation/buyer/
 - Depende de la publicación en backend de las specs 024 y 026 (y 017/022 para moderación/media).
 - En esta feature se desconecta el feed comunitario de `MockDataProvider.sampleFriends` (dejando `Amigos QR` aislado en `FT-25`).
 
+## Corrección de integración — 2026-11-14
+
+- La URL oficial, Retrofit y AuthInterceptor existentes se conservan; no se sustituyen rutas ni se simula publicación exitosa.
+- Los errores de lectura y publicación son independientes en el estado MVI. Un fallo de carga no acredita feed vacío ni se muestra como fallo del formulario.
+- Ante HTTP 404 la UI informa indisponibilidad del servicio. Ante fallo al publicar conserva texto, foto y selección de comercio; solo limpia el borrador tras confirmación remota.
+- Evidencia backend consultada: main `01dad6e1e7adc07f9da969cb4875414b3d77ece1`; specs 024/026 son borradores, tareas pendientes y sin endpoints de feed registrados en Program.cs. También sin archivos Feed/Post/Publicacion en src de Sprint3_B, sprint3_oscar y Back_Rodrigo consultadas. La integración E2E queda pendiente de backend y despliegue.
+
 ## Aprobación
 
 | Estado | Revisor | Fecha | Evidencia |

@@ -1,52 +1,64 @@
-# PLAN — FT-21 Notificaciones Push FCM, Bandeja Local y Preferencias por Categoría
+# PLAN — FT-21 Preferencias y activación
 
-> Derivado de `spec.md`. Historias/Alcance: SE-039, SE-040, SE-041 (Pantallas P-04, P-26).
-> Rector: `.specify/memory/constitution.md` §2, §4, §5, §6, §10 y §11.
+## 1. Contrato
 
-## 1. Diseño
+Consumir únicamente GET/PUT api/v1/users/settings y PUT api/v1/users/device-token publicados en main 01dad6e.
+No implementar rutas notifications/settings, devices, read-all ni bandeja remota.
 
-1. **Registro y baja de dispositivo (`POST/DELETE /api/v1/notifications/devices`).** `RegisterPushDeviceUseCase` registra el token FCM al iniciar sesión y lo desregistra en `LogoutUseCase`.
-2. **Preferencias por categoría (`GET/PUT /api/v1/notifications/settings`).** `UpdateNotificationSettingsUseCase` sincroniza `nearbyOffersEnabled`, `expiringFavoritesEnabled`, `communityActivityEnabled` y `reservationUpdatesEnabled`.
-3. **Bandeja cifrada (`NotificationDao`).** Las notificaciones recibidas se guardan en SQLCipher; `NotificationsViewModel` soporta `markAllAsRead()` y deep-linking a `P-14`, `P-20` o `P-24`.
+## 2. Capas
 
-## 2. UI y navegación
+Dominio puro: NotificationsPreferences, NotificationsDevice, repositorio, proveedor SDK abstracto y tres casos de uso.
+Data: DTO exacto, NotificationsApiService, repositorio con errores sanitizados y proveedor Firebase real.
+DI: NotificationsModule con @Binds para repositorio/proveedor y @Provides para API/casos de uso.
+Presentación: estado MVI, borrador editable, guardado explícito, activación y resultados localizados.
 
-- `OnboardingNotificationsScreen` (`P-04`) solicita `POST_NOTIFICATIONS` en Android 13+ con rationale.
-- `NotificationsScreen` (`P-26`) muestra bandeja real, botón funcional `Marcar todo como leído` y hoja de preferencias conectada desde `BuyerProfileScreen`.
-- Previews: `NotificationsLoaded`, `NotificationsEmpty`, `NotificationSettingsSheet`.
+## 3. Integración main
 
-## 3. DI
+NetworkClient.notificationsApi debe usar publishingHttpClient(TIMEOUT_SECONDS), sin logging de cuerpos.
+Main agrega Firebase Messaging 26.0.2 y permiso POST_NOTIFICATIONS en manifest, sin fabricar recursos Firebase.
+BuyerViewModelsTest: reemplazar constructor NotificationsViewModel(storeRepo) y test CategorySelected por casos de uso
+NotificationsGetSettingsUseCase, NotificationsUpdateSettingsUseCase, NotificationsRegisterDeviceUseCase y estado preferences.
+No se modificaron tests compartidos, build, manifiesto, NetworkClient ni contenedor desde esta slice.
 
-| Binding | Implementación |
-|---|---|
-| `NotificationsApiService` | Retrofit `/api/v1/notifications/*` en `NetworkModule` |
-| `NotificationDao` | Provisión en `DatabaseModule` |
-| `NotificationsRepository` | `NotificationsRepositoryImpl` en `RepositoryModule` |
+## 4. Verificación pendiente (secuencial por main)
 
-## 4. Gates
+- ./gradlew.bat compileDebugKotlin --no-daemon
+- ./gradlew.bat testDebugUnitTest --tests '*NotificationPreferences*' --no-daemon
+- ./gradlew.bat compileDebugAndroidTestSources --no-daemon
+- ./gradlew.bat lint detekt ktlintCheck --no-daemon
+- ./gradlew.bat testDebugUnitTest koverXmlReportDebug koverVerifyDebug --no-daemon
+- Ejecutar NotificationPreferencesComposeTest en dispositivo/emulador y verificar cobertura >=80%.
+- python scripts/check_sdd.py; python scripts/check_layers.py; python scripts/check_endpoints.py
+- python scripts/check_secrets.py; python scripts/check_coverage.py --min 80
 
-- `./gradlew.bat compileDebugKotlin` y `compileDebugAndroidTestSources` verdes.
-- `./gradlew.bat detekt ktlintCheck lint` verdes (0 violaciones).
-- `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (cobertura `>= 80%`).
-- `python scripts/check_sdd.py` PASS.
-- `python scripts/check_layers.py` PASS.
-- `python scripts/check_endpoints.py` PASS.
-- `python scripts/check_secrets.py` PASS.
-- `python scripts/check_coverage.py --min 80` PASS.
+No se ejecuta Gradle por coordinación explícita con main. No se marca gate verde sin evidencia.
+Revisión local realizada: diff --check de archivos propios sin errores, XML de 22 strings parseado,
+fuentes propias <=160 líneas y <=160 columnas; dominio sin imports de frameworks.
+Se agregó NotificationPreferencesFirebaseProviderTest para inicialización sin recursos, tareas SDK y error sanitizado.
+Estas pruebas son fuentes pendientes de ejecución; no se infiere cobertura ni compatibilidad compilada.
 
-## 5. Orden de implementación
+## 5. Límites
 
-1. Crear `NotificationSettings`, `NotificationItem` y casos de uso en `domain/`.
-2. Crear `NotificationsApiService`, `NotificationEntity` y `NotificationDao`.
-3. Implementar `SensusFirebaseMessagingService` y canales de notificación Android.
-4. Refactorizar `NotificationsViewModel` retirando `MockDataProvider` e implementando `markAllAsRead()`.
-5. Conectar `Preferencias de notificaciones` en `BuyerProfileScreen`.
+Sin recursos Firebase oficiales no puede activarse el dispositivo; el proveedor devuelve indisponibilidad explícita.
+Permiso denegado no llama al proveedor ni al backend. Sin token manual, persistencia ni logs de credenciales.
+Canales, recepción, rotación y baja en logout requieren slices posteriores y contratos publicados.
 
-## 6. Prohibiciones
+## Corrección del gate inicial (validación pendiente)
 
-- Prohibido dejar `onClick = {}` vacío en `Preferencias de notificaciones` (`BuyerProfileScreen`) o `Marcar todo como leído` (`NotificationsScreen`).
-- Prohibido mantener el token FCM activo en backend tras cerrar sesión.
+Detekt reportó ReturnCount en mapSettings, previews privadas sin uso y radio literal de preview.
+Se refactorizó a un único return, previews internal y PREVIEW_RADIUS_KM; sin suppressions ni cambios de gates.
+Intenciones serializadas por viewModelScope en Main y lecturas de guarda desde una instantánea de estado.
+NotificationPreferencesConcurrencyTest añade cargas/guardados suspendidos para rechazar operaciones duplicadas y ediciones tardías.
+Revisión Firebase: CancellationException se relanza antes de IllegalStateException; IOException se traduce a Network,
+FirebaseException/errores de inicialización a Generic sanitizado, y configuración ausente a indisponibilidad explícita.
+Se añadieron fuentes de pruebas para estas rutas. Compilación, detekt, ktlint y ejecución siguen pendientes por main.
 
-## Tareas
+## Revisión de seguridad de sesión (validación pendiente)
 
-Ver `tasks.md`.
+Los tres casos de uso reciben SessionRepository obligatorio desde NotificationsModule, sin sesión predeterminada.
+Se exige sesión activa, registrada y token no vacío antes de GET/PUT o adquisición SDK privada.
+Se verifica la identidad de sesión (token y cuenta) después del resultado y antes de registrar credenciales SDK.
+El ViewModel observa cambios de identidad sin exponer tokens y limpia preferencias/borrador al cambiar la sesión.
+Constructor de ViewModel conservado con tres casos de uso. Fuentes de pruebas propias adaptadas y
+NotificationPreferencesSessionTest agregado para invitados, logout y cambio de cuenta durante operaciones.
+No se ejecutó Gradle; validación de compilación, pruebas y gates pendiente por main.

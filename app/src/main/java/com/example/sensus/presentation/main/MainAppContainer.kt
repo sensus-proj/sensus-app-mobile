@@ -1,5 +1,6 @@
 package com.example.sensus.presentation.main
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -22,15 +23,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.example.sensus.domain.model.ApartadoOrder
+import com.example.sensus.R
 import com.example.sensus.domain.model.ProductOffer
-import com.example.sensus.presentation.buyer.ActiveApartadoScreen
 import com.example.sensus.presentation.buyer.BuyerHomeCallbacks
 import com.example.sensus.presentation.buyer.BuyerHomeScreen
 import com.example.sensus.presentation.buyer.BuyerMapCallbacks
 import com.example.sensus.presentation.buyer.BuyerMapScreen
 import com.example.sensus.presentation.buyer.BuyerProfileCallbacks
 import com.example.sensus.presentation.buyer.BuyerProfileScreen
+import com.example.sensus.presentation.buyer.ClaimOfferScreen
+import com.example.sensus.presentation.buyer.ClaimsScreenActions
 import com.example.sensus.presentation.buyer.CommunityScreen
 import com.example.sensus.presentation.buyer.NotificationsScreen
 import com.example.sensus.presentation.buyer.ProductDetailCallbacks
@@ -47,28 +49,11 @@ import com.example.sensus.presentation.merchant.MerchantRegisterScreen
 import com.example.sensus.presentation.merchant.MerchantSalesScreen
 import com.example.sensus.theme.SensusBackground
 
-private const val FALLBACK_ORIG_PRICE = 100.0
-private const val FALLBACK_DISC_PRICE = 50.0
-private const val FALLBACK_DISCOUNT_PCT = 50
-private const val FALLBACK_UNITS_LEFT = 10
-private const val FALLBACK_DIST_METERS = 200
 private const val TAB_SENSI = 2
 private const val TAB_COMMUNITY = 3
 private const val TAB_PROFILE = 4
 private const val MERCHANT_TAB_SALES = 2
 private const val MERCHANT_TAB_PROFILE = 3
-
-private val defaultFallbackOffer = ProductOffer(
-    id = "sample_fallback",
-    name = "Oferta Local Sensus",
-    storeName = "Tienda Local",
-    category = "Abarrotes",
-    originalPrice = FALLBACK_ORIG_PRICE,
-    discountPrice = FALLBACK_DISC_PRICE,
-    discountPercent = FALLBACK_DISCOUNT_PCT,
-    unitsLeft = FALLBACK_UNITS_LEFT,
-    distanceMeters = FALLBACK_DIST_METERS
-)
 
 @Composable
 fun MainAppContainer(
@@ -112,9 +97,8 @@ private fun renderFullscreenOverlay(state: MainAppState, isGuest: Boolean): Bool
 @Composable
 private fun renderPrimaryOverlay(state: MainAppState, isGuest: Boolean): Boolean {
     when {
-        state.showNotifications -> RenderNotificationsOverlay(state, isGuest)
+        state.showNotifications -> RenderNotificationsOverlay(state)
         state.activeRouteOffer != null -> RenderRouteOverlay(state, isGuest)
-        state.activeApartadoOrder != null -> RenderApartadoOrderOverlay(state)
         state.activeApartadoOffer != null -> RenderApartadoOfferOverlay(state)
         else -> return false
     }
@@ -134,17 +118,10 @@ private fun renderSecondaryOverlay(state: MainAppState, isGuest: Boolean): Boole
 }
 
 @Composable
-private fun RenderNotificationsOverlay(state: MainAppState, isGuest: Boolean) {
+private fun RenderNotificationsOverlay(state: MainAppState) {
     NotificationsScreen(
         onNavigateBack = { state.showNotifications = false },
-        onNotificationActionClick = { notif ->
-            state.showNotifications = false
-            if (notif.category == "Ofertas") {
-                state.selectedProductForDetail = defaultFallbackOffer
-            } else if (notif.category == "Reservas") {
-                if (isGuest) state.showGuestPrompt = true else state.activeApartadoOffer = defaultFallbackOffer
-            }
-        }
+        onNotificationActionClick = {}
     )
 }
 
@@ -156,37 +133,29 @@ private fun RenderRouteOverlay(state: MainAppState, isGuest: Boolean) {
         onNavigateBack = { state.activeRouteOffer = null },
         onShowQrClick = {
             state.activeRouteOffer = null
-            if (isGuest) state.showGuestPrompt = true else state.activeApartadoOffer = offer
+            if (isGuest) {
+                state.showGuestPrompt = true
+            } else {
+                state.activeClaimExpected = false
+                state.activeApartadoOffer = offer
+            }
         }
-    )
-}
-
-@Composable
-private fun RenderApartadoOrderOverlay(state: MainAppState) {
-    val order = state.activeApartadoOrder ?: return
-    ActiveApartadoScreen(
-        order = order,
-        onNavigateBack = { state.activeApartadoOrder = null },
-        onNavigateToRoute = {
-            val firstOffer = order.items.first().offer
-            state.activeApartadoOrder = null
-            state.activeRouteOffer = firstOffer
-        },
-        onCancelApartado = { state.activeApartadoOrder = null }
     )
 }
 
 @Composable
 private fun RenderApartadoOfferOverlay(state: MainAppState) {
     val offer = state.activeApartadoOffer ?: return
-    ActiveApartadoScreen(
+    ClaimOfferScreen(
         offer = offer,
-        onNavigateBack = { state.activeApartadoOffer = null },
-        onNavigateToRoute = {
-            state.activeApartadoOffer = null
-            state.activeRouteOffer = offer
-        },
-        onCancelApartado = { state.activeApartadoOffer = null }
+        actions = ClaimsScreenActions(
+            expectExisting = state.activeClaimExpected,
+            onNavigateBack = { state.activeApartadoOffer = null },
+            onNavigateToRoute = {
+                state.activeApartadoOffer = null
+                state.activeRouteOffer = offer
+            }
+        )
     )
 }
 
@@ -197,26 +166,13 @@ private fun RenderProductDetailOverlay(state: MainAppState, isGuest: Boolean) {
         offer = product,
         callbacks = ProductDetailCallbacks(
             onNavigateBack = { state.selectedProductForDetail = null },
-            onApartarClick = { offer ->
-                if (isGuest) {
-                    state.showGuestPrompt = true
-                } else {
-                    state.selectedProductForDetail = null
-                    state.activeApartadoOrder = ApartadoOrder.fromSingleOffer(offer, 1)
-                }
-            },
-            onApartarDirect = { offer, quantity ->
-                if (isGuest) {
-                    state.showGuestPrompt = true
-                } else {
-                    state.selectedProductForDetail = null
-                    state.activeApartadoOrder = ApartadoOrder.fromSingleOffer(offer, quantity)
-                }
-            },
+            onApartarClick = { offer -> openPublishedClaim(state, isGuest, offer) },
+            onApartarDirect = { offer, _ -> openPublishedClaim(state, isGuest, offer) },
             onNavigateToRoute = { offer ->
                 state.selectedProductForDetail = null
                 state.activeRouteOffer = offer
-            }
+            },
+            onViewActiveClaim = { offer -> openPublishedClaim(state, isGuest, offer, expectExisting = true) }
         )
     )
 }
@@ -300,7 +256,12 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
 @Composable
 private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToTerms: () -> Unit) {
     val openCartGuarded = { runWhenAuthenticated(state, isGuest) { state.showCartSheet = true } }
-    val openApartadoGuarded = { runWhenAuthenticated(state, isGuest) { state.activeApartadoOffer = defaultFallbackOffer } }
+    val context = LocalContext.current
+    val openApartadoGuarded = {
+        runWhenAuthenticated(state, isGuest) {
+            Toast.makeText(context, context.getString(R.string.detail_feature_unavailable), Toast.LENGTH_SHORT).show()
+        }
+    }
     when (state.buyerTabIndex) {
         0 -> BuyerMapScreen(
             callbacks = BuyerMapCallbacks(
@@ -384,5 +345,13 @@ internal fun toggleMerchantMode(state: MainAppState, isGuest: Boolean, enableMer
         }
         enableMerchant -> state.showMerchantRegister = true
         else -> state.isMerchantMode = false
+    }
+}
+
+internal fun openPublishedClaim(state: MainAppState, isGuest: Boolean, offer: ProductOffer, expectExisting: Boolean = false) {
+    runWhenAuthenticated(state, isGuest) {
+        state.selectedProductForDetail = null
+        state.activeClaimExpected = expectExisting
+        state.activeApartadoOffer = offer
     }
 }

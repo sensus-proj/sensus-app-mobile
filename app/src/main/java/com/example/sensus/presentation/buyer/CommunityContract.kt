@@ -1,5 +1,6 @@
 package com.example.sensus.presentation.buyer
 
+import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.base.ViewEffect
@@ -16,7 +17,9 @@ data class CommunityViewState(
     val isCached: Boolean = false,
     val hasMore: Boolean = false,
     val nextPage: Int = 1,
-    val errorMessage: String? = null,
+    val feedError: AppError? = null,
+    val publishError: AppError? = null,
+    val hasLoadedFeed: Boolean = false,
     val showComposer: Boolean = false,
     val draftText: String = "",
     val merchantId: String? = null,

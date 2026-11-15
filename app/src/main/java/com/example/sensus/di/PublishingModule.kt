@@ -8,6 +8,7 @@ import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.usecase.ChangeOfferStatusUseCase
 import com.example.sensus.domain.usecase.CreateOfferUseCase
 import com.example.sensus.domain.usecase.GetMerchantInventoryUseCase
+import com.example.sensus.domain.usecase.RepublishOfferUseCase
 import com.example.sensus.domain.usecase.UpdateOfferUseCase
 import dagger.Module
 import dagger.Provides
@@ -17,6 +18,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object PublishingModule {
+    @Provides
+    @Singleton
+    fun provideRepublishOfferUseCase(repository: OffersRepository): RepublishOfferUseCase = RepublishOfferUseCase(repository)
+
     @Provides
     @Singleton
     fun provideOffersRepository(offerDao: OfferDao, container: SensusContainer): OffersRepository =

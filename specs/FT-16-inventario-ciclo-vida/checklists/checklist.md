@@ -49,3 +49,6 @@
 - [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
 - [ ] `CHECKLIST_PR.md` completo
 - [ ] Tag `v1.19.0-ft16`
+
+- [ ] REPUBLISH: validar compileDebugKotlin, testDebugUnitTest, compileDebugAndroidTestSources, lint/detekt/ktlint, Kover >=80%, gates SDD y seguridad en corrida coordinada main.
+- [ ] Ejecutar Compose y E2E autenticado contra backend oficial; confirmar 409 sin caché ni reintento.

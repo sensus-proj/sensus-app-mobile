@@ -25,11 +25,15 @@
 | Ofertas cercanas y detalle | `GET /api/v1/offers/nearby`, `GET /api/v1/offers/{id}` | 20 s | 1 | 20 | Propuesto (FT-11, FT-12) |
 | Contador de vistas | `POST /api/v1/offers/{id}/view` | 10 s | 0 | — | Propuesto (FT-12) |
 | Apartado y canje QR | `POST /api/v1/offers/{id}/claim`, `POST /api/v1/offers/claims/{code}/redeem` | 20 s | 0 | — | Propuesto (FT-13, FT-14) |
-| Carga multimedia multipart | `POST /api/v1/media/upload` | 45 s | 1 | — | Propuesto (FT-15) |
-| Gestión inventario comercio | `GET /api/v1/merchants/my-offers`, `POST`/`PUT /api/v1/offers` | 20 s | 1 / 0 | 20 | Propuesto (FT-15, FT-16) |
+| Carga multimedia multipart | `POST /api/v1/media/upload` | 45 s | 1 | — | Alineado cliente (FT-15, 2026-11-14; reintento solo ante `IOException`/timeout, nunca ante respuesta HTTP; medición backend pendiente) |
+| Creación de oferta | `POST /api/v1/offers` | 20 s | 0 | — | Alineado cliente (FT-15, 2026-11-14; medición backend pendiente) |
+| Gestión inventario comercio | `GET /api/v1/merchants/my-offers`, `PUT /api/v1/offers/{id}` | 20 s | 1 / 0 | 20 | Propuesto (FT-16) |
 | Favoritos | `POST /api/v1/users/favorites/{id}` | 15 s | 0 | 20 | Propuesto (FT-17) |
 | Feed social, comentarios y reportes | `GET /api/v1/feed/nearby`, `POST /feed/posts`, `comments`, `reports` | 20 s | 1 / 0 | 20 | Propuesto (FT-18, FT-19) |
 | Búsqueda, recomendaciones y sustitutos | `GET /api/v1/ml/search`, `recommendations`, `alternatives` | 15 s | 1 | 20 | Propuesto (FT-20) |
+| Detalle de oferta y registro de vista | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/view` | 20 s | 0 | — | Cliente oficial sanitizado (FT-12; sin reintento automático de escritura) |
+| Apartado, canje y republicación | `POST /api/v1/offers/{id}/claim`, `POST /api/v1/offers/claims/{code}/redeem`, `POST /api/v1/offers/{id}/republish` | 20 s | 0 | — | Cliente oficial sanitizado (FT-13/14/16; sin reintento automático de escritura) |
+| Consulta/edición ajustes y registro dispositivo | `GET`/`PUT /api/v1/users/settings`, `PUT /api/v1/users/device-token` | 15 s | 0 | — | Cliente oficial sanitizado (FT-21; token FCM real, no se registra en logs) |
 | Device token y settings push | `PUT /api/v1/users/device-token`, `PUT /api/v1/users/settings` | 15 s | 1 | — | Propuesto (FT-21) |
 | Sensi IA (Borrador) | `POST /api/v1/ai/conversations`, `POST /api/v1/ai/messages` | 30 s | 0 | — | Borrador (FT-24) |
 | Amigos QR y reseñas (Borrador) | `/api/v1/friends`, `/api/v1/reviews` | 20 s | 0 | 20 | Borrador (FT-25, FT-26) |

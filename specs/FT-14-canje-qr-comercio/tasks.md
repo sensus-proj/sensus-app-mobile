@@ -1,25 +1,21 @@
-# TASKS — FT-14 Escáner QR y Validación de Canje en Comercio
+# TASKS — FT-14-canje-qr-comercio
 
-> 1 PR = 1 slice. Orden: Permisos/Deps -> Dominio -> Datos -> CameraX/UI -> Tests -> Gates.
+- [x] Materializar DTOs exactos y POST sin body con HTTP 200.
+- [x] Implementar dominio, repositorio, sesión fail closed y Hilt ClaimsModule.
+- [x] Implementar contratos/ViewModels MVI y UI explícita sin éxito simulado.
+- [x] Añadir pruebas JUnit4/API/ViewModel y Compose en archivos Claims nuevos.
+- [x] Integración principal: claimsApi sanitizada, ZXing core y navegación.
+- [x] Ejecutar gates locales Gradle/Python, compilación y cobertura >=80% en integración principal.
+- [ ] Listado y cancelación pendientes de publicación backend, sin rutas inventadas.
 
-## Fase A — Configuración y Dominio
+Contrato auditado: backend main 01dad6e, OfferClaimDtos.cs y OfferEndpoints.cs.
+Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisiones, Kover 82.82%, compileDebugKotlin/compileDebugAndroidTestSources/lint/detekt/ktlint PASS. Pruebas Compose compiladas, no ejecutadas.
 
-- [ ] T14.1 Declarar permiso `CAMERA` (con `required="false"`) en `AndroidManifest.xml` y librerías CameraX + ML Kit en `libs.versions.toml` (previa aprobación D-2) — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T14.2 Crear `RedeemResult` y ampliar `ClaimsRepository` con `redeemClaim(code)` — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T14.3 Crear `RedeemClaimUseCase` con sanitización y validación de formato de folio/código — verif: `./gradlew.bat testDebugUnitTest`
+- [x] Verificar Initialize por offerId sin POST y efecto Confirmed único con callback onClaimConfirmed sin vaciar el carrito antes de confirmación; retirada automática posterior no implementada.
 
-## Fase B — Datos y ViewModel MVI
+- [x] Revisión: capturar JSON/HTTP inválidos; comparar identidad de autenticación; expirar QR con reloj; limitar payload y probar fallos sin éxito falso.
 
-- [ ] T14.4 Añadir `@POST("api/v1/offers/claims/{code}/redeem")` en `ClaimsApiService`, DTOs y `ClaimsRepositoryImpl` (manejo `200`, `403`, `404`, `409`) — verif: `./gradlew.bat testDebugUnitTest`
-- [ ] T14.5 Crear `MerchantSalesContract.kt` y `MerchantSalesViewModel.kt` con bloqueo de lecturas duplicadas — verif: `./gradlew.bat testDebugUnitTest`
 
-## Fase C — CameraX y UI
-
-- [ ] T14.6 Implementar `QrCameraPreview.kt` con CameraX `ImageAnalysis` + ML Kit `BarcodeScanner` y ciclo de vida seguro — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T14.7 Actualizar `MerchantSalesScreen.kt` conectándolo a `MerchantSalesViewModel`, solicitud de permiso runtime y retirando el string simulado `"SNS-A7K9-24"` — verif: `./gradlew.bat compileDebugKotlin`
-
-## Fase D — Pruebas y Cierre
-
-- [ ] T14.8 Añadir `RedeemClaimUseCaseTest`, `MerchantSalesViewModelTest` (Turbine) y tests `MockWebServer` (`200`, `403`, `404`, `409`) — verif: `./gradlew.bat testDebugUnitTest`
-- [ ] T14.9 Añadir tests Compose UI para entrada manual de folio, tarjeta de cobro y estado de permiso denegado — verif: `./gradlew.bat compileDebugAndroidTestSources`
-- [ ] T14.10 Actualizar `docs/endpoints-internos.md`, `docs/rate-matrix.md`, `docs/asvs-l2-checklist.md`, `Memoria.md` §6 y validar todos los gates — verif: `python scripts/check_endpoints.py`
+- [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación.
+- [ ] Retirada automática de la unidad de bolsa tras confirmación (la bolsa se conserva; no se afirma vaciarla).
+- Suite remota de seguridad/CI no ejecutada sin push; paquete SAST p/mobile externo devuelve 404. No se cierran estas condiciones.

@@ -11,6 +11,9 @@ import com.example.sensus.data.mapper.OfferMapper.toEntity
 import com.example.sensus.data.media.compressToLimit
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.remote.api.FeedApiService
+import com.example.sensus.data.remote.api.MediaApiService
+import com.example.sensus.data.remote.api.OffersApiService
+import com.example.sensus.data.remote.dto.UploadMediaResponse
 import com.example.sensus.data.repository.CloudinarySignedUploader
 import com.example.sensus.data.repository.FeedRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
@@ -27,11 +30,14 @@ import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.ImageModerationRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.io.IOException
+import java.net.SocketTimeoutException
 import kotlinx.coroutines.test.runTest
+import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -42,6 +48,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import retrofit2.Response
 
 class PublishingApiTest {
     private val server = MockWebServer()
@@ -160,6 +167,55 @@ class PublishingApiTest {
         server.enqueue(MockResponse().setResponseCode(422))
         val input = CreateOfferInput("Pan", "", StoreCategory.BAKERY, 100.0, 60.0, 17, Long.MAX_VALUE)
         assertTrue(OffersRepositoryImpl(offerDao, client.offersApi).createOffer(input, null) is Result.Failure)
+        verify(exactly = 0) { offerDao.insertOffer(any()) }
+    }
+
+    @Test
+    fun publishingClients_applyRateMatrixTimeoutsWithoutBodyLogging() {
+        listOf(client.offersHttpClient to 20_000, client.mediaUploadHttpClient to 45_000).forEach { (http, millis) ->
+            assertEquals(millis, http.connectTimeoutMillis)
+            assertEquals(millis, http.readTimeoutMillis)
+            assertEquals(millis, http.writeTimeoutMillis)
+            assertTrue(http.interceptors.none { it is HttpLoggingInterceptor })
+        }
+    }
+
+    @Test
+    fun mediaUpload_retriesOnceOnTransportTimeoutThenSucceeds() = runTest {
+        val api = mockk<MediaApiService>()
+        coEvery { api.uploadMedia(any()) } throws SocketTimeoutException("timeout") andThen
+            Response.success(UploadMediaResponse("m1", "https://example.com/x.jpg", approved = true))
+        val result = MediaRepositoryImpl(api).uploadAndModerate(byteArrayOf(1), "image/jpeg")
+        assertEquals(UploadedMedia("m1", "https://example.com/x.jpg"), (result as Result.Success).data)
+        coVerify(exactly = 2) { api.uploadMedia(any()) }
+    }
+
+    @Test
+    fun mediaUpload_failsClosedAfterSingleRetry() = runTest {
+        val api = mockk<MediaApiService>()
+        coEvery { api.uploadMedia(any()) } throws SocketTimeoutException("timeout")
+        val result = MediaRepositoryImpl(api).uploadAndModerate(byteArrayOf(1), "image/jpeg")
+        assertTrue((result as Result.Failure).error is AppError.Network)
+        coVerify(exactly = 2) { api.uploadMedia(any()) }
+    }
+
+    @Test
+    fun mediaUpload_neverRetriesHttpResponses() = runTest {
+        val repository = MediaRepositoryImpl(client.mediaUploadApi)
+        server.enqueue(MockResponse().setResponseCode(500))
+        assertTrue(repository.uploadAndModerate(byteArrayOf(1), "image/jpeg") is Result.Failure)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun offerCreate_isNotRetriedOnTimeoutAndNothingIsCached() = runTest {
+        val api = mockk<OffersApiService>()
+        val offerDao = mockk<OfferDao>(relaxed = true)
+        coEvery { api.createOffer(any()) } throws SocketTimeoutException("timeout")
+        val input = CreateOfferInput("Pan", "", StoreCategory.BAKERY, 100.0, 60.0, 5, Long.MAX_VALUE)
+        val result = OffersRepositoryImpl(offerDao, api).createOffer(input, null)
+        assertTrue((result as Result.Failure).error is AppError.Network)
+        coVerify(exactly = 1) { api.createOffer(any()) }
         verify(exactly = 0) { offerDao.insertOffer(any()) }
     }
 

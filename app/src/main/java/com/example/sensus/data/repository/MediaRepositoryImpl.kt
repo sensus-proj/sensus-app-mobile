@@ -10,6 +10,7 @@ import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.ImageModerationRepository
 import com.example.sensus.domain.repository.MediaRepository
+import java.io.IOException
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -20,6 +21,7 @@ private const val HTTP_NOT_FOUND = 404
 private const val HTTP_PAYLOAD_TOO_LARGE = 413
 private const val HTTP_UNPROCESSABLE = 422
 private const val HTTP_SERVER_ERROR = 500
+private const val MEDIA_UPLOAD_MAX_RETRIES = 1
 private const val UPLOAD_FILE_NAME = "sensus_upload.jpg"
 private const val OFFER_MODERATION_CONTEXT = "Fotografía de producto de oferta comercial"
 
@@ -44,13 +46,21 @@ class MediaRepositoryImpl(
 
         return safeNetworkCall("Error al subir la imagen.") {
             val part = MultipartBody.Part.createFormData("file", UPLOAD_FILE_NAME, bytes.toRequestBody(mimeType.toMediaType()))
-            val response = mediaApi.uploadMedia(part)
+            val response = withTransportRetry(MEDIA_UPLOAD_MAX_RETRIES) { mediaApi.uploadMedia(part) }
             when {
                 response.isSuccessful -> mapApprovedUpload(response.body())
                 shouldFallbackToSignedUpload(response.code()) -> uploadViaSignedCloudinary(bytes, mimeType, response)
                 else -> mapUploadError(response)
             }
         }
+    }
+
+    /** Retry only transport failures; HTTP responses retain the upstream handling. */
+    private suspend fun <T> withTransportRetry(retriesLeft: Int, call: suspend () -> T): T = try {
+        call()
+    } catch (e: IOException) {
+        if (retriesLeft <= 0) throw e
+        withTransportRetry(retriesLeft - 1, call)
     }
 
     private fun shouldFallbackToSignedUpload(statusCode: Int): Boolean = profileApi != null &&

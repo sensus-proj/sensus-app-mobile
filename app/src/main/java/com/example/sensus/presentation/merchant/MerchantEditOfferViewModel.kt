@@ -5,8 +5,10 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.OfferPublishingPolicy
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.usecase.ChangeOfferStatusUseCase
+import com.example.sensus.domain.usecase.RepublishOfferUseCase
 import com.example.sensus.domain.usecase.UpdateOfferUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +18,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MerchantEditOfferViewModel @Inject constructor(
     private val updateOfferUseCase: UpdateOfferUseCase,
-    private val changeOfferStatusUseCase: ChangeOfferStatusUseCase
+    private val changeOfferStatusUseCase: ChangeOfferStatusUseCase,
+    private val republishOfferUseCase: RepublishOfferUseCase
 ) : MviViewModel<MerchantEditOfferViewState, MerchantEditOfferViewIntent, MerchantEditOfferViewEffect>(
     MerchantEditOfferViewState()
 ) {
@@ -24,11 +27,27 @@ class MerchantEditOfferViewModel @Inject constructor(
     override fun processIntent(intent: MerchantEditOfferViewIntent) {
         when (intent) {
             is MerchantEditOfferViewIntent.Initialize -> updateState {
-                copy(currentOffer = intent.offer, fieldError = null, errorMessage = null)
+                copy(currentOffer = intent.offer, fieldError = null, errorMessage = null, republishFailed = false)
             }
-            is MerchantEditOfferViewIntent.FieldEdited -> updateState { copy(fieldError = null, errorMessage = null) }
+            is MerchantEditOfferViewIntent.FieldEdited -> updateState { copy(fieldError = null, errorMessage = null, republishFailed = false) }
+            is MerchantEditOfferViewIntent.Republish -> republish(intent.input)
             is MerchantEditOfferViewIntent.SaveChanges -> saveChanges(intent.input)
             is MerchantEditOfferViewIntent.ChangeStatus -> changeStatus(intent.offer, intent.newStatus)
+        }
+    }
+
+    private fun republish(input: RepublishOfferInput) {
+        if (viewState.value.isSaving || viewState.value.isChangingStatus) return
+        val offer = viewState.value.currentOffer ?: return
+        updateState { copy(isSaving = true, republishFailed = false, errorMessage = null, fieldError = null) }
+        viewModelScope.launch {
+            when (val result = republishOfferUseCase(offer, input)) {
+                is Result.Success -> {
+                    updateState { copy(currentOffer = result.data, isSaving = false) }
+                    emitEffect(MerchantEditOfferViewEffect.OfferRepublished(result.data))
+                }
+                is Result.Failure -> updateState { copy(isSaving = false, republishFailed = true) }
+            }
         }
     }
 

@@ -1,28 +1,27 @@
-# TASKS — FT-13 Reserva / Apartado con Folio y Código QR Real (Cliente)
+# TASKS — FT-13-reserva-qr-cliente
 
-> 1 PR = 1 slice. Orden: Dominio -> DB/API -> Generador QR -> ViewModel/UI -> DI -> Tests -> Gates.
+- [x] Materializar DTOs exactos y POST sin body con HTTP 200.
+- [x] Implementar dominio, repositorio, sesión fail closed y Hilt ClaimsModule.
+- [x] Implementar contratos/ViewModels MVI y UI explícita sin éxito simulado.
+- [x] Añadir pruebas JUnit4/API/ViewModel y Compose en archivos Claims nuevos.
+- [x] Integración principal: claimsApi sanitizada, ZXing core y navegación.
+- [x] Ejecutar gates locales Gradle/Python, compilación y cobertura >=80% en integración principal.
+- [ ] Listado y cancelación pendientes de publicación backend, sin rutas inventadas.
 
-## Fase A — Dominio
+Contrato auditado: backend main 01dad6e, OfferClaimDtos.cs y OfferEndpoints.cs.
+Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisiones, Kover 82.82%, compileDebugKotlin/compileDebugAndroidTestSources/lint/detekt/ktlint PASS. Pruebas Compose compiladas, no ejecutadas.
 
-- [ ] T13.1 Definir `ClaimRecord`, `ClaimStatus` (`ACTIVE`, `REDEEMED`, `CANCELLED`, `EXPIRED`) y `ClaimsRepository` en `domain/` — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T13.2 Crear `CreateClaimUseCase`, `GetMyClaimsUseCase` y `CancelClaimUseCase` (bloqueando modo invitado) — verif: `./gradlew.bat testDebugUnitTest`
+- [x] Verificar Initialize por offerId sin POST y efecto Confirmed único con callback onClaimConfirmed sin vaciar el carrito antes de confirmación; retirada automática posterior no implementada.
 
-## Fase B — Persistencia SQLCipher y API
+- [x] Revisión: capturar JSON/HTTP inválidos; comparar identidad de autenticación; expirar QR con reloj; limitar payload y probar fallos sin éxito falso.
 
-- [ ] T13.3 Crear `ClaimEntity.java` y `ClaimDao.java` y registrar en `SensusDatabase.java` + `DatabaseModule.kt` — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T13.4 Crear `ClaimDtos.kt`, `ClaimsApiService.kt` (`POST /api/v1/offers/{id}/claim`, borrador `GET /api/v1/offers/claims`, `PATCH /api/v1/offers/claims/{id}/cancel`) y `ClaimMapper.kt` — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T13.5 Implementar `ClaimsRepositoryImpl` con guardado offline-first en `ClaimDao` y mapeo de `409 Conflict` — verif: `./gradlew.bat testDebugUnitTest`
+- [x] Agrupar callbacks/reloj en ClaimsScreenActions sin supresiones; migrar pruebas propias y comunicar firma de navegación a MAIN.
 
-## Fase C — Generador QR y Presentación
+- [x] Simplificar igualdad de identidad privada sin condición compleja ni exposición de token; verificar contrato equals/hashCode.
 
-- [ ] T13.6 Agregar `com.google.zxing:core` en `gradle/libs.versions.toml` (previa aprobación de D-2) y crear `QrCodeBitmapGenerator.kt` — verif: `./gradlew.bat testDebugUnitTest`
-- [ ] T13.7 Actualizar `ActiveApartadoScreen.kt` (`P-16`/`P-18`) para renderizar QR real, folio y cuenta regresiva desde `expiresAt` — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T13.8 Crear `MyClaimsContract.kt`, `MyClaimsViewModel.kt` y `MyClaimsScreen.kt` (`P-21`) con filtros por estado — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T13.9 Conectar `"Mis apartados y pedidos"` en `BuyerProfileScreen.kt` y el botón cancelar (`P-20`) — verif: `./gradlew.bat compileDebugKotlin`
+- [x] Retener confirmaciones solo en memoria por oferta; Initialize(expectExisting) restaura o bloquea POST sin código; probar cambios de oferta y borrado por identidad.
 
-## Fase D — DI, Pruebas y Cierre
 
-- [ ] T13.10 Registrar `ClaimsApiService`, `ClaimsRepository` y casos de uso en `AppModule.kt` — verif: `./gradlew.bat compileDebugKotlin`
-- [ ] T13.11 Añadir tests unitarios (`CreateClaimUseCaseTest`, `QrCodeBitmapGeneratorTest`, `MyClaimsViewModelTest`) e integración (`ClaimDao` SQLCipher + `MockWebServer` 201/409) — verif: `./gradlew.bat testDebugUnitTest`
-- [ ] T13.12 Añadir tests Compose UI para `ActiveApartadoScreen` (folio/QR real) y `MyClaimsScreen` — verif: `./gradlew.bat compileDebugAndroidTestSources`
-- [ ] T13.13 Actualizar `docs/endpoints-internos.md`, `docs/rate-matrix.md`, `Memoria.md` §6 y verificar todos los gates — verif: `python scripts/check_endpoints.py`
+- [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación.
+- [ ] Retirada automática de la unidad de bolsa tras confirmación (la bolsa se conserva; no se afirma vaciarla).
+- Suite remota de seguridad/CI no ejecutada sin push; paquete SAST p/mobile externo devuelve 404. No se cierran estas condiciones.

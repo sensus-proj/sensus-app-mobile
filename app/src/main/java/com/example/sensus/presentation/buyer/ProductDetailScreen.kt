@@ -1,5 +1,6 @@
 package com.example.sensus.presentation.buyer
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -11,75 +12,93 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.sensus.domain.model.AddToCartResult
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sensus.R
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusRed
 
 @Composable
-fun ProductDetailScreen(cartViewModel: CartViewModel = hiltViewModel(), offer: ProductOffer, callbacks: ProductDetailCallbacks, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    var quantity by remember { mutableIntStateOf(1) }
-    var conflictDialogState by remember { mutableStateOf<AddToCartResult.StoreConflict?>(null) }
-    var showAddedNotice by remember { mutableStateOf(false) }
+fun ProductDetailScreen(
+    cartViewModel: CartViewModel = hiltViewModel(),
+    offer: ProductOffer,
+    callbacks: ProductDetailCallbacks,
+    modifier: Modifier = Modifier,
+    viewModel: ProductDetailViewModel = hiltViewModel()
+) {
+    val state by viewModel.viewState.collectAsStateWithLifecycle()
+    LaunchedEffect(offer.id) { viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id)) }
+    ProductDetailContent(
+        offer = offer,
+        state = state,
+        actions = ProductDetailActions(
+            callbacks,
+            viewModel::dispatchIntent,
+            { current, quantity -> cartViewModel.dispatchIntent(CartViewIntent.AddOffer(current, quantity)) }
+        ),
+        modifier = modifier
+    )
+}
 
+@Composable
+internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewState, actions: ProductDetailActions, modifier: Modifier = Modifier) {
+    val current = state.details?.offer?.copy(distanceMeters = offer.distanceMeters) ?: offer.copy(isVerified = false, rating = 0.0, reviewCount = 0)
+    val canClaim = state.details?.canClaim(System.currentTimeMillis()) == true
+    val context = LocalContext.current
+    var showAddedNotice by remember(offer.id) { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         ProductDetailScrollSection(
-            offer = offer,
-            quantity = quantity,
+            offer = current,
             showAddedNotice = showAddedNotice,
-            callbacks = callbacks,
-            onQuantityChange = { next -> quantity = next }
+            state = state,
+            actions = actions
         )
-
         ProductDetailBottomBar(
-            offer = offer,
-            quantity = quantity,
-            onAddToCart = {
-                cartViewModel.dispatchIntent(CartViewIntent.AddOffer(offer, quantity))
-                showAddedNotice = true
-                Toast.makeText(context, "$quantity x ${offer.name} agregado a la bolsa", Toast.LENGTH_SHORT).show()
-            },
-            onApartarDirect = { callbacks.onApartarDirect(offer, quantity) },
+            offer = current,
+            quantity = state.quantity,
+            actions = ProductBottomBarActions(
+                enabled = canClaim,
+                onAddToCart = {
+                    actions.onAddToCart(current, state.quantity)
+                    showAddedNotice = true
+                    Toast.makeText(context, context.getString(R.string.detail_added_to_cart), Toast.LENGTH_SHORT).show()
+                },
+                onApartarDirect = {
+                    if (state.details?.hasActiveClaim == true) {
+                        actions.navigation.onViewActiveClaim(current)
+                    } else {
+                        actions.navigation.onApartarDirect(current, 1)
+                    }
+                },
+                hasActiveClaim = state.details?.hasActiveClaim == true
+            ),
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-
-        conflictDialogState?.let { conflict ->
-            StoreConflictAlertDialog(
-                conflict = conflict,
-                onConfirmReplace = {
-                    cartViewModel.dispatchIntent(CartViewIntent.ClearCart)
-                    cartViewModel.dispatchIntent(CartViewIntent.AddOffer(offer, quantity))
-                    conflictDialogState = null
-                    showAddedNotice = true
-                    Toast.makeText(context, "Bolsa actualizada con ${offer.storeName}", Toast.LENGTH_SHORT).show()
-                },
-                onDismiss = { conflictDialogState = null }
-            )
-        }
     }
 }
 
 @Composable
-private fun ProductDetailScrollSection(
-    offer: ProductOffer,
-    quantity: Int,
-    showAddedNotice: Boolean,
-    callbacks: ProductDetailCallbacks,
-    onQuantityChange: (Int) -> Unit
-) {
+private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boolean, state: ProductDetailViewState, actions: ProductDetailActions) {
     val context = LocalContext.current
+    val quantity = state.quantity
+    val callbacks = actions.navigation
+    val hasCoordinates = offer.latitude.isFinite() && offer.longitude.isFinite()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -89,9 +108,16 @@ private fun ProductDetailScrollSection(
     ) {
         ProductDetailTopBar(
             onNavigateBack = callbacks.onNavigateBack,
-            onShareClick = { Toast.makeText(context, "Enlace de oferta copiado", Toast.LENGTH_SHORT).show() },
-            onFavoriteClick = { Toast.makeText(context, "Guardado en favoritos", Toast.LENGTH_SHORT).show() }
+            onShareClick = {
+                val share = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, context.getString(R.string.detail_share_text, offer.name, offer.storeName))
+                }
+                context.startActivity(Intent.createChooser(share, context.getString(R.string.detail_share_title)))
+            },
+            onFavoriteClick = { Toast.makeText(context, context.getString(R.string.detail_feature_unavailable), Toast.LENGTH_SHORT).show() }
         )
+        ProductDetailStatus(state) { actions.onIntent(ProductDetailViewIntent.Load(offer.id)) }
         if (showAddedNotice) {
             ProductAddedNoticeBanner(storeName = offer.storeName)
         }
@@ -102,15 +128,15 @@ private fun ProductDetailScrollSection(
         QuantitySelectorCard(
             quantity = quantity,
             maxUnits = offer.unitsLeft,
-            onDecrease = { if (quantity > 1) onQuantityChange(quantity - 1) },
-            onIncrease = { if (quantity < offer.unitsLeft) onQuantityChange(quantity + 1) }
+            onDecrease = { if (quantity > 1) actions.onIntent(ProductDetailViewIntent.ChangeQuantity(quantity - 1)) },
+            onIncrease = { if (quantity < offer.unitsLeft) actions.onIntent(ProductDetailViewIntent.ChangeQuantity(quantity + 1)) }
         )
         Spacer(modifier = Modifier.height(16.dp))
         ProductMerchantCard(
             offer = offer,
-            hasRouteNavigation = callbacks.onNavigateToRoute != null,
+            hasRouteNavigation = callbacks.onNavigateToRoute != null && hasCoordinates,
             onGoogleMapsClick = {
-                NavigationIntentUtils.launchGoogleMapsDirections(context, offer.latitude, offer.longitude, offer.storeName)
+                if (hasCoordinates) NavigationIntentUtils.launchGoogleMapsDirections(context, offer.latitude, offer.longitude, offer.storeName)
             },
             onRouteClick = { callbacks.onNavigateToRoute?.invoke(offer) }
         )
@@ -118,3 +144,23 @@ private fun ProductDetailScrollSection(
         ProductDescriptionCard(description = offer.description, quantity = quantity)
     }
 }
+
+@Composable
+internal fun ProductDetailStatus(state: ProductDetailViewState, onRetry: () -> Unit) {
+    when {
+        state.isLoading -> Text(stringResource(R.string.detail_refreshing), modifier = Modifier.padding(16.dp))
+        state.error != null -> Column(modifier = Modifier.padding(16.dp)) {
+            Text(state.error.message, color = SensusRed)
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.detail_retry)) }
+        }
+        state.details?.hasActiveClaim == true -> Text(stringResource(R.string.detail_active_claim), modifier = Modifier.padding(16.dp))
+        state.details?.canClaim(System.currentTimeMillis()) == false -> Text(stringResource(R.string.detail_unavailable), modifier = Modifier.padding(16.dp))
+    }
+}
+
+@ComposeUiModel
+internal data class ProductDetailActions(
+    val navigation: ProductDetailCallbacks,
+    val onIntent: (ProductDetailViewIntent) -> Unit,
+    val onAddToCart: (ProductOffer, Int) -> Unit
+)

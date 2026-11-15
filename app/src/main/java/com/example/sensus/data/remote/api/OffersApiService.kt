@@ -5,6 +5,8 @@ import com.example.sensus.data.remote.dto.CreateOfferRequest
 import com.example.sensus.data.remote.dto.OfferDto
 import com.example.sensus.data.remote.dto.PagedOffersResponseDto
 import com.example.sensus.data.remote.dto.UpdateOfferRequestDto
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -15,7 +17,17 @@ import retrofit2.http.Query
 
 private const val DEFAULT_NEARBY_PAGE_SIZE = 50
 
+@Serializable
+data class RepublishOfferRequestDto(
+    @SerialName("newStartsAt") val newStartsAt: String,
+    @SerialName("newEndsAt") val newEndsAt: String,
+    @SerialName("newStock") val newStock: Int
+)
+
 interface OffersApiService {
+
+    @POST("api/v1/offers/{id}/republish")
+    suspend fun republishOffer(@Path("id") id: String, @Body request: RepublishOfferRequestDto): Response<OfferDto>
 
     @POST("api/v1/offers")
     suspend fun createOffer(@Body request: CreateOfferRequest): Response<OfferDto>

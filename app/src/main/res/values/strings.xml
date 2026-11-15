@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Sensus</string>
+    <string name="community_feed_unavailable">El servicio de comunidad no está disponible en el servidor. Inténtalo más tarde.</string>
+    <string name="community_publish_unavailable">El servidor no tiene disponible el servicio de publicaciones. Tu borrador se conserva; inténtalo más tarde.</string>
 </resources>

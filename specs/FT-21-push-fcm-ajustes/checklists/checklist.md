@@ -1,52 +1,30 @@
-# CHECKLIST — FT-21 Notificaciones Push FCM, Bandeja Local y Preferencias por Categoría
+# CHECKLIST — FT-21 Slice preferencias y activación
 
-> Gate de cierre. Alcance: SE-039, SE-040, SE-041 (Pantallas P-04, P-26). Sin todos los ítems en `[x]` no hay merge ni cierre de slice.
+## Implementación local (sin cierre)
 
-## Spec y alcance
+- [x] DTOs y rutas alineados con backend main 01dad6e.
+- [x] Dominio puro y DI dedicada sin bindings preexistentes encontrados.
+- [x] Preferencias MVI sustituyen lista fake y marcado de leídas inoperante.
+- [x] Proveedor real Firebase y activación explícita con permiso Android13+.
+- [x] Textos en strings_notification_preferences.xml y previews por estado disponible.
+- [x] Fuentes nuevas JUnit4 de API/dominio/VM y Compose.
+- [x] Main integra permiso POST_NOTIFICATIONS y adapta BuyerViewModelsTest.
+- [ ] Recursos oficiales de proyecto Firebase aprovisionados por equipo de despliegue.
 
-- [ ] `spec.md` con las 7 secciones canónicas + tabla `## Aprobación` resuelta
-- [ ] Historias y pantallas del alcance cubiertas por pruebas de éxito, error y borde
-- [ ] `plan.md` y `tasks.md` alineados sin cambios de alcance ocultos
-- [ ] Sin `TODO`, `FIXME` ni `STOPSHIP` sin issue trazado
+## Validación pendiente por main
 
-## Funcionalidad y reglas de negocio
+- [x] compileDebugKotlin y compileDebugAndroidTestSources verdes.
+- [ ] Suite unitaria y Compose ejecutadas con éxito.
+- [x] Cobertura Kover >=80% medida.
+- [x] lint, detekt y ktlintCheck verdes.
+- [x] Gates SDD, capas, endpoints, secretos y cobertura verdes.
+- [ ] Revisión de seguridad e integración completa.
+- [x] Documentación compartida y memoria conciliadas por main.
 
-- [ ] `POST` y `DELETE /api/v1/notifications/devices` integrados con login y logout
-- [ ] `GET` y `PUT /api/v1/notifications/settings` integrados con switches por categoría
-- [ ] Permiso `POST_NOTIFICATIONS` (Android 13+) solicitado con rationale en `P-04`
-- [ ] Eliminado `MockDataProvider` de `NotificationsViewModel.kt`
-- [ ] Botón `Marcar todo como leído` en `NotificationsScreen.kt` (línea 114) funcional
-- [ ] Opción `Preferencias de notificaciones` en `BuyerProfileScreen.kt` (línea 321) conectada
+## Deuda fuera de esta slice
 
-## Arquitectura y seguridad
+- [ ] Recepción FCM, canales, renovación de token y ciclo login/logout.
+- [ ] Bandeja cifrada y lectura solo con contratos publicados.
+- [ ] Aprobación final y CHECKLIST_PR completo; sin cierre total de FT-21.
 
-- [ ] `domain/` puro (sin `android.*`, Retrofit, Room ni serializadores JSON)
-- [ ] `presentation/` no importa `data/` (`check_layers.py` en PASS)
-- [ ] ViewModels heredan de `MviViewModel<ViewState, ViewIntent, ViewEffect>`
-- [ ] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
-- [ ] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
-
-## UI y accesibilidad
-
-- [ ] Previews `@Preview` para estados `Loading`, `Loaded`, `Empty` y `Error`
-- [ ] Paleta morada de marca (`#7C3AED` / `#8B5CF6`); sin ámbar (`SensusAmber`) ni emojis
-- [ ] Touch targets `>= 48x48 dp` y `contentDescription` en controles interactivos
-
-## Gates automatizados
-
-- [ ] `./gradlew.bat compileDebugKotlin` verde
-- [ ] `./gradlew.bat compileDebugAndroidTestSources` verde
-- [ ] `./gradlew.bat detekt ktlintCheck lint` verdes
-- [ ] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
-- [ ] `python scripts/check_sdd.py` PASS
-- [ ] `python scripts/check_layers.py` PASS
-- [ ] `python scripts/check_endpoints.py` PASS
-- [ ] `python scripts/check_secrets.py` PASS
-- [ ] `python scripts/check_coverage.py --min 80` PASS
-
-## Cierre SDD
-
-- [ ] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
-- [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
-- [ ] `CHECKLIST_PR.md` completo
-- [ ] Tag `v1.24.0-ft21`
+Evidencia local: 257 tests sin fallos/errores/omisiones; Kover 82.82%. Tests Compose compilados, no ejecutados; Firebase real y validación E2E/configuración pendientes. No se declara suite remota DevSecOps completa aprobada.

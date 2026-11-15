@@ -11,9 +11,9 @@
 
 ## Funcionalidad y reglas de negocio
 
-- [ ] `GET /api/v1/feed` con paginación cursor y caché SQLCipher de primera página
+- [ ] `GET /api/v1/feed/nearby` con paginación por página y caché SQLCipher
 - [ ] `POST /api/v1/feed/posts` con compresión de imagen y moderación fail-closed (`422`)
-- [ ] `DELETE /api/v1/feed/posts/{id}` habilitado solo para el autor del post
+- [ ] FT-19 (fuera del alcance FT-18): `DELETE /api/v1/feed/posts/{id}` habilitado solo para el autor del post
 - [ ] Eliminado `MockDataProvider` de `CommunityViewModel.kt`
 - [ ] Bloqueo de publicación para invitados con redirección a `P-16`
 
@@ -57,3 +57,15 @@ La app y las pruebas instrumentadas compilan; detekt, ktlint, lint y los scripts
 Las pruebas instrumentadas están pendientes de ejecución, al igual que la validación con el backend desplegado.
 No se declara cierre formal de la slice, aprobación, merge ni tag. El alcance ejecutado corresponde a las HU solicitadas;
 las condiciones globales sobre eliminación de mocks legacy y otras HU no se modifican ni se declaran cumplidas.
+
+
+### Corrección de indisponibilidad — 2026-11-14
+
+- [x] Estado MVI con errores de feed y publicación independientes, sin falso estado vacío tras 404.
+- [x] Regresiones HTTP con autenticación existente y conservación del borrador verificadas.
+- [x] Pruebas Compose nuevas compiladas.
+- [ ] Ejecución de pruebas Compose en dispositivo.
+- [ ] Backend 024/026 implementado/desplegado y E2E exitoso (bloqueo externo: ausente en main revisado).
+- SAST: paquete remoto p/mobile responde 404; no se modifica configuración, no se declara suite CI completa aprobada. Paquetes disponibles p/default + p/owasp-top-ten: 66 reglas sobre los 4 archivos Kotlin modificados, 0 hallazgos.
+
+- Validación local 2026-11-14: 188 tests sin fallos, Kover 81.41%, compilación/linters/lint y 5 gates Python PASS. No se cierra la slice ni se declara el backend funcional.

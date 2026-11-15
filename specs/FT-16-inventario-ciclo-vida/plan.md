@@ -50,3 +50,7 @@
 ## Tareas
 
 Ver `tasks.md`.
+
+## Slice REPUBLISH publicada — 2026-11-14
+
+Contrato confirmado en OfferEndpoints.cs (solo lectura): POST /api/v1/offers/{id}/republish, cuerpo newStartsAt/newEndsAt/newStock, HTTP 200 OfferDto. GET oficial reportado por coordinación: 405 Allow POST; no acredita mutación autenticada E2E. Esta slice sustituye la mención a republicar agotadas: solo EXPIRED/ARCHIVED; ACTIVE, PAUSED y SOLD_OUT excluidas. No modifica precio, descripción ni imagen. Inicio futuro con margen de un minuto, fin editable posterior al inicio y stock > 0. Dominio puro, repositorio remoto sin reintentos añadidos, caché con respuesta confirmada, Hilt y MVI. Error conserva formulario. No cambia URL, interceptor ni cliente oficial.

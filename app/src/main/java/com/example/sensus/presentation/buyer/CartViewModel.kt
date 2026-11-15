@@ -1,7 +1,9 @@
 package com.example.sensus.presentation.buyer
 
 import androidx.lifecycle.viewModelScope
+import com.example.sensus.common.Result
 import com.example.sensus.domain.repository.CartRepository
+import com.example.sensus.domain.usecase.PrepareCartClaimUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -9,13 +11,14 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class CartViewModel @Inject constructor(
-    private val cartRepository: CartRepository
+    private val cartRepository: CartRepository,
+    private val prepareClaim: PrepareCartClaimUseCase
 ) : MviViewModel<CartViewState, CartViewIntent, CartViewEffect>(CartViewState()) {
 
     init {
         viewModelScope.launch {
             cartRepository.cart.collect { cart ->
-                updateState { copy(storeCart = cart) }
+                updateState { copy(storeCart = cart, checkoutError = null) }
             }
         }
     }
@@ -27,10 +30,9 @@ class CartViewModel @Inject constructor(
             is CartViewIntent.RemoveOffer -> cartRepository.removeItem(intent.offerId)
             is CartViewIntent.ClearCart -> cartRepository.clearCart()
             is CartViewIntent.CheckoutApartado -> {
-                val order = cartRepository.createApartadoOrder()
-                if (order != null) {
-                    updateState { copy(activeOrder = order) }
-                    emitEffect(CartViewEffect.OrderCreated(order))
+                when (val result = prepareClaim(cartRepository.cart.value)) {
+                    is Result.Success -> emitEffect(CartViewEffect.OpenClaim(result.data))
+                    is Result.Failure -> updateState { copy(checkoutError = result.error) }
                 }
             }
         }
