@@ -16,6 +16,9 @@ plugins {
 }
 
 android {
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+    }
     namespace = "com.example.sensus"
     compileSdk = 36
     val ciVersionCode =
@@ -158,6 +161,9 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.osmdroid.android)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.firebase:firebase-messaging:24.1.2")
 
     // Networking (Retrofit 2 & OkHttp)
     implementation(libs.retrofit.core)

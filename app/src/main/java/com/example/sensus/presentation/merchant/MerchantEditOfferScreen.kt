@@ -41,7 +41,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,17 +48,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sensus.R
 import com.example.sensus.domain.model.OfferField
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.OfferPublishingPolicy
 import com.example.sensus.domain.model.OfferValidationError
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.UpdateOfferInput
+import com.example.sensus.domain.usecase.RepublishOfferUseCase
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
@@ -70,6 +74,7 @@ import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
+private const val REPUBLISH_START_LEAD_MILLIS = 60_000L
 private const val DEFAULT_LEAD_MILLIS = 3_600_000L
 private const val DESCRIPTION_MIN_LINES = 2
 private const val STATUS_ALPHA = 0.14f
@@ -91,6 +96,7 @@ private data class EditOfferActions(
     val onFormChange: (EditOfferFormHolder) -> Unit,
     val onToggleStatus: (OfferLifecycleStatus) -> Unit,
     val onRequestArchive: () -> Unit,
+    val onRepublish: () -> Unit,
     val onSaveChanges: () -> Unit
 )
 
@@ -102,7 +108,7 @@ fun MerchantEditOfferScreen(
     onOfferChanged: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val vmState by viewModel.viewState.collectAsState()
+    val vmState by viewModel.viewState.collectAsStateWithLifecycle()
     val effectiveOffer = vmState.currentOffer?.takeIf { it.id == offer.id } ?: offer
     var form by remember(offer.id) { mutableStateOf(initialEditForm(offer)) }
     var showArchiveConfirm by remember { mutableStateOf(false) }
@@ -113,6 +119,7 @@ fun MerchantEditOfferScreen(
     LaunchedEffect(viewModel) {
         viewModel.viewEffect.collect { effect ->
             when (effect) {
+                is MerchantEditOfferViewEffect.OfferRepublished,
                 is MerchantEditOfferViewEffect.OfferUpdated,
                 is MerchantEditOfferViewEffect.OfferStatusChanged -> onOfferChanged()
             }
@@ -133,6 +140,13 @@ fun MerchantEditOfferScreen(
                 viewModel.dispatchIntent(MerchantEditOfferViewIntent.ChangeStatus(effectiveOffer, nextStatus))
             },
             onRequestArchive = { showArchiveConfirm = true },
+            onRepublish = {
+                viewModel.dispatchIntent(
+                    MerchantEditOfferViewIntent.Republish(
+                        RepublishOfferInput(effectiveOffer.id, System.currentTimeMillis() + REPUBLISH_START_LEAD_MILLIS, form.expiresAtMillis, form.stockCount)
+                    )
+                )
+            },
             onSaveChanges = {
                 viewModel.dispatchIntent(MerchantEditOfferViewIntent.SaveChanges(buildUpdateOfferInput(effectiveOffer, form)))
             }
@@ -174,13 +188,23 @@ private fun EditOfferScrollContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         EditOfferHeader(offer = offer, onNavigateBack = actions.onNavigateBack)
-        EditOfferLifecycleCard(
-            offer = offer,
-            isBusy = vmState.isChangingStatus || vmState.isSaving,
-            onTogglePause = actions.onToggleStatus,
-            onRequestArchive = actions.onRequestArchive
-        )
-        if (offer.status != OfferLifecycleStatus.ARCHIVED) {
+        if (!RepublishOfferUseCase.supports(offer.status)) {
+            EditOfferLifecycleCard(
+                offer = offer,
+                isBusy = vmState.isChangingStatus || vmState.isSaving,
+                onTogglePause = actions.onToggleStatus,
+                onRequestArchive = actions.onRequestArchive
+            )
+        }
+        if (RepublishOfferUseCase.supports(offer.status)) {
+            Text(stringResource(R.string.republish_schedule_hint), color = SensusTextSecondary)
+            EditStockRow(form.stockCount, null) { actions.onFormChange(form.copy(stockCount = it)) }
+            OfferExpirationPicker(value = form.expiresAtMillis, error = null, onChange = {
+                actions.onFormChange(form.copy(expiresAtMillis = it))
+            })
+            if (vmState.republishFailed) Text(stringResource(R.string.republish_failed), color = SensusRed)
+            RepublishOfferButton(offer.status, vmState.isSaving || vmState.isChangingStatus, actions.onRepublish)
+        } else if (offer.status != OfferLifecycleStatus.ARCHIVED) {
             EditOfferFormCard(
                 form = form,
                 fieldError = vmState.fieldError,
@@ -200,7 +224,8 @@ private fun EditOfferScrollContent(
 
 private fun initialEditForm(offer: ProductOffer): EditOfferFormHolder {
     val now = System.currentTimeMillis()
-    val futureMillis = offer.expiresAtMillis?.takeIf { it > now } ?: (now + DEFAULT_LEAD_MILLIS)
+    val minimumEndMillis = if (RepublishOfferUseCase.supports(offer.status)) now + DEFAULT_LEAD_MILLIS else now
+    val futureMillis = offer.expiresAtMillis?.takeIf { it > minimumEndMillis } ?: (now + DEFAULT_LEAD_MILLIS)
     return EditOfferFormHolder(
         title = offer.name,
         description = offer.description,
@@ -474,4 +499,13 @@ private fun ArchiveConfirmationDialog(offerName: String, onDismiss: () -> Unit, 
             }
         }
     )
+}
+
+@Composable
+internal fun RepublishOfferButton(status: OfferLifecycleStatus, isBusy: Boolean, onClick: () -> Unit) {
+    if (RepublishOfferUseCase.supports(status)) {
+        Button(onClick = onClick, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.republish_action))
+        }
+    }
 }

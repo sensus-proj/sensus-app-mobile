@@ -53,11 +53,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.sensus.R
 import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
@@ -82,7 +84,8 @@ data class ProductDetailCallbacks(
     val onNavigateBack: () -> Unit = {},
     val onApartarClick: (ProductOffer) -> Unit = {},
     val onApartarDirect: (ProductOffer, Int) -> Unit = { off, _ -> onApartarClick(off) },
-    val onNavigateToRoute: ((ProductOffer) -> Unit)? = null
+    val onNavigateToRoute: ((ProductOffer) -> Unit)? = null,
+    val onViewActiveClaim: (ProductOffer) -> Unit = onApartarClick
 )
 
 @Composable
@@ -321,18 +324,22 @@ private fun MerchantCardHeaderRow(offer: ProductOffer) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(text = offer.storeName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = "Verificado", tint = SensusSuccess, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Comercio verificado", fontSize = 11.sp, color = SensusSuccess, fontWeight = FontWeight.Medium)
+                if (offer.isVerified) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = "Verificado", tint = SensusSuccess, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Comercio verificado", fontSize = 11.sp, color = SensusSuccess, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Star, contentDescription = "Rating", tint = SensusRating, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "${offer.rating}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-            Text(text = " (${offer.reviewCount})", fontSize = 11.sp, color = SensusTextMuted)
+        if (offer.reviewCount > 0) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.Star, contentDescription = "Rating", tint = SensusRating, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "${offer.rating}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = " (${offer.reviewCount})", fontSize = 11.sp, color = SensusTextMuted)
+            }
         }
     }
 }
@@ -402,7 +409,7 @@ internal fun ProductDescriptionCard(description: String, quantity: Int) {
 }
 
 @Composable
-internal fun ProductDetailBottomBar(offer: ProductOffer, quantity: Int, onAddToCart: () -> Unit, onApartarDirect: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ProductDetailBottomBar(offer: ProductOffer, quantity: Int, actions: ProductBottomBarActions, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -418,7 +425,7 @@ internal fun ProductDetailBottomBar(offer: ProductOffer, quantity: Int, onAddToC
             verticalAlignment = Alignment.CenterVertically
         ) {
             ProductBottomPriceSummary(offer = offer, quantity = quantity)
-            ProductBottomActionButtons(quantity = quantity, onAddToCart = onAddToCart, onApartarDirect = onApartarDirect)
+            ProductBottomActionButtons(actions)
         }
     }
 }
@@ -456,10 +463,11 @@ private fun ProductBottomPriceSummary(offer: ProductOffer, quantity: Int) {
 }
 
 @Composable
-private fun ProductBottomActionButtons(quantity: Int, onAddToCart: () -> Unit, onApartarDirect: () -> Unit) {
+private fun ProductBottomActionButtons(actions: ProductBottomBarActions) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
-            onClick = onAddToCart,
+            onClick = actions.onAddToCart,
+            enabled = actions.enabled,
             shape = RoundedCornerShape(12.dp),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
         ) {
@@ -471,14 +479,20 @@ private fun ProductBottomActionButtons(quantity: Int, onAddToCart: () -> Unit, o
             )
         }
         Button(
-            onClick = onApartarDirect,
+            onClick = actions.onApartarDirect,
+            enabled = actions.enabled || actions.hasActiveClaim,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = "Apartar ahora", tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Apartar ($quantity)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(
+                text = stringResource(if (actions.hasActiveClaim) R.string.detail_view_active_claim else R.string.detail_claim_one),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
     }
 }
@@ -509,3 +523,11 @@ internal fun StoreConflictAlertDialog(conflict: AddToCartResult.StoreConflict, o
         }
     )
 }
+
+@ComposeUiModel
+internal data class ProductBottomBarActions(
+    val enabled: Boolean,
+    val onAddToCart: () -> Unit,
+    val onApartarDirect: () -> Unit,
+    val hasActiveClaim: Boolean = false
+)

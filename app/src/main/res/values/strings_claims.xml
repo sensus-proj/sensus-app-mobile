@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="claims_back">Volver</string>
+    <string name="claims_one_unit">Apartarás una unidad de esta oferta.</string>
+    <string name="claims_confirm">Confirmar apartado de una unidad</string>
+    <string name="claims_expiry">Vence: %1$s</string>
+    <string name="claims_route">Cómo llegar</string>
+    <string name="claims_qr_description">Código QR del apartado confirmado por el servidor</string>
+    <string name="claims_failure">No se confirmó la operación. Revisa tu sesión, conexión y disponibilidad antes de intentarlo nuevamente.</string>
+    <string name="claims_redeem_title">Canjear apartado</string>
+    <string name="claims_code">Código del cliente</string>
+    <string name="claims_redeem">Validar y canjear</string>
+    <string name="claims_redeemed">Canje confirmado por el servidor: %1$s</string>
+    <string name="claims_session_required">Inicia sesión con una cuenta registrada para continuar.</string>
+    <string name="claims_forbidden">Tu cuenta o comercio no tiene permiso para esta operación.</string>
+    <string name="claims_not_found">No se encontró la oferta o el apartado.</string>
+    <string name="claims_unavailable">No se pudo confirmar: revisa disponibilidad, vigencia o límite de solicitudes.</string>
+    <string name="claims_network_uncertain">Se perdió la conexión. La operación podría haberse aplicado; verifica antes de volver a enviar.</string>
+    <string name="claims_expired">Apartado vencido. Este código ya no está disponible para canje.</string>
+    <string name="claims_qr_unavailable">No se pudo mostrar el QR. Usa el código confirmado para la captura manual.</string>
+    <string name="claims_existing_code_unavailable">Ya tienes un apartado activo, pero su código no está disponible en esta sesión. No es posible recuperarlo tras reiniciar la app porque el servidor aún no publica esa consulta.</string>
+</resources>

@@ -1,6 +1,6 @@
 package com.example.sensus.presentation.buyer
 
-import com.example.sensus.domain.model.ApartadoOrder
+import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.presentation.base.ViewEffect
@@ -9,7 +9,7 @@ import com.example.sensus.presentation.base.ViewState
 
 data class CartViewState(
     val storeCart: StoreCart = StoreCart(),
-    val activeOrder: ApartadoOrder? = null
+    val checkoutError: AppError? = null
 ) : ViewState
 
 sealed interface CartViewIntent : ViewIntent {
@@ -21,5 +21,5 @@ sealed interface CartViewIntent : ViewIntent {
 }
 
 sealed interface CartViewEffect : ViewEffect {
-    data class OrderCreated(val order: ApartadoOrder) : CartViewEffect
+    data class OpenClaim(val offer: ProductOffer) : CartViewEffect
 }

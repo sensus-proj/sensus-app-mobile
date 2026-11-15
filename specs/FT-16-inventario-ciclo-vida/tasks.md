@@ -24,3 +24,11 @@
 - [ ] T16.9 Añadir pruebas unitarias de casos de uso y tests `MockWebServer` para `my-offers`, `PUT /offers/{id}` y `/status` — verif: `./gradlew.bat testDebugUnitTest`
 - [ ] T16.10 Añadir pruebas Turbine en ViewModels y Compose UI para edición, pausado y republicación — verif: `./gradlew.bat compileDebugAndroidTestSources`
 - [ ] T16.11 Actualizar `docs/endpoints-internos.md`, `docs/rate-matrix.md`, `Memoria.md` §6 y verificar todos los gates — verif: `python scripts/check_endpoints.py`
+
+## Slice autorizada REPUBLISH — 2026-11-14
+
+- [x] T16.12 Integrar POST /api/v1/offers/{id}/republish: entrada tipada, fechas futuras y stock positivo, solo EXPIRED/ARCHIVED, HTTP 200 y cache server-wins, Hilt, boton explicito, pruebas dominio/repositorio/VM/UI. Gradle y gates coordinados por main sin paralelismo. Sin cambios de conexion, backend, gates, memoria ni docs globales.
+
+Evidencia T16.12: implementación y pruebas fuente preparadas en UTF-8; diff --check sin errores. Sin ejecución Gradle por coordinación main; cobertura y E2E no acreditados. Integración main: registrar endpoint/rate y bitácora global autorizada en su slice, ejecutar gates completos y pruebas instrumentadas. Python del PATH apunta a alias WindowsApps no ejecutable en esta sesión.
+
+Validación integración principal T16.12: contrato y Allow POST oficial verificados, 257 tests globales sin fallos, Kover 82.82%, Debug e instrumentadas compilan, lint/detekt/ktlint y cinco gates Python PASS. Tests Compose añadidos y compilados; ejecución en dispositivo/E2E pendiente. Sin cierre de la feature completa.

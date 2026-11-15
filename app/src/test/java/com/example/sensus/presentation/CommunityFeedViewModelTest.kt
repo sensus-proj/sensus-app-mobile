@@ -94,7 +94,7 @@ class CommunityFeedViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.viewState.value.posts.size)
         assertEquals(2, vm.viewState.value.nextPage)
-        assertEquals("Sin conexión", vm.viewState.value.errorMessage)
+        assertEquals("Sin conexión", vm.viewState.value.feedError?.message)
     }
 
     @Test
@@ -103,7 +103,7 @@ class CommunityFeedViewModelTest {
         val vm = viewModel()
         dispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.viewState.value.isLoading)
-        assertTrue(vm.viewState.value.errorMessage!!.contains("ubicación"))
+        assertTrue(vm.viewState.value.feedError?.message!!.contains("ubicación"))
         coVerify(exactly = 0) { getFeed(any()) }
     }
 
@@ -147,7 +147,7 @@ class CommunityFeedViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals("Mi texto", vm.viewState.value.draftText)
         assertEquals(1, vm.viewState.value.posts.size)
-        assertEquals("Contenido bloqueado", vm.viewState.value.errorMessage)
+        assertEquals("Contenido bloqueado", vm.viewState.value.publishError?.message)
         assertTrue(vm.viewState.value.hasImage)
     }
 
@@ -157,5 +157,82 @@ class CommunityFeedViewModelTest {
         val vm = viewModel()
         dispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.isCached)
+    }
+
+    @Test
+    fun feedUnavailable_openingAndEditingComposerDoesNotEraseFeedFailure() = runTest(dispatcher) {
+        coEvery { getFeed(any()) } returns Result.Failure(AppError.NotFound())
+        val vm = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        vm.dispatchIntent(CommunityViewIntent.NewPost)
+        vm.dispatchIntent(CommunityViewIntent.TextChanged("Hola comunidad"))
+        vm.dispatchIntent(CommunityViewIntent.ImageSelected(byteArrayOf(1)))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.feedError is AppError.NotFound)
+        assertEquals(null, vm.viewState.value.publishError)
+        assertFalse(vm.viewState.value.hasLoadedFeed)
+        assertTrue(vm.viewState.value.showComposer)
+    }
+
+    @Test
+    fun publishUnavailable_refreshDoesNotEraseFailureOrDraftAndRetryUsesSamePhoto() = runTest(dispatcher) {
+        val vm = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        val photo = byteArrayOf(1, 2)
+        coEvery { createPost(any(), any()) } returns Result.Failure(AppError.NotFound())
+        vm.dispatchIntent(CommunityViewIntent.NewPost)
+        vm.dispatchIntent(CommunityViewIntent.TextChanged("Hola comunidad"))
+        vm.dispatchIntent(CommunityViewIntent.ImageSelected(photo))
+        vm.dispatchIntent(CommunityViewIntent.MerchantSelected("shop-1"))
+        vm.dispatchIntent(CommunityViewIntent.Submit)
+        dispatcher.scheduler.advanceUntilIdle()
+        vm.dispatchIntent(CommunityViewIntent.Refresh)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.publishError is AppError.NotFound)
+        assertEquals(null, vm.viewState.value.feedError)
+        assertEquals("Hola comunidad", vm.viewState.value.draftText)
+        assertEquals("shop-1", vm.viewState.value.merchantId)
+        assertTrue(vm.viewState.value.hasImage)
+        assertTrue(vm.viewState.value.showComposer)
+        assertFalse(vm.viewState.value.isPublishing)
+        assertEquals(listOf(firstPost), vm.viewState.value.posts)
+        coEvery { createPost(any(), any()) } returns Result.Success(firstPost.copy(id = "retry"))
+        vm.dispatchIntent(CommunityViewIntent.Submit)
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 2) { createPost(match { it.text == "Hola comunidad" && it.merchantId == "shop-1" }, photo) }
+        assertEquals("retry", vm.viewState.value.posts.first().id)
+        assertEquals(null, vm.viewState.value.publishError)
+        assertFalse(vm.viewState.value.hasImage)
+    }
+
+    @Test
+    fun feedUnavailable_refreshRecoversToConfirmedEmptyState() = runTest(dispatcher) {
+        coEvery { getFeed(any()) } returns Result.Failure(AppError.NotFound())
+        val vm = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.viewState.value.hasLoadedFeed)
+        coEvery { getFeed(any()) } returns Result.Success(PagedFeed(emptyList(), 1, false))
+        vm.dispatchIntent(CommunityViewIntent.Refresh)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.hasLoadedFeed)
+        assertEquals(null, vm.viewState.value.feedError)
+        assertFalse(vm.viewState.value.hasMore)
+        assertTrue(vm.viewState.value.posts.isEmpty())
+    }
+
+    @Test
+    fun closingComposerClearsOnlyPublishFailure() = runTest(dispatcher) {
+        coEvery { getFeed(any()) } returns Result.Failure(AppError.NotFound())
+        val vm = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        coEvery { createPost(any(), any()) } returns Result.Failure(AppError.NotFound())
+        vm.dispatchIntent(CommunityViewIntent.NewPost)
+        vm.dispatchIntent(CommunityViewIntent.TextChanged("Hola"))
+        vm.dispatchIntent(CommunityViewIntent.Submit)
+        dispatcher.scheduler.advanceUntilIdle()
+        vm.dispatchIntent(CommunityViewIntent.CloseComposer)
+        assertTrue(vm.viewState.value.feedError is AppError.NotFound)
+        assertEquals(null, vm.viewState.value.publishError)
+        assertFalse(vm.viewState.value.showComposer)
     }
 }

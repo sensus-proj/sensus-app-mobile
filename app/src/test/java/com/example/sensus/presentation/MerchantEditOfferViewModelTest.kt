@@ -76,7 +76,7 @@ class MerchantEditOfferViewModelTest {
 
     @Test
     fun invalidUpdate_stopsAtFieldError_andClearsWhenEdited() = runTest(dispatcher) {
-        val vm = MerchantEditOfferViewModel(updateUseCase, changeStatusUseCase)
+        val vm = MerchantEditOfferViewModel(updateUseCase, changeStatusUseCase, mockk())
         vm.dispatchIntent(MerchantEditOfferViewIntent.Initialize(baseOffer))
         vm.dispatchIntent(MerchantEditOfferViewIntent.SaveChanges(validInput.copy(discountPrice = 120.0)))
 
@@ -91,7 +91,7 @@ class MerchantEditOfferViewModelTest {
     fun saveChanges_callsUseCaseOnceAndEmitsEffect() = runTest(dispatcher) {
         val updated = baseOffer.copy(name = "Pan artesanal", discountPrice = 55.0, unitsLeft = 6, version = 3)
         coEvery { updateUseCase(validInput) } returns Result.Success(updated)
-        val vm = MerchantEditOfferViewModel(updateUseCase, changeStatusUseCase)
+        val vm = MerchantEditOfferViewModel(updateUseCase, changeStatusUseCase, mockk())
 
         vm.viewEffect.test {
             vm.dispatchIntent(MerchantEditOfferViewIntent.SaveChanges(validInput))
@@ -114,7 +114,7 @@ class MerchantEditOfferViewModelTest {
             changeStatusUseCase(paused, OfferLifecycleStatus.ARCHIVED)
         } returns Result.Failure(AppError.Network("Error de red"))
 
-        val vm = MerchantEditOfferViewModel(updateUseCase, changeStatusUseCase)
+        val vm = MerchantEditOfferViewModel(updateUseCase, changeStatusUseCase, mockk())
         vm.viewEffect.test {
             vm.dispatchIntent(MerchantEditOfferViewIntent.ChangeStatus(baseOffer, OfferLifecycleStatus.PAUSED))
             dispatcher.scheduler.advanceUntilIdle()

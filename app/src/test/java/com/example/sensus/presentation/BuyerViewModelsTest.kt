@@ -33,7 +33,6 @@ import com.example.sensus.presentation.buyer.BuyerProfileViewModel
 import com.example.sensus.presentation.buyer.CartViewIntent
 import com.example.sensus.presentation.buyer.CartViewModel
 import com.example.sensus.presentation.buyer.CommunityViewModel
-import com.example.sensus.presentation.buyer.NotificationsViewIntent
 import com.example.sensus.presentation.buyer.NotificationsViewModel
 import com.example.sensus.presentation.buyer.RouteMapViewIntent
 import com.example.sensus.presentation.buyer.RouteMapViewModel
@@ -280,10 +279,8 @@ class BuyerViewModelsTest {
         coEvery { cartRepo.cart } returns cartFlow
 
         val offer = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
-        val sampleOrder = com.example.sensus.domain.model.ApartadoOrder.fromSingleOffer(offer, 2)
-        coEvery { cartRepo.createApartadoOrder() } returns sampleOrder
 
-        val vm = CartViewModel(cartRepo)
+        val vm = CartViewModel(cartRepo, com.example.sensus.domain.usecase.PrepareCartClaimUseCase())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.dispatchIntent(CartViewIntent.AddOffer(offer, 2))
@@ -297,20 +294,23 @@ class BuyerViewModelsTest {
 
         vm.dispatchIntent(CartViewIntent.CheckoutApartado)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertNotNull(vm.viewState.value.activeOrder)
+        assertNotNull(vm.viewState.value.checkoutError)
 
         vm.dispatchIntent(CartViewIntent.ClearCart)
         coVerify { cartRepo.clearCart() }
     }
 
     @Test
-    fun notifications_category_updatesState() = runTest {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
-        val vm = NotificationsViewModel(storeRepo)
+    fun notifications_loadsPublishedSettingsAndDoesNotTreatMissingInboxAsRemoteData() = runTest {
+        val get = mockk<com.example.sensus.domain.usecase.NotificationsGetSettingsUseCase>()
+        val update = mockk<com.example.sensus.domain.usecase.NotificationsUpdateSettingsUseCase>()
+        val register = mockk<com.example.sensus.domain.usecase.NotificationsRegisterDeviceUseCase>()
+        val preferences = com.example.sensus.domain.model.NotificationsPreferences(true, true, false, 2)
+        coEvery { get() } returns com.example.sensus.common.Result.Success(preferences)
+        coEvery { get.sessionChanges } returns MutableStateFlow(Unit)
+        val vm = NotificationsViewModel(get, update, register)
         testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.dispatchIntent(NotificationsViewIntent.CategorySelected("Ofertas"))
-        assertEquals("Ofertas", vm.viewState.value.selectedCategory)
+        assertEquals(preferences, vm.viewState.value.preferences)
     }
 
     @Test

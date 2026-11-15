@@ -6,18 +6,22 @@ import com.example.sensus.data.MockDataProvider
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.mapper.OfferMapper.toDomain
 import com.example.sensus.data.mapper.OfferMapper.toEntity
+import com.example.sensus.data.mapper.RemoteOfferMapper.formatIsoUtc
 import com.example.sensus.data.mapper.RemoteOfferMapper.toDomain
 import com.example.sensus.data.mapper.RemoteOfferMapper.toRequest
 import com.example.sensus.data.remote.api.OffersApiService
+import com.example.sensus.data.remote.api.RepublishOfferRequestDto
 import com.example.sensus.data.remote.dto.ChangeOfferStatusRequestDto
 import com.example.sensus.domain.model.CreateOfferInput
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.OffersRepository
 import retrofit2.Response
 
+private const val HTTP_OK = 200
 private const val HTTP_CREATED = 201
 private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_FORBIDDEN = 403
@@ -170,6 +174,26 @@ class OffersRepositoryImpl(
             if (response.isSuccessful && body != null) {
                 val updated = body.toDomain()
                 addOffer(updated)
+                Result.Success(updated)
+            } else {
+                mapCreateOfferError(response)
+            }
+        }
+    }
+
+    override suspend fun republishOffer(input: RepublishOfferInput): Result<ProductOffer> {
+        val api = offersApi ?: return Result.Failure(AppError.Network())
+        return safeNetworkCall("Error al republicar la oferta.") {
+            val request = RepublishOfferRequestDto(
+                formatIsoUtc(input.newStartsAtMillis),
+                formatIsoUtc(input.newEndsAtMillis),
+                input.newStock
+            )
+            val response = api.republishOffer(input.offerId, request)
+            val body = response.body()
+            if (response.code() == HTTP_OK && body != null) {
+                val updated = body.toDomain()
+                offerDao?.insertOffer(updated.toEntity())
                 Result.Success(updated)
             } else {
                 mapCreateOfferError(response)

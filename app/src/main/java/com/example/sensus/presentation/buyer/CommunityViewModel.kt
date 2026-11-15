@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import androidx.lifecycle.viewModelScope
+import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.CreatePostInput
 import com.example.sensus.domain.model.FeedQuery
@@ -60,13 +61,13 @@ class CommunityViewModel @Inject constructor(
 
     private fun editDraft(intent: CommunityViewIntent) {
         when (intent) {
-            is CommunityViewIntent.TextChanged -> updateState { copy(draftText = intent.text, errorMessage = null) }
+            is CommunityViewIntent.TextChanged -> updateState { copy(draftText = intent.text, publishError = null) }
             is CommunityViewIntent.MerchantSelected -> updateState { copy(merchantId = intent.id) }
             is CommunityViewIntent.ImageSelected -> {
                 imageBytes = intent.bytes
-                updateState { copy(hasImage = intent.bytes != null, errorMessage = null) }
+                updateState { copy(hasImage = intent.bytes != null, publishError = null) }
             }
-            CommunityViewIntent.ImageReadFailed -> updateState { copy(errorMessage = "No se pudo leer la foto. Selecciónala de nuevo.") }
+            CommunityViewIntent.ImageReadFailed -> updateState { copy(publishError = AppError.Validation("No se pudo leer la foto. Selecciónala de nuevo.")) }
             else -> Unit
         }
     }
@@ -75,10 +76,10 @@ class CommunityViewModel @Inject constructor(
         if (viewState.value.isLoading && !refresh) return
         feedJob?.cancel()
         val page = if (refresh) 1 else viewState.value.nextPage
-        updateState { copy(isLoading = true, errorMessage = null) }
+        updateState { copy(isLoading = true, feedError = null) }
         feedJob = viewModelScope.launch {
             if (!locationRepository.hasLocationPermission()) {
-                updateState { copy(isLoading = false, errorMessage = "Activa el permiso de ubicación para ver tu comunidad.") }
+                updateState { copy(isLoading = false, feedError = AppError.Validation("Activa el permiso de ubicación para ver tu comunidad.")) }
                 return@launch
             }
             val current = resolveLocation(refresh)
@@ -97,9 +98,16 @@ class CommunityViewModel @Inject constructor(
         when (result) {
             is Result.Success -> updateState {
                 val items = if (refresh) result.data.posts else (posts + result.data.posts).distinctBy { it.id }
-                copy(posts = items, isLoading = false, hasMore = result.data.hasMore, nextPage = page + 1, isCached = result.data.isCached)
+                copy(
+                    posts = items,
+                    isLoading = false,
+                    hasMore = result.data.hasMore,
+                    nextPage = page + 1,
+                    isCached = result.data.isCached,
+                    hasLoadedFeed = true
+                )
             }
-            is Result.Failure -> updateState { copy(isLoading = false, errorMessage = result.error.message) }
+            is Result.Failure -> updateState { copy(isLoading = false, feedError = result.error) }
         }
     }
 
@@ -108,7 +116,7 @@ class CommunityViewModel @Inject constructor(
             emitEffect(CommunityViewEffect.RequireAuth)
             return
         }
-        updateState { copy(showComposer = true, errorMessage = null) }
+        updateState { copy(showComposer = true, publishError = null) }
         viewModelScope.launch {
             val merchants = withContext(Dispatchers.IO) {
                 val current = location ?: return@withContext emptyList()
@@ -124,7 +132,7 @@ class CommunityViewModel @Inject constructor(
 
     private fun closeComposer() {
         imageBytes = null
-        updateState { copy(showComposer = false, draftText = "", merchantId = null, hasImage = false) }
+        updateState { copy(showComposer = false, draftText = "", merchantId = null, hasImage = false, publishError = null) }
     }
 
     private fun submit() {
@@ -135,11 +143,11 @@ class CommunityViewModel @Inject constructor(
         }
         val current = location
         if (current == null) {
-            updateState { copy(errorMessage = "Actualiza la comunidad para obtener tu ubicación antes de publicar.") }
+            updateState { copy(publishError = AppError.Validation("Actualiza la comunidad para obtener tu ubicación antes de publicar.")) }
             return
         }
         val draft = viewState.value
-        updateState { copy(isPublishing = true, errorMessage = null) }
+        updateState { copy(isPublishing = true, publishError = null) }
         viewModelScope.launch {
             val input = CreatePostInput(draft.draftText, current.latitude, current.longitude, draft.merchantId)
             when (val result = createPost(input, imageBytes)) {
@@ -147,7 +155,7 @@ class CommunityViewModel @Inject constructor(
                     closeComposer()
                     updateState { copy(posts = (listOf(result.data) + posts).distinctBy { it.id }, isPublishing = false) }
                 }
-                is Result.Failure -> updateState { copy(isPublishing = false, errorMessage = result.error.message) }
+                is Result.Failure -> updateState { copy(isPublishing = false, publishError = result.error) }
             }
         }
     }

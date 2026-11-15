@@ -4,10 +4,13 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.CreateOfferInput
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
 
 interface OffersRepository {
+    suspend fun republishOffer(input: RepublishOfferInput): Result<ProductOffer>
+
     fun getOffers(): List<ProductOffer>
     fun addOffer(offer: ProductOffer)
     fun syncOffersFromServer(remoteOffers: List<ProductOffer>) = Unit
