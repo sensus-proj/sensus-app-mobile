@@ -1,7 +1,6 @@
 package com.example.sensus.presentation
 
 import app.cash.turbine.test
-import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.AiChatMessage
 import com.example.sensus.domain.model.AiConversation
@@ -11,7 +10,6 @@ import com.example.sensus.domain.model.SensiResult
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.LocationRepository
-import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.LoadAiConversationUseCase
@@ -33,7 +31,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -49,7 +46,6 @@ class SensiChatViewModelTest {
     private val aiChatRepository = mockk<AiChatRepository>(relaxed = true)
     private val sessionRepository = mockk<SessionRepository>(relaxed = true)
     private val locationRepository = mockk<LocationRepository>(relaxed = true)
-    private val mapPreferencesRepository = mockk<MapPreferencesRepository>(relaxed = true)
 
     private val sessionState = MutableStateFlow(SessionState(isSessionActive = true, isGuest = false, activeToken = "token"))
 
@@ -71,8 +67,7 @@ class SensiChatViewModelTest {
             sendSensiMessageUseCase = sendSensiMessageUseCase,
             aiChatRepository = aiChatRepository,
             sessionRepository = sessionRepository,
-            locationRepository = locationRepository,
-            mapPreferencesRepository = mapPreferencesRepository
+            locationRepository = locationRepository
         )
     }
 
@@ -126,9 +121,7 @@ class SensiChatViewModelTest {
                 conversationId = "c_1",
                 message = "¿Qué hay para cenar?",
                 screenContext = any(),
-                latitude = any(),
-                longitude = any(),
-                radiusKm = any()
+                location = any()
             )
         } returns SensiResult.Success(turn)
 
@@ -170,7 +163,7 @@ class SensiChatViewModelTest {
             degradationReason = "timeout",
             correlationId = "corr_deg"
         )
-        coEvery { sendSensiMessageUseCase(any(), any(), any(), any(), any(), any()) } returns SensiResult.Success(turn)
+        coEvery { sendSensiMessageUseCase(any(), any(), any(), any()) } returns SensiResult.Success(turn)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -188,7 +181,7 @@ class SensiChatViewModelTest {
         val conv = AiConversation("c_1", "Active", "Fast", 0)
         coEvery { loadAiConversationUseCase.createOrResume(any(), any()) } returns Result.Success(conv)
         coEvery { loadAiConversationUseCase.getMessages(any()) } returns Result.Success(emptyList())
-        coEvery { sendSensiMessageUseCase(any(), any(), any(), any(), any(), any()) } returns SensiResult.Rejected(
+        coEvery { sendSensiMessageUseCase(any(), any(), any(), any()) } returns SensiResult.Rejected(
             "Ai.MessageBlockedByModeration",
             "Contenido no permitido por moderación."
         )
@@ -214,7 +207,7 @@ class SensiChatViewModelTest {
         val conv = AiConversation("c_1", "Active", "Fast", 0)
         coEvery { loadAiConversationUseCase.createOrResume(any(), any()) } returns Result.Success(conv)
         coEvery { loadAiConversationUseCase.getMessages(any()) } returns Result.Success(emptyList())
-        coEvery { sendSensiMessageUseCase(any(), any(), any(), any(), any(), any()) } returns SensiResult.RateLimited(3)
+        coEvery { sendSensiMessageUseCase(any(), any(), any(), any()) } returns SensiResult.RateLimited(3)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -241,7 +234,7 @@ class SensiChatViewModelTest {
         val conv = AiConversation("c_1", "Active", "Fast", 0)
         coEvery { loadAiConversationUseCase.createOrResume(any(), any()) } returns Result.Success(conv)
         coEvery { loadAiConversationUseCase.getMessages(any()) } returns Result.Success(emptyList())
-        coEvery { sendSensiMessageUseCase(any(), any(), any(), any(), any(), any()) } returns SensiResult.GuestBlocked
+        coEvery { sendSensiMessageUseCase(any(), any(), any(), any()) } returns SensiResult.GuestBlocked
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -263,7 +256,7 @@ class SensiChatViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(vm.viewState.value.showGuestPrompt)
-        coVerify(exactly = 0) { sendSensiMessageUseCase(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendSensiMessageUseCase(any(), any(), any(), any()) }
     }
 
     @Test
@@ -276,9 +269,9 @@ class SensiChatViewModelTest {
         coEvery { loadAiConversationUseCase.getMessages(any()) } returns Result.Success(emptyList())
 
         // First call with old conv returns ConversationGone; second call with renewed conv returns Success
-        coEvery { sendSensiMessageUseCase(conversationId = "c_old", any(), any(), any(), any(), any()) } returns SensiResult.ConversationGone
+        coEvery { sendSensiMessageUseCase(conversationId = "c_old", any(), any(), any()) } returns SensiResult.ConversationGone
         val turn = AiTurn("c_new", "msg_1", "Respuesta reintentada", null, emptyList(), false, null, "corr")
-        coEvery { sendSensiMessageUseCase(conversationId = "c_new", any(), any(), any(), any(), any()) } returns SensiResult.Success(turn)
+        coEvery { sendSensiMessageUseCase(conversationId = "c_new", any(), any(), any()) } returns SensiResult.Success(turn)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -296,7 +289,7 @@ class SensiChatViewModelTest {
         val conv = AiConversation("c_1", "Active", "Fast", 0)
         coEvery { loadAiConversationUseCase.createOrResume(any(), any()) } returns Result.Success(conv)
         coEvery { loadAiConversationUseCase.getMessages(any()) } returns Result.Success(emptyList())
-        coEvery { sendSensiMessageUseCase(any(), any(), any(), any(), any(), any()) } returns SensiResult.Unavailable
+        coEvery { sendSensiMessageUseCase(any(), any(), any(), any()) } returns SensiResult.Unavailable
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()

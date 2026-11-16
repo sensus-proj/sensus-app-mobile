@@ -12,14 +12,29 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class ScreenContextDto {
-    @SerialName("home") HOME,
-    @SerialName("map") MAP,
-    @SerialName("offer_detail") OFFER_DETAIL,
-    @SerialName("my_claims") MY_CLAIMS,
-    @SerialName("merchant_inventory") MERCHANT_INVENTORY,
-    @SerialName("merchant_profile") MERCHANT_PROFILE,
-    @SerialName("user_profile") USER_PROFILE,
-    @SerialName("settings") SETTINGS,
+    @SerialName("home")
+    HOME,
+
+    @SerialName("map")
+    MAP,
+
+    @SerialName("offer_detail")
+    OFFER_DETAIL,
+
+    @SerialName("my_claims")
+    MY_CLAIMS,
+
+    @SerialName("merchant_inventory")
+    MERCHANT_INVENTORY,
+
+    @SerialName("merchant_profile")
+    MERCHANT_PROFILE,
+
+    @SerialName("user_profile")
+    USER_PROFILE,
+
+    @SerialName("settings")
+    SETTINGS
 }
 
 fun ScreenContext.toDto(): ScreenContextDto = when (this) {
@@ -47,7 +62,7 @@ fun ScreenContextDto.toDomain(): ScreenContext = when (this) {
 @Serializable
 data class CreateConversationRequest(
     val forceNew: Boolean = false,
-    val screenContext: ScreenContextDto? = null,
+    val screenContext: ScreenContextDto? = null
 )
 
 @Serializable
@@ -57,7 +72,7 @@ data class SendAiMessageRequest(
     val screenContext: ScreenContextDto? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val radiusKm: Double? = null,
+    val radiusKm: Double? = null
 )
 
 @Serializable
@@ -69,7 +84,7 @@ data class ConversationSummaryDto(
     val lastScreenContext: String? = null,
     val markdownVersion: String = "1.0.0",
     val createdAtUtc: String = "",
-    val updatedAtUtc: String? = null,
+    val updatedAtUtc: String? = null
 )
 
 fun ConversationSummaryDto.toDomain(): AiConversation = AiConversation(
@@ -101,7 +116,7 @@ data class CitedOfferDto(
     val endsAtUtc: String? = null,
     val merchantAddress: String? = null,
     val latitude: Double? = null,
-    val longitude: Double? = null,
+    val longitude: Double? = null
 )
 
 fun CitedOfferDto.toDomain(): CitedOffer = CitedOffer(
@@ -129,7 +144,7 @@ data class RecommendedPackageDto(
     val budgetMxn: Double,
     val totalPriceMxn: Double,
     val savingsMxn: Double,
-    val items: List<CitedOfferDto>,
+    val items: List<CitedOfferDto>
 )
 
 fun RecommendedPackageDto.toDomain(): RecommendedPackage = RecommendedPackage(
@@ -148,7 +163,7 @@ data class AiTurnResponseDto(
     val offersCited: List<CitedOfferDto>? = null,
     val degraded: Boolean = false,
     val degradationReason: String? = null,
-    val correlationId: String? = null,
+    val correlationId: String? = null
 )
 
 fun AiTurnResponseDto.toDomain(): AiTurn = AiTurn(
@@ -170,7 +185,7 @@ data class ConversationMessageDto(
     val recommendedPackage: RecommendedPackageDto? = null,
     val offersCited: List<CitedOfferDto>? = null,
     val degraded: Boolean = false,
-    val createdAtUtc: String = "",
+    val createdAtUtc: String = ""
 )
 
 fun ConversationMessageDto.toDomain(conversationId: String = ""): AiChatMessage = AiChatMessage(
@@ -196,7 +211,7 @@ data class PaginationDto(
 data class ConversationDetailDto(
     val conversation: ConversationSummaryDto,
     val messages: List<ConversationMessageDto> = emptyList(),
-    val pagination: PaginationDto? = null,
+    val pagination: PaginationDto? = null
 )
 
 @Serializable

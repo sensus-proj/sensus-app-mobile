@@ -254,6 +254,13 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
     }
 }
 
+private fun sensiOfferActions(state: MainAppState, isGuest: Boolean, onApartarPackage: () -> Unit) = SensiOfferActions(
+    onApartarPackage = onApartarPackage,
+    onDetail = { state.selectedProductForDetail = it },
+    onApartar = { openPublishedClaim(state, isGuest, it) },
+    onRoute = { state.activeRouteOffer = it }
+)
+
 @Composable
 private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToTerms: () -> Unit) {
     val openCartGuarded = { runWhenAuthenticated(state, isGuest) { state.showCartSheet = true } }
@@ -288,12 +295,7 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
             )
         )
         TAB_SENSI -> SensiChatScreen(
-            actions = SensiOfferActions(
-                onApartarPackage = openApartadoGuarded,
-                onDetail = { state.selectedProductForDetail = it },
-                onApartar = { openPublishedClaim(state, isGuest, it) },
-                onRoute = { state.activeRouteOffer = it }
-            ),
+            actions = sensiOfferActions(state, isGuest, openApartadoGuarded),
             onRequireAuth = { state.showGuestPrompt = true }
         )
         TAB_COMMUNITY -> CommunityScreen(

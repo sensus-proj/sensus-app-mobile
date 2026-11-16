@@ -5,6 +5,7 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.AiChatMessage
 import com.example.sensus.domain.model.AiConversation
 import com.example.sensus.domain.model.ScreenContext
+import com.example.sensus.domain.model.SensiLocation
 import com.example.sensus.domain.model.SensiResult
 import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -47,7 +48,7 @@ class AiChatUseCasesTest {
         assertTrue(blankResult is SensiResult.Rejected)
         assertEquals("Ai.EmptyMessage", (blankResult as SensiResult.Rejected).code)
 
-        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any()) }
     }
 
     @Test
@@ -57,7 +58,7 @@ class AiChatUseCasesTest {
         assertTrue(result is SensiResult.Rejected)
         assertEquals("Ai.MessageTooLong", (result as SensiResult.Rejected).code)
 
-        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any()) }
     }
 
     @Test
@@ -66,7 +67,7 @@ class AiChatUseCasesTest {
         val result = sendSensiMessageUseCase("conv_1", "Hola Sensi")
         assertTrue(result is SensiResult.GuestBlocked)
 
-        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any()) }
     }
 
     @Test
@@ -75,7 +76,7 @@ class AiChatUseCasesTest {
         val result = sendSensiMessageUseCase("conv_1", "Hola Sensi")
         assertTrue(result is SensiResult.GuestBlocked)
 
-        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { aiChatRepository.sendMessage(any(), any(), any(), any()) }
     }
 
     @Test
@@ -86,9 +87,7 @@ class AiChatUseCasesTest {
                 conversationId = "conv_1",
                 message = "Ofertas de café",
                 screenContext = ScreenContext.MAP,
-                latitude = 20.0,
-                longitude = -99.0,
-                radiusKm = 3.0
+                location = SensiLocation(20.0, -99.0, 3.0)
             )
         } returns expected
 
@@ -96,14 +95,12 @@ class AiChatUseCasesTest {
             conversationId = "conv_1",
             message = "   Ofertas de café   ",
             screenContext = ScreenContext.MAP,
-            latitude = 20.0,
-            longitude = -99.0,
-            radiusKm = 3.0
+            location = SensiLocation(20.0, -99.0, 3.0)
         )
 
         assertEquals(expected, actual)
         coVerify(exactly = 1) {
-            aiChatRepository.sendMessage("conv_1", "Ofertas de café", ScreenContext.MAP, 20.0, -99.0, 3.0)
+            aiChatRepository.sendMessage("conv_1", "Ofertas de café", ScreenContext.MAP, SensiLocation(20.0, -99.0, 3.0))
         }
     }
 

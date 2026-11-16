@@ -9,6 +9,7 @@ import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import io.mockk.every
 import io.mockk.mockk
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -25,7 +26,6 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import java.util.concurrent.TimeUnit
 
 /**
  * Regresión de docs/errores-conocidos.md (E-01 y E-02): si la base Room local falla (clave de SQLCipher
@@ -38,7 +38,11 @@ class AiChatLocalCacheFailureTest {
     private val sessionState = MutableStateFlow(SessionState(isSessionActive = true, isGuest = false, activeToken = "token"))
     private val sessionRepository = mockk<SessionRepository>()
     private val dao = mockk<AiMessageDao>()
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; isLenient = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        isLenient = true
+    }
     private lateinit var repository: AiChatRepositoryImpl
 
     private val brokenDatabase = IllegalStateException("file is not a database")
@@ -80,7 +84,7 @@ class AiChatLocalCacheFailureTest {
                 )
         )
 
-        val result = repository.sendMessage("c1", "hola", null, null, null, null)
+        val result = repository.sendMessage("c1", "hola", null, null)
 
         assertTrue(result is SensiResult.Success)
         assertEquals("Hola", (result as SensiResult.Success).turn.reply)

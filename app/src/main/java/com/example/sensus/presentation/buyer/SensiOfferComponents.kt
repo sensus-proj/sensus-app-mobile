@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
@@ -78,12 +79,9 @@ data class SensiOfferActions(
  * Tarjeta con la información completa de una oferta mencionada por Sensi: imagen, descuento, tienda, precios,
  * disponibilidad, vigencia y dirección, con los botones Apartar, Cómo llegar y Ver detalle.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SensiOfferCard(offer: CitedOffer, actions: SensiOfferActions, modifier: Modifier = Modifier) {
     val product = remember(offer) { offer.toProductOffer() }
-    val hasStock = offer.availableStock > 0
-    val hasCoordinates = offer.latitude != null && offer.longitude != null
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -94,98 +92,102 @@ internal fun SensiOfferCard(offer: CitedOffer, actions: SensiOfferActions, modif
     ) {
         Column {
             OfferImage(offer = offer, discountPercent = product.discountPercent)
-
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(
-                    text = offer.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SensusTextPrimary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                MerchantLine(offer)
-
-                offer.description?.takeIf { it.isNotBlank() }?.let { description ->
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = description,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        color = SensusTextSecondary,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                PriceLine(offer)
-
-                Spacer(modifier = Modifier.height(10.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    StockChip(offer.availableStock)
-                    offer.endsAtMillis?.let { InfoChip(Icons.Default.AccessTime, "Hasta ${formatOfferDay(it)}") }
-                }
-
-                offer.merchantAddress?.takeIf { it.isNotBlank() }?.let { address ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = SensusTextMuted,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = address, fontSize = 11.sp, color = SensusTextMuted)
-                    }
-                }
-
+                OfferInfo(offer)
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = { actions.onApartar(product) },
-                    enabled = hasStock,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                    contentPadding = PaddingValues(vertical = 12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingBag,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (hasStock) "Apartar" else "Agotado",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    if (hasCoordinates) {
-                        OutlinedActionButton(
-                            text = "Cómo llegar",
-                            icon = Icons.Default.Directions,
-                            onClick = { actions.onRoute(product) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    OutlinedActionButton(
-                        text = "Ver detalle",
-                        icon = null,
-                        onClick = { actions.onDetail(product) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                OfferButtons(offer = offer, product = product, actions = actions)
             }
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun OfferInfo(offer: CitedOffer) {
+    Text(
+        text = offer.title,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        color = SensusTextPrimary,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
+    )
+    Spacer(modifier = Modifier.height(4.dp))
+    MerchantLine(offer)
+
+    offer.description?.takeIf { it.isNotBlank() }?.let { description ->
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = description,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            color = SensusTextSecondary,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+    PriceLine(offer)
+
+    Spacer(modifier = Modifier.height(10.dp))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        StockChip(offer.availableStock)
+        offer.endsAtMillis?.let { InfoChip(Icons.Default.AccessTime, "Hasta ${formatOfferDay(it)}") }
+    }
+
+    offer.merchantAddress?.takeIf { it.isNotBlank() }?.let { address ->
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = SensusTextMuted,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = address, fontSize = 11.sp, color = SensusTextMuted)
+        }
+    }
+}
+
+@Composable
+private fun OfferButtons(offer: CitedOffer, product: ProductOffer, actions: SensiOfferActions) {
+    val hasStock = offer.availableStock > 0
+    val hasCoordinates = offer.latitude != null && offer.longitude != null
+
+    Button(
+        onClick = { actions.onApartar(product) },
+        enabled = hasStock,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = if (hasStock) "Apartar" else "Agotado", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        if (hasCoordinates) {
+            OutlinedActionButton(
+                text = "Cómo llegar",
+                icon = Icons.Default.Directions,
+                onClick = { actions.onRoute(product) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        OutlinedActionButton(
+            text = "Ver detalle",
+            icon = null,
+            onClick = { actions.onDetail(product) },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -302,7 +304,7 @@ private fun StockChip(stock: Int) {
 @Composable
 private fun InfoChip(icon: ImageVector, text: String, highlight: Boolean = false) {
     val tint = if (highlight) SensusRed else SensusTextSecondary
-    Surface(shape = RoundedCornerShape(50), color = SensusBackground) {
+    Surface(shape = CircleShape, color = SensusBackground) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
@@ -315,12 +317,7 @@ private fun InfoChip(icon: ImageVector, text: String, highlight: Boolean = false
 }
 
 @Composable
-private fun OutlinedActionButton(
-    text: String,
-    icon: ImageVector?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun OutlinedActionButton(text: String, icon: ImageVector?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedButton(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
@@ -338,12 +335,11 @@ private fun OutlinedActionButton(
 
 private fun money(value: Double): String = String.format(Locale.US, "%.2f", value)
 
-private fun formatDistance(km: Double): String =
-    if (km < 1.0) "${(km * METERS_PER_KM).roundToInt()} m" else String.format(Locale.US, "%.1f km", km)
+private fun formatDistance(km: Double): String = if (km < 1.0) "${(km * METERS_PER_KM).roundToInt()} m" else String.format(Locale.US, "%.1f km", km)
 
 @Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
-private fun SensiOfferCardPreview() {
+internal fun SensiOfferCardPreview() {
     SensiOfferCard(
         offer = CitedOffer(
             offerId = "off_1",

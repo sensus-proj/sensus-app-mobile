@@ -13,6 +13,7 @@ import com.example.sensus.domain.repository.SessionState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -31,7 +32,6 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import java.util.concurrent.TimeUnit
 
 /** FT-24: las tarjetas de oferta que Sensi cita llegan completas del backend y sobreviven en la caché Room. */
 class AiOffersCacheTest {
@@ -39,7 +39,11 @@ class AiOffersCacheTest {
     private val server = MockWebServer()
     private val sessionRepository = mockk<SessionRepository>()
     private val dao = mockk<AiMessageDao>(relaxed = true)
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; isLenient = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        isLenient = true
+    }
     private lateinit var repository: AiChatRepositoryImpl
 
     private val turnJson = """
@@ -111,7 +115,7 @@ class AiOffersCacheTest {
             MockResponse().setResponseCode(200).setHeader("Content-Type", "application/json").setBody(turnJson)
         )
 
-        val result = repository.sendMessage("c1", "ofertas", null, null, null, null)
+        val result = repository.sendMessage("c1", "ofertas", null, null)
 
         assertTrue(result is SensiResult.Success)
         val assistant = saved.single { it.role == "Assistant" }
@@ -128,10 +132,15 @@ class AiOffersCacheTest {
         server.enqueue(MockResponse().setResponseCode(500))
         val entitySlot = slot<String>()
         val cached = AiMessageEntity(
-            "m1", "c1", "Assistant", "Hola", null,
+            "m1",
+            "c1",
+            "Assistant",
+            "Hola",
+            null,
             """[{"offerId":"o","title":"Pan","merchantId":"m","merchantName":"T","offerPriceMxn":1.0,
                 "regularPriceMxn":2.0,"availableStock":1,"isOpenNow":true,"imageUrl":"https://i/p.jpg"}]""",
-            false, "2026-11-15T09:00:00Z"
+            false,
+            "2026-11-15T09:00:00Z"
         )
         every { dao.getMessagesByConversationId(capture(entitySlot)) } returns listOf(cached)
 

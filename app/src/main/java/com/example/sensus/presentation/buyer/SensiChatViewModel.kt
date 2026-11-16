@@ -3,11 +3,12 @@ package com.example.sensus.presentation.buyer
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.AiChatMessage
+import com.example.sensus.domain.model.AiTurn
 import com.example.sensus.domain.model.ScreenContext
+import com.example.sensus.domain.model.SensiLocation
 import com.example.sensus.domain.model.SensiResult
 import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.LocationRepository
-import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.usecase.LoadAiConversationUseCase
 import com.example.sensus.domain.usecase.SendSensiMessageUseCase
@@ -15,9 +16,15 @@ import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val SEARCH_RADIUS_KM = 5.0
+private const val COUNTDOWN_TICK_MS = 1000L
+private const val UNAVAILABLE_MESSAGE = "Sensi no está disponible, intenta de nuevo."
+private const val CONVERSATION_EXPIRED_MESSAGE = "La conversación expiró. Intenta de nuevo."
 
 @HiltViewModel
 class SensiChatViewModel @Inject constructor(
@@ -25,8 +32,7 @@ class SensiChatViewModel @Inject constructor(
     private val sendSensiMessageUseCase: SendSensiMessageUseCase,
     private val aiChatRepository: AiChatRepository,
     private val sessionRepository: SessionRepository,
-    private val locationRepository: LocationRepository,
-    private val mapPreferencesRepository: MapPreferencesRepository
+    private val locationRepository: LocationRepository
 ) : MviViewModel<SensiChatViewState, SensiChatViewIntent, SensiChatViewEffect>(SensiChatViewState()) {
 
     private var currentScreenContext: ScreenContext = ScreenContext.HOME
@@ -115,123 +121,86 @@ class SensiChatViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sendWithRetry(text, optimisticMsg, isRetry = false)
+            sendWithRetry(text, isRetry = false)
         }
     }
 
-    private suspend fun sendWithRetry(
-        text: String,
-        optimisticMsg: AiChatMessage,
-        isRetry: Boolean
-    ) {
-        val state = viewState.value
-        val location = try {
-            locationRepository.getCurrentLocation()
-        } catch (e: Exception) {
-            null
-        }
-        val lat = location?.latitude
-        val lng = location?.longitude
-        val radiusKm = 5.0
-
+    private suspend fun sendWithRetry(text: String, isRetry: Boolean) {
         val result = sendSensiMessageUseCase(
-            conversationId = state.conversationId,
+            conversationId = viewState.value.conversationId,
             message = text,
             screenContext = currentScreenContext,
-            latitude = lat,
-            longitude = lng,
-            radiusKm = radiusKm
+            location = currentLocation()
         )
-
         when (result) {
-            is SensiResult.Success -> {
-                val turn = result.turn
-                val assistantMsg = AiChatMessage(
-                    id = turn.messageId,
-                    conversationId = turn.conversationId,
-                    role = "Assistant",
-                    content = turn.reply,
-                    recommendedPackage = turn.recommendedPackage,
-                    offersCited = turn.offersCited,
-                    degraded = turn.degraded,
-                    createdAtUtc = Instant.now().toString()
-                )
-                updateState {
-                    copy(
-                        messages = messages + assistantMsg,
-                        conversationId = turn.conversationId,
-                        isTyping = false,
-                        isSending = false,
-                        isDegraded = turn.degraded
-                    )
-                }
-            }
-            is SensiResult.ConversationGone -> {
-                if (!isRetry) {
-                    val newConv = loadAiConversationUseCase.createOrResume(
-                        forceNew = true,
-                        screenContext = currentScreenContext
-                    )
-                    if (newConv is Result.Success) {
-                        updateState { copy(conversationId = newConv.data.conversationId) }
-                        sendWithRetry(text, optimisticMsg, isRetry = true)
-                        return
-                    }
-                }
-                updateState {
-                    copy(
-                        isTyping = false,
-                        isSending = false,
-                        errorMessage = "La conversación expiró. Intenta de nuevo."
-                    )
-                }
-                emitEffect(SensiChatViewEffect.ShowToast("La conversación expiró. Intenta de nuevo."))
-            }
-            is SensiResult.RateLimited -> {
-                val seconds = result.retryAfterSeconds
-                updateState {
-                    copy(
-                        isTyping = false,
-                        isSending = false,
-                        retryAfterSeconds = seconds,
-                        errorMessage = "Límite de mensajes alcanzado. Espera $seconds segundos."
-                    )
-                }
-                startRetryCountdown(seconds)
-            }
-            is SensiResult.GuestBlocked -> {
-                updateState {
-                    copy(
-                        isTyping = false,
-                        isSending = false,
-                        isGuest = true,
-                        showGuestPrompt = true
-                    )
-                }
-            }
-            is SensiResult.Rejected -> {
-                updateState {
-                    copy(
-                        isTyping = false,
-                        isSending = false,
-                        errorMessage = result.message
-                    )
-                }
-                emitEffect(SensiChatViewEffect.ShowToast(result.message))
-            }
-            is SensiResult.Unavailable -> {
-                val msg = "Sensi no está disponible, intenta de nuevo."
-                updateState {
-                    copy(
-                        isTyping = false,
-                        isSending = false,
-                        errorMessage = msg
-                    )
-                }
-                emitEffect(SensiChatViewEffect.ShowToast(msg))
-            }
+            is SensiResult.Success -> showAssistantReply(result.turn)
+            is SensiResult.ConversationGone -> handleConversationGone(text, isRetry)
+            is SensiResult.RateLimited -> showRateLimited(result.retryAfterSeconds)
+            is SensiResult.GuestBlocked -> updateState { stopSending().copy(isGuest = true, showGuestPrompt = true) }
+            is SensiResult.Rejected -> showSendError(result.message)
+            is SensiResult.Unavailable -> showSendError(UNAVAILABLE_MESSAGE)
         }
     }
+
+    private suspend fun currentLocation(): SensiLocation? {
+        val location = try {
+            locationRepository.getCurrentLocation()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        return location?.let { SensiLocation(it.latitude, it.longitude, SEARCH_RADIUS_KM) }
+    }
+
+    private fun showAssistantReply(turn: AiTurn) {
+        val assistantMsg = AiChatMessage(
+            id = turn.messageId,
+            conversationId = turn.conversationId,
+            role = "Assistant",
+            content = turn.reply,
+            recommendedPackage = turn.recommendedPackage,
+            offersCited = turn.offersCited,
+            degraded = turn.degraded,
+            createdAtUtc = Instant.now().toString()
+        )
+        updateState {
+            stopSending().copy(
+                messages = messages + assistantMsg,
+                conversationId = turn.conversationId,
+                isDegraded = turn.degraded
+            )
+        }
+    }
+
+    private suspend fun handleConversationGone(text: String, isRetry: Boolean) {
+        if (!isRetry) {
+            val newConv = loadAiConversationUseCase.createOrResume(forceNew = true, screenContext = currentScreenContext)
+            if (newConv is Result.Success) {
+                updateState { copy(conversationId = newConv.data.conversationId) }
+                sendWithRetry(text, isRetry = true)
+                return
+            }
+        }
+        showSendError(CONVERSATION_EXPIRED_MESSAGE)
+    }
+
+    private fun showRateLimited(seconds: Int) {
+        updateState {
+            stopSending().copy(
+                retryAfterSeconds = seconds,
+                errorMessage = "Límite de mensajes alcanzado. Espera $seconds segundos."
+            )
+        }
+        startRetryCountdown(seconds)
+    }
+
+    private fun showSendError(message: String) {
+        updateState { stopSending().copy(errorMessage = message) }
+        emitEffect(SensiChatViewEffect.ShowToast(message))
+    }
+
+    private fun SensiChatViewState.stopSending() = copy(isTyping = false, isSending = false)
 
     private fun handleClearConversation() {
         viewModelScope.launch {
@@ -260,7 +229,7 @@ class SensiChatViewModel @Inject constructor(
             var remaining = seconds
             while (remaining > 0) {
                 updateState { copy(retryAfterSeconds = remaining) }
-                delay(1000L)
+                delay(COUNTDOWN_TICK_MS)
                 remaining--
             }
             updateState { copy(retryAfterSeconds = null, errorMessage = null) }

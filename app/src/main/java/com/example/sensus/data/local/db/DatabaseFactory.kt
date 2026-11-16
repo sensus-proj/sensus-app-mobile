@@ -40,11 +40,17 @@ object DatabaseFactory {
         return try {
             database.openHelper.writableDatabase
             database
-        } catch (e: RuntimeException) {
-            Log.w(TAG, "No se pudo abrir la base local: ${e.javaClass.simpleName}")
-            runCatching { database.close() }
-            null
+        } catch (_: android.database.sqlite.SQLiteException) {
+            discard(database)
+        } catch (_: IllegalStateException) {
+            discard(database)
         }
+    }
+
+    private fun discard(database: SensusDatabase): SensusDatabase? {
+        Log.w(TAG, "No se pudo abrir la base local.")
+        runCatching { database.close() }
+        return null
     }
 
     private fun createRoomDatabase(context: Context, keyManager: DatabaseKeyManager): SensusDatabase {

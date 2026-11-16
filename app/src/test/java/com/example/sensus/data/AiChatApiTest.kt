@@ -7,6 +7,7 @@ import com.example.sensus.data.local.db.entity.AiMessageEntity
 import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.repository.AiChatRepositoryImpl
 import com.example.sensus.domain.model.ScreenContext
+import com.example.sensus.domain.model.SensiLocation
 import com.example.sensus.domain.model.SensiResult
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
@@ -14,6 +15,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -33,7 +35,6 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import java.util.concurrent.TimeUnit
 
 class AiChatApiTest {
 
@@ -51,40 +52,7 @@ class AiChatApiTest {
     private lateinit var api: AiChatApiService
     private lateinit var repository: AiChatRepositoryImpl
 
-    @Before
-    fun setup() {
-        server.start()
-        every { sessionRepository.sessionState } returns sessionState
-
-        val client = OkHttpClient.Builder()
-            .connectTimeout(500, TimeUnit.MILLISECONDS)
-            .readTimeout(500, TimeUnit.MILLISECONDS)
-            .build()
-
-        api = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(AiChatApiService::class.java)
-
-        repository = AiChatRepositoryImpl(
-            api = api,
-            dao = dao,
-            sessionRepository = sessionRepository,
-            locationRepository = null,
-            json = json
-        )
-    }
-
-    @After
-    fun teardown() {
-        server.shutdown()
-    }
-
-    @Test
-    fun sendMessage_200Normal_cachesUserAndAssistantAndReturnsSuccess() = runTest {
-        val responseBody = """
+    private val normalTurnJson = """
         {
             "conversationId": "conv_100",
             "messageId": "msg_200",
@@ -112,22 +80,52 @@ class AiChatApiTest {
             "degradationReason": null,
             "correlationId": "corr_abc"
         }
-        """.trimIndent()
+    """.trimIndent()
 
+    @Before
+    fun setup() {
+        server.start()
+        every { sessionRepository.sessionState } returns sessionState
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(500, TimeUnit.MILLISECONDS)
+            .readTimeout(500, TimeUnit.MILLISECONDS)
+            .build()
+
+        api = Retrofit.Builder()
+            .baseUrl(server.url("/"))
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(AiChatApiService::class.java)
+
+        repository = AiChatRepositoryImpl(
+            api = api,
+            dao = dao,
+            sessionRepository = sessionRepository,
+            json = json
+        )
+    }
+
+    @After
+    fun teardown() {
+        server.shutdown()
+    }
+
+    @Test
+    fun sendMessage_200Normal_cachesUserAndAssistantAndReturnsSuccess() = runTest {
         server.enqueue(
             MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(responseBody)
+                .setBody(normalTurnJson)
         )
 
         val result = repository.sendMessage(
             conversationId = "conv_100",
             message = "¿Qué hay con $50?",
             screenContext = ScreenContext.HOME,
-            latitude = 20.05,
-            longitude = -99.34,
-            radiusKm = 2.0
+            location = SensiLocation(20.05, -99.34, 2.0)
         )
 
         assertTrue(result is SensiResult.Success)

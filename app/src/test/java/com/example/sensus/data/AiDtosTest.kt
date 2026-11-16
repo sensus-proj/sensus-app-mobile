@@ -2,7 +2,6 @@ package com.example.sensus.data
 
 import com.example.sensus.data.remote.dto.AiTurnResponseDto
 import com.example.sensus.data.remote.dto.ConversationDetailDto
-import com.example.sensus.data.remote.dto.ConversationSummaryDto
 import com.example.sensus.data.remote.dto.CreateConversationRequest
 import com.example.sensus.data.remote.dto.ProblemDetailsDto
 import com.example.sensus.data.remote.dto.ScreenContextDto
