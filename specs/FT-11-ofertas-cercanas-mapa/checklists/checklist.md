@@ -22,7 +22,7 @@
 ## Arquitectura y seguridad
 
 - [ ] `domain/` puro (sin `android.*`, Retrofit, Room ni serializadores JSON)
-- [ ] `presentation/` no importa `data/` (`check_layers.py` en PASS)
+- [x] `presentation/` no importa `data/` (`check_layers.py` en PASS)
 - [ ] ViewModels heredan de `MviViewModel<ViewState, ViewIntent, ViewEffect>`
 - [ ] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
 - [ ] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
@@ -35,15 +35,15 @@
 
 ## Gates automatizados
 
-- [ ] `./gradlew.bat compileDebugKotlin` verde
-- [ ] `./gradlew.bat compileDebugAndroidTestSources` verde
+- [x] `./gradlew.bat compileDebugKotlin` verde
+- [x] `./gradlew.bat compileDebugAndroidTestSources` verde
 - [ ] `./gradlew.bat detekt ktlintCheck lint` verdes
-- [ ] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
-- [ ] `python scripts/check_sdd.py` PASS
-- [ ] `python scripts/check_layers.py` PASS
-- [ ] `python scripts/check_endpoints.py` PASS
-- [ ] `python scripts/check_secrets.py` PASS
-- [ ] `python scripts/check_coverage.py --min 80` PASS
+- [x] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
+- [x] `python scripts/check_sdd.py` PASS
+- [x] `python scripts/check_layers.py` PASS
+- [x] `python scripts/check_endpoints.py` PASS
+- [x] `python scripts/check_secrets.py` PASS
+- [x] `python scripts/check_coverage.py --min 80` PASS
 
 ## Cierre SDD
 
@@ -51,3 +51,5 @@
 - [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
 - [ ] `CHECKLIST_PR.md` completo
 - [ ] Tag `v1.14.0-ft11`
+
+> Auditoría 2026-11-15 (código contra tareas): `compileDebugKotlin`, `compileDebugAndroidTestSources`, `testDebugUnitTest` (257 pruebas, 0 fallos), `koverVerifyDebug`, `detekt` y `ktlintCheck` verdes; `check_sdd`, `check_layers`, `check_endpoints`, `check_secrets` y `check_coverage --min 80` PASS. `lint` no se ejecutó. Brechas funcionales registradas en `tasks.md`.

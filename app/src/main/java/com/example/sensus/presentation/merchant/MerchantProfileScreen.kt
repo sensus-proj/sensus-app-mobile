@@ -44,8 +44,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,7 +63,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.HorarioDia
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantStore
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
@@ -84,7 +88,9 @@ private data class MerchantEditDraft(
     val name: String,
     val address: String,
     val postalCode: String,
-    val schedules: List<HorarioDia>
+    val schedules: List<HorarioDia>,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @ComposeUiModel
@@ -95,7 +101,9 @@ private data class MerchantProfileDisplayState(
     val storeScheduleText: String = "",
     val schedules: List<HorarioDia> = defaultScheduleList(),
     val isOpen: Boolean = true,
-    val updateSuccessMessage: String? = null
+    val updateSuccessMessage: String? = null,
+    val storeLatitude: Double? = null,
+    val storeLongitude: Double? = null
 )
 
 @ComposeUiModel
@@ -105,6 +113,13 @@ private data class MerchantProfileActions(
     val onSwitchToBuyer: () -> Unit
 )
 
+@ComposeUiModel
+private data class MerchantEditSheetActions(
+    val onDraftChange: (MerchantEditDraft) -> Unit,
+    val onPickLocationClick: () -> Unit,
+    val onSaveClick: () -> Unit
+)
+
 @Composable
 fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(), onSwitchToBuyer: () -> Unit, modifier: Modifier = Modifier) {
     val profileState by viewModel.viewState.collectAsState()
@@ -112,7 +127,12 @@ fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(),
     val scope = rememberCoroutineScope()
     var isSaving by remember { mutableStateOf(false) }
     var showEditSheet by remember { mutableStateOf(false) }
-    var display by remember { mutableStateOf(MerchantProfileDisplayState(isOpen = store.isOpen)) }
+    var display by remember { mutableStateOf(buildMerchantDisplayState(store, profileState.schedules, MerchantProfileDisplayState())) }
+
+    LaunchedEffect(Unit) { viewModel.dispatchIntent(MerchantProfileViewIntent.LoadMerchant) }
+    LaunchedEffect(store, profileState.schedules) {
+        display = buildMerchantDisplayState(store, profileState.schedules, display)
+    }
 
     MerchantProfileListContent(
         display = display,
@@ -126,7 +146,14 @@ fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(),
     )
 
     if (showEditSheet) {
-        val draft = MerchantEditDraft(display.storeName, display.storeAddress, display.storePostalCode, display.schedules)
+        val draft = MerchantEditDraft(
+            display.storeName,
+            display.storeAddress,
+            display.storePostalCode,
+            display.schedules,
+            display.storeLatitude,
+            display.storeLongitude
+        )
         MerchantEditBottomSheet(
             initialDraft = draft,
             isSaving = isSaving,
@@ -144,6 +171,18 @@ fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(),
         )
     }
 }
+
+private fun buildMerchantDisplayState(store: MerchantStore, schedules: List<HorarioDia>, current: MerchantProfileDisplayState): MerchantProfileDisplayState =
+    current.copy(
+        storeName = store.name.ifBlank { current.storeName },
+        storeAddress = store.address.removePrefix("Dirección: ").trim().ifBlank { current.storeAddress },
+        storePostalCode = store.postalCode.ifBlank { current.storePostalCode.ifBlank { "42800" } },
+        storeScheduleText = store.schedule.removePrefix("Horarios: ").trim().ifBlank { current.storeScheduleText },
+        schedules = schedules.ifEmpty { current.schedules },
+        isOpen = store.isOpen,
+        storeLatitude = store.latitude.takeIf { it != 0.0 } ?: current.storeLatitude,
+        storeLongitude = store.longitude.takeIf { it != 0.0 } ?: current.storeLongitude
+    )
 
 @Composable
 private fun MerchantProfileListContent(
@@ -181,12 +220,14 @@ private suspend fun saveMerchantEdit(
     onError: (String) -> Unit,
     onSaved: (MerchantProfileDisplayState) -> Unit
 ) {
+    val coords = draft.latitude?.let { lat -> draft.longitude?.let { lng -> MerchantCoordinates(lat, lng) } }
     when (
         val result = viewModel.updateMerchantProfileUseCase(
             nombreComercial = draft.name.trim(),
             direccion = draft.address.trim(),
             codigoPostal = draft.postalCode,
-            horarios = draft.schedules
+            horarios = draft.schedules,
+            coordinates = coords
         )
     ) {
         is Result.Success -> {
@@ -198,7 +239,9 @@ private suspend fun saveMerchantEdit(
                     storePostalCode = profile.codigoPostal,
                     schedules = profile.horarios,
                     storeScheduleText = "Lun-Vie: 08:00 - 20:00 / Sáb: 09:00 - 18:00",
-                    updateSuccessMessage = "¡Datos del local actualizados exitosamente! Coordenadas espaciales recalculadas."
+                    updateSuccessMessage = "¡Datos del local actualizados exitosamente! Coordenadas espaciales actualizadas.",
+                    storeLatitude = profile.latitud,
+                    storeLongitude = profile.longitud
                 )
             )
         }
@@ -347,6 +390,8 @@ private fun MerchantEditBottomSheet(
 ) {
     var draft by remember { mutableStateOf(initialDraft) }
     var editError by remember { mutableStateOf<String?>(null) }
+    var showPinPicker by remember { mutableStateOf(false) }
+    var pickerRecenterSignal by remember { mutableIntStateOf(1) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -358,26 +403,47 @@ private fun MerchantEditBottomSheet(
             draft = draft,
             editError = editError,
             isSaving = isSaving,
-            onDraftChange = {
-                draft = it
-                editError = null
-            },
-            onSaveClick = {
-                val err = validateMerchantDraft(draft)
-                if (err != null) editError = err else onSave(draft) { serverErr -> editError = serverErr }
+            actions = MerchantEditSheetActions(
+                onDraftChange = {
+                    draft = it
+                    editError = null
+                },
+                onPickLocationClick = { showPinPicker = true },
+                onSaveClick = {
+                    val err = validateMerchantDraft(draft)
+                    if (err != null) editError = err else onSave(draft) { serverErr -> editError = serverErr }
+                }
+            )
+        )
+    }
+
+    if (showPinPicker) {
+        val baseLoc = UserLocation(draft.latitude ?: UserLocation().latitude, draft.longitude ?: UserLocation().longitude)
+        val pickerState = MerchantRegisterViewState(
+            userLocation = baseLoc,
+            pickerLatitude = baseLoc.latitude,
+            pickerLongitude = baseLoc.longitude,
+            selectedLatitude = baseLoc.latitude,
+            selectedLongitude = baseLoc.longitude,
+            recenterSignal = pickerRecenterSignal,
+            resolvedAddressPreview = draft.address.ifBlank { null },
+            resolvedPostalPreview = draft.postalCode.ifBlank { null }
+        )
+        MerchantLocationPickerModal(
+            state = pickerState,
+            onDismiss = { showPinPicker = false },
+            onRecenterGps = { pickerRecenterSignal++ },
+            onPinMoved = { lat, lng -> draft = draft.copy(latitude = lat, longitude = lng) },
+            onConfirm = { lat, lng ->
+                draft = draft.copy(latitude = lat, longitude = lng)
+                showPinPicker = false
             }
         )
     }
 }
 
 @Composable
-private fun MerchantEditSheetLazyBody(
-    draft: MerchantEditDraft,
-    editError: String?,
-    isSaving: Boolean,
-    onDraftChange: (MerchantEditDraft) -> Unit,
-    onSaveClick: () -> Unit
-) {
+private fun MerchantEditSheetLazyBody(draft: MerchantEditDraft, editError: String?, isSaving: Boolean, actions: MerchantEditSheetActions) {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -386,11 +452,18 @@ private fun MerchantEditSheetLazyBody(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { EditSheetIntroHeader() }
-        item { EditSheetField("Nombre comercial", draft.name, "Nombre de la tienda") { onDraftChange(draft.copy(name = it)) } }
-        item { EditSheetField("Dirección física del local", draft.address, "Calle, número y colonia") { onDraftChange(draft.copy(address = it)) } }
+        item { EditSheetField("Nombre comercial", draft.name, "Nombre de la tienda") { actions.onDraftChange(draft.copy(name = it)) } }
+        item {
+            PeekingCatLocationButton(
+                isResolving = false,
+                hasCoordinates = draft.latitude != null && draft.longitude != null,
+                onClick = actions.onPickLocationClick
+            )
+        }
+        item { EditSheetField("Dirección física del local", draft.address, "Calle, número y colonia") { actions.onDraftChange(draft.copy(address = it)) } }
         item {
             EditSheetField("Código postal (5 dígitos)", draft.postalCode, "06000") { input ->
-                if (input.length <= POSTAL_LEN && input.all(Char::isDigit)) onDraftChange(draft.copy(postalCode = input))
+                if (input.length <= POSTAL_LEN && input.all(Char::isDigit)) actions.onDraftChange(draft.copy(postalCode = input))
             }
         }
         item {
@@ -400,11 +473,11 @@ private fun MerchantEditSheetLazyBody(
         }
         items(draft.schedules) { schedule ->
             MerchantScheduleDayCard(schedule) { updated ->
-                onDraftChange(draft.copy(schedules = draft.schedules.map { if (it.dia == updated.dia) updated else it }))
+                actions.onDraftChange(draft.copy(schedules = draft.schedules.map { if (it.dia == updated.dia) updated else it }))
             }
         }
         editError?.let { err -> item { Text(text = err, fontSize = 12.sp, color = SensusRed) } }
-        item { MerchantEditSaveButton(isSaving = isSaving, onClick = onSaveClick) }
+        item { MerchantEditSaveButton(isSaving = isSaving, onClick = actions.onSaveClick) }
     }
 }
 

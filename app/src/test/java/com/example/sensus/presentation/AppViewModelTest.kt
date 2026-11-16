@@ -116,4 +116,15 @@ class AppViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(AppScreen.LOGIN, viewModel.viewState.value.currentScreen)
     }
+
+    @Test
+    fun sessionUpdate_propagatesIsMerchantRegisteredFlag() = runTest {
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, viewModel.viewState.value.isMerchantRegistered)
+
+        sessionFlow.value = SessionState(isSessionActive = true, isMerchantRegistered = true, merchantStoreName = "Café Sol")
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(true, viewModel.viewState.value.isMerchantRegistered)
+    }
 }

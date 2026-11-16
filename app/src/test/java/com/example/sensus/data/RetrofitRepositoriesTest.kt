@@ -3,6 +3,7 @@ package com.example.sensus.data
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.SecurePreferences
+import com.example.sensus.data.local.StoredMerchantStatus
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
@@ -226,5 +227,95 @@ class RetrofitRepositoriesTest {
         assertTrue(result is Result.Failure)
         val error = (result as Result.Failure).error
         assertTrue(error is AppError.Unprocessable)
+    }
+
+    @Test
+    fun merchantRepo_activateMerchant_shouldSaveNewJwtAndMerchantStatusOn201() = runTest {
+        var sessionUpdated = false
+        val repoWithPrefs = RetrofitMerchantRepository(
+            merchantApi = networkClient.merchantApi,
+            securePreferences = securePreferences,
+            onSessionUpdated = { sessionUpdated = true }
+        )
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(201)
+                .setBody(
+                    "{\"mensaje\":\"Comercio activado\",\"comercioId\":\"merch_1\",\"esComerciante\":true," +
+                        "\"roles\":[\"Consumidor\",\"Comerciante\"]," +
+                        "\"comercio\":{\"id\":\"merch_1\",\"usuarioId\":\"usr_1\",\"nombreComercial\":\"Café Luna\"," +
+                        "\"direccion\":\"Av. Reforma 222\",\"codigoPostal\":\"06600\",\"latitud\":19.427,\"longitud\":-99.163}," +
+                        "\"token\":\"new_jwt_merchant\",\"tokenType\":\"Bearer\"}"
+                )
+        )
+
+        val result = repoWithPrefs.activateMerchant(
+            nombreComercial = "Café Luna",
+            direccion = "Av. Reforma 222",
+            codigoPostal = "06600",
+            latitud = 19.427,
+            longitud = -99.163
+        )
+
+        assertTrue(result is Result.Success)
+        val merchant = (result as Result.Success).data
+        assertEquals("Café Luna", merchant.nombreComercial)
+        assertEquals(19.427, merchant.latitud, 0.0001)
+        verify { securePreferences.saveAuthToken("new_jwt_merchant") }
+        verify {
+            securePreferences.storedMerchantStatus = StoredMerchantStatus(
+                isRegistered = true,
+                storeName = "Café Luna",
+                address = "Av. Reforma 222",
+                postalCode = "06600"
+            )
+        }
+        assertTrue(sessionUpdated)
+    }
+
+    @Test
+    fun merchantRepo_activateMerchant_shouldMap409And400ToValidation() = runTest {
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(409)
+                .setBody("{\"detail\":\"El usuario ya tiene un comercio activo.\"}")
+        )
+        val conflictResult = merchantRepo.activateMerchant("Café Sol", "Av. Reforma 10", "06600")
+        assertTrue(conflictResult is Result.Failure)
+        assertTrue((conflictResult as Result.Failure).error is AppError.Validation)
+        assertEquals("El usuario ya tiene un comercio activo.", conflictResult.error.message)
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(400)
+                .setBody("{\"detail\":\"Coordenadas fuera de rango.\"}")
+        )
+        val badRequestResult = merchantRepo.activateMerchant("Café Sol", "Av. Reforma 10", "06600", 95.0, -99.1)
+        assertTrue(badRequestResult is Result.Failure)
+        assertTrue((badRequestResult as Result.Failure).error is AppError.Validation)
+    }
+
+    @Test
+    fun merchantRepo_activateMerchant_shouldFallbackToComerciosWhenActivateRouteReturns404() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(404))
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(201)
+                .setBody(
+                    "{\"mensaje\":\"Creado\",\"comercioId\":\"merch_legacy\",\"esComerciante\":true," +
+                        "\"comercio\":{\"id\":\"merch_legacy\",\"usuarioId\":\"usr_1\",\"nombreComercial\":\"Tienda UTTT\"," +
+                        "\"direccion\":\"Carretera Tula-Tepeji\",\"codigoPostal\":\"42800\",\"latitud\":20.0536,\"longitud\":-99.3436}," +
+                        "\"token\":\"jwt_legacy\"}"
+                )
+        )
+
+        val result = merchantRepo.activateMerchant("Tienda UTTT", "Carretera Tula-Tepeji", "42800", 20.0536, -99.3436)
+        assertTrue(result is Result.Success)
+        assertEquals("Tienda UTTT", (result as Result.Success).data.nombreComercial)
+
+        val firstReq = mockWebServer.takeRequest()
+        val secondReq = mockWebServer.takeRequest()
+        assertEquals("/api/v1/merchants/activate", firstReq.path)
+        assertEquals("/api/v1/comercios", secondReq.path)
     }
 }

@@ -1,7 +1,12 @@
 package com.example.sensus.presentation.merchant
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,16 +35,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,11 +57,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
@@ -93,6 +102,14 @@ private data class MerchantFieldSpec(
     val keyboardOptions: KeyboardOptions
 )
 
+@ComposeUiModel
+private data class MerchantRegisterUiActions(
+    val onNavigateBack: () -> Unit,
+    val onFormChange: (MerchantRegisterForm, MerchantRegisterErrors) -> Unit,
+    val onUseLocationClick: () -> Unit,
+    val onSubmitClick: () -> Unit
+)
+
 @Composable
 fun MerchantRegisterScreen(
     viewModel: MerchantRegisterViewModel = hiltViewModel(),
@@ -101,11 +118,141 @@ fun MerchantRegisterScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    BackHandler { onNavigateBack() }
+    val state by viewModel.viewState.collectAsState()
+    val formState = remember { mutableStateOf(MerchantRegisterForm()) }
+    val errorsState = remember { mutableStateOf(MerchantRegisterErrors()) }
+    val permissionLauncher = rememberLocationPickerPermissionLauncher(viewModel)
 
-    var form by remember { mutableStateOf(MerchantRegisterForm()) }
-    var errors by remember { mutableStateOf(MerchantRegisterErrors()) }
+    BackHandler {
+        if (state.showMapPicker) viewModel.dispatchIntent(MerchantRegisterViewIntent.DismissMapPicker) else onNavigateBack()
+    }
+    CollectMerchantRegisterEffects(viewModel, context, onApplyResolvedAddress = { addr, cp ->
+        formState.value = formState.value.copy(address = addr.ifBlank { formState.value.address }, postalCode = cp.ifBlank { formState.value.postalCode })
+        errorsState.value = errorsState.value.copy(
+            addressError = if (addr.isNotBlank()) null else errorsState.value.addressError,
+            postalCodeError = if (cp.isNotBlank()) null else errorsState.value.postalCodeError
+        )
+    }, onRegisterSuccess = onRegisterSuccess)
+    SyncAutoDetectedAddressIfBlank(
+        state = state,
+        form = formState.value,
+        onAutoFill = { addr, cp ->
+            formState.value = formState.value.copy(address = addr, postalCode = cp)
+            errorsState.value = errorsState.value.copy(
+                addressError = if (addr.isNotBlank()) null else errorsState.value.addressError,
+                postalCodeError = if (cp.isNotBlank()) null else errorsState.value.postalCodeError
+            )
+        }
+    )
 
+    val actions = MerchantRegisterUiActions(
+        onNavigateBack = onNavigateBack,
+        onFormChange = { updated, cleared ->
+            formState.value = updated
+            errorsState.value = cleared
+            if (state.errorMessage != null) viewModel.dispatchIntent(MerchantRegisterViewIntent.ClearError)
+        },
+        onUseLocationClick = { launchLocationPicker(context, viewModel, permissionLauncher::launch) },
+        onSubmitClick = { submitMerchantRegistration(formState.value, { errorsState.value = it }, viewModel) }
+    )
+    MerchantRegisterScaffoldContent(state = state, form = formState.value, errors = errorsState.value, actions = actions, modifier = modifier)
+    RenderLocationPickerIfOpen(state = state, viewModel = viewModel)
+}
+
+private fun launchLocationPicker(context: Context, viewModel: MerchantRegisterViewModel, launchPermission: (Array<String>) -> Unit) {
+    if (hasAnyLocationPermission(context)) {
+        viewModel.dispatchIntent(MerchantRegisterViewIntent.OpenMapPickerWithCurrentLocation)
+    } else {
+        launchPermission(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+    }
+}
+
+private fun submitMerchantRegistration(form: MerchantRegisterForm, onErrors: (MerchantRegisterErrors) -> Unit, viewModel: MerchantRegisterViewModel) {
+    val validation = validateMerchantForm(form)
+    onErrors(validation)
+    if (!validation.hasErrors) {
+        viewModel.dispatchIntent(
+            MerchantRegisterViewIntent.ActivateMerchant(
+                storeName = form.businessName.trim(),
+                address = form.address.trim(),
+                postalCode = form.postalCode.trim()
+            )
+        )
+    }
+}
+
+@Composable
+private fun RenderLocationPickerIfOpen(state: MerchantRegisterViewState, viewModel: MerchantRegisterViewModel) {
+    if (state.showMapPicker) {
+        MerchantLocationPickerModal(
+            state = state,
+            onDismiss = { viewModel.dispatchIntent(MerchantRegisterViewIntent.DismissMapPicker) },
+            onRecenterGps = { viewModel.dispatchIntent(MerchantRegisterViewIntent.RecenterPickerOnCurrentLocation) },
+            onPinMoved = { lat, lng -> viewModel.dispatchIntent(MerchantRegisterViewIntent.MoveMapPin(lat, lng)) },
+            onConfirm = { lat, lng -> viewModel.dispatchIntent(MerchantRegisterViewIntent.ConfirmMapLocation(lat, lng)) }
+        )
+    }
+}
+
+@Composable
+private fun rememberLocationPickerPermissionLauncher(viewModel: MerchantRegisterViewModel) =
+    rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestMultiplePermissions()) { perms ->
+        val granted = perms[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val intent = if (granted) {
+            MerchantRegisterViewIntent.OpenMapPickerWithCurrentLocation
+        } else {
+            MerchantRegisterViewIntent.OpenMapPickerManualFallback
+        }
+        viewModel.dispatchIntent(intent)
+    }
+
+@Composable
+private fun CollectMerchantRegisterEffects(
+    viewModel: MerchantRegisterViewModel,
+    context: Context,
+    onApplyResolvedAddress: (String, String) -> Unit,
+    onRegisterSuccess: () -> Unit
+) {
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect ->
+            when (effect) {
+                is MerchantRegisterViewEffect.ActivationSuccess -> {
+                    Toast.makeText(context, "¡Comercio registrado con éxito!", Toast.LENGTH_SHORT).show()
+                    onRegisterSuccess()
+                }
+                is MerchantRegisterViewEffect.ApplyResolvedAddress -> onApplyResolvedAddress(effect.address, effect.postalCode)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncAutoDetectedAddressIfBlank(state: MerchantRegisterViewState, form: MerchantRegisterForm, onAutoFill: (String, String) -> Unit) {
+    LaunchedEffect(state.resolvedAddressPreview, state.resolvedPostalPreview, state.selectedLatitude, state.selectedLongitude) {
+        val addr = state.resolvedAddressPreview.orEmpty()
+        val cp = state.resolvedPostalPreview.orEmpty()
+        val hasResolvedText = addr.isNotBlank() || cp.isNotBlank()
+        if (state.selectedLatitude != null && form.address.isBlank() && hasResolvedText) {
+            onAutoFill(addr.ifBlank { form.address }, cp.ifBlank { form.postalCode })
+        }
+    }
+}
+
+private fun hasAnyLocationPermission(context: Context): Boolean {
+    val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    return fine || coarse
+}
+
+@Composable
+private fun MerchantRegisterScaffoldContent(
+    state: MerchantRegisterViewState,
+    form: MerchantRegisterForm,
+    errors: MerchantRegisterErrors,
+    actions: MerchantRegisterUiActions,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -116,36 +263,31 @@ fun MerchantRegisterScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        MerchantRegisterTopBar(onNavigateBack = onNavigateBack)
+        MerchantRegisterTopBar(onNavigateBack = actions.onNavigateBack)
         Spacer(modifier = Modifier.height(16.dp))
         MerchantBenefitsCard()
         Spacer(modifier = Modifier.height(20.dp))
         MerchantRegisterFormCard(
+            state = state,
             form = form,
             errors = errors,
-            onFormChange = { updated, cleared ->
-                form = updated
-                errors = cleared
-            }
+            onFormChange = actions.onFormChange,
+            onUseLocationClick = actions.onUseLocationClick
         )
+        state.errorMessage?.let { apiError ->
+            Spacer(modifier = Modifier.height(12.dp))
+            Surface(shape = RoundedCornerShape(12.dp), color = SensusRedBg, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = apiError,
+                    color = SensusRed,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(24.dp))
-        MerchantRegisterSubmitButton(
-            onClick = {
-                val result = validateMerchantForm(form)
-                errors = result
-                if (!result.hasErrors) {
-                    viewModel.dispatchIntent(
-                        MerchantRegisterViewIntent.ActivateMerchant(
-                            storeName = form.businessName.trim(),
-                            address = form.address.trim(),
-                            postalCode = form.postalCode.trim()
-                        )
-                    )
-                    Toast.makeText(context, "¡Comercio registrado con éxito!", Toast.LENGTH_SHORT).show()
-                    onRegisterSuccess()
-                }
-            }
-        )
+        MerchantRegisterSubmitButton(isRegistering = state.isRegistering, onClick = actions.onSubmitClick)
     }
 }
 
@@ -190,9 +332,11 @@ private fun MerchantBenefitsCard() {
 
 @Composable
 private fun MerchantRegisterFormCard(
+    state: MerchantRegisterViewState,
     form: MerchantRegisterForm,
     errors: MerchantRegisterErrors,
-    onFormChange: (MerchantRegisterForm, MerchantRegisterErrors) -> Unit
+    onFormChange: (MerchantRegisterForm, MerchantRegisterErrors) -> Unit,
+    onUseLocationClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(18.dp),
@@ -212,16 +356,23 @@ private fun MerchantRegisterFormCard(
                 ),
                 onValueChange = { onFormChange(form.copy(businessName = it), errors.copy(businessNameError = null)) }
             )
-            MerchantLabeledField(
-                spec = MerchantFieldSpec(
-                    "Dirección completa del local",
-                    form.address,
-                    "Calle, número y colonia",
-                    errors.addressError,
-                    KeyboardOptions(imeAction = ImeAction.Next)
-                ),
-                onValueChange = { onFormChange(form.copy(address = it), errors.copy(addressError = null)) }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PeekingCatLocationButton(
+                    isResolving = state.isResolvingLocation && !state.showMapPicker,
+                    hasCoordinates = state.selectedLatitude != null && state.selectedLongitude != null,
+                    onClick = onUseLocationClick
+                )
+                MerchantLabeledField(
+                    spec = MerchantFieldSpec(
+                        "Dirección completa del local",
+                        form.address,
+                        "Calle, número y colonia",
+                        errors.addressError,
+                        KeyboardOptions(imeAction = ImeAction.Next)
+                    ),
+                    onValueChange = { onFormChange(form.copy(address = it), errors.copy(addressError = null)) }
+                )
+            }
             MerchantLabeledField(
                 spec = MerchantFieldSpec(
                     "Código postal",
@@ -264,15 +415,20 @@ private fun MerchantLabeledField(spec: MerchantFieldSpec, onValueChange: (String
 }
 
 @Composable
-private fun MerchantRegisterSubmitButton(onClick: () -> Unit) {
+private fun MerchantRegisterSubmitButton(isRegistering: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
+        enabled = !isRegistering,
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 14.dp)
     ) {
-        Text(text = "Comenzar a vender en Sensus", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        if (isRegistering) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+        } else {
+            Text(text = "Comenzar a vender en Sensus", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
     }
 }
 

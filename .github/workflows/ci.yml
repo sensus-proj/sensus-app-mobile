@@ -133,6 +133,28 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  mutation-test:
+    needs: unit-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: "gradle"
+      - run: chmod +x ./gradlew
+      - run: ./gradlew pitestDebug --no-daemon --no-configuration-cache
+      - name: Subir reporte de mutacion
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pitest-reports
+          path: app/build/reports/pitest/
+          if-no-files-found: ignore
+          retention-days: 7
+
   instrumentation-compile:
     needs: unit-test
     runs-on: ubuntu-latest
@@ -174,6 +196,7 @@ jobs:
       - security-scan
       - static-analysis
       - unit-test
+      - mutation-test
       - instrumentation-compile
       - build
     runs-on: ubuntu-latest
@@ -193,7 +216,8 @@ jobs:
           echo "| **3. SAST Semántico** | ${{ needs.security-scan.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`CodeQL (Java/Kotlin)\` | OWASP Mobile Top 10 |" >> $GITHUB_STEP_SUMMARY
           echo "| **4. Análisis Estático** | ${{ needs.static-analysis.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`Android SDK Lint\` | Correctitud y accesibilidad |" >> $GITHUB_STEP_SUMMARY
           echo "| **5. Pruebas Unitarias** | ${{ needs.unit-test.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`JUnit 5 + MockK + Turbine\` | Umbral de cobertura >= 80% |" >> $GITHUB_STEP_SUMMARY
-          echo "| **6. Compilación Instrumentada** | ${{ needs.instrumentation-compile.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`AndroidTest Sources\` | Pruebas de integración E2E |" >> $GITHUB_STEP_SUMMARY
+          echo "| **6. Pruebas de Mutación** | ${{ needs.mutation-test.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`PITest 1.17.1\` | Umbral de mutación en dominio |" >> $GITHUB_STEP_SUMMARY
+          echo "| **7. Compilación Instrumentada** | ${{ needs.instrumentation-compile.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`AndroidTest Sources\` | Pruebas de integración E2E |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🏷️ Metadatos de la Ejecución" >> $GITHUB_STEP_SUMMARY
           echo "- **Rama:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY

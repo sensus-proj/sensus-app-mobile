@@ -24,6 +24,12 @@ public class OfferEntity {
     @ColumnInfo(defaultValue = "5")
     public int unitsLeft = 5;
     public String expirationDate;
+    @ColumnInfo(defaultValue = "Published")
+    public String status = "Published";
+    @ColumnInfo(defaultValue = "1")
+    public int version = 1;
+    @ColumnInfo(defaultValue = "0")
+    public long expiresAtMillis = 0L;
 
     public OfferEntity(@NonNull String id, String title, String description, double price, double originalPrice,
                        String category, String imageUrl, double latitude, double longitude,

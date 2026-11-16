@@ -34,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.sensus.R
+import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
@@ -134,7 +135,7 @@ private fun CommunityPostCard(post: FeedPost, onMerchantClick: (String) -> Unit)
 }
 
 private fun shouldLoadMore(index: Int?, state: CommunityViewState): Boolean {
-    if (index == null || state.isLoading) return false
+    if (index == null || state.isLoading || state.feedError != null) return false
     return state.hasMore && index >= state.posts.size
 }
 
@@ -144,7 +145,13 @@ private fun CommunityFeedHeader(state: CommunityViewState, onIntent: (CommunityV
     Button(onClick = { onIntent(CommunityViewIntent.NewPost) }, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
         Text(stringResource(R.string.community_new_post))
     }
-    state.errorMessage?.let { Text(it, color = SensusRed) }
+    state.feedError?.let {
+        val message = if (it is AppError.NotFound) stringResource(R.string.community_feed_unavailable) else it.message
+        Text(message, color = SensusRed)
+    }
     if (state.isCached) Text(stringResource(R.string.community_cached))
-    if (state.posts.isEmpty() && !state.isLoading) Text(stringResource(R.string.community_empty))
+    val hasSuccessfulResult = state.hasLoadedFeed && state.feedError == null
+    if (hasSuccessfulResult && state.posts.isEmpty() && !state.isLoading) {
+        Text(stringResource(R.string.community_empty))
+    }
 }

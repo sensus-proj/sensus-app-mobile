@@ -80,6 +80,9 @@ private const val LOCKED_BADGE_HEX = 0xFFF1F5F9
 @ComposeUiModel
 data class BuyerProfileCallbacks(
     val isMerchantMode: Boolean = false,
+    val hasActiveMerchant: Boolean = false,
+    val merchantStoreName: String? = null,
+    val onMerchantStatusSynced: (Boolean) -> Unit = {},
     val onToggleMerchantMode: (Boolean) -> Unit = {},
     val onLogoutClick: () -> Unit = {},
     val onDeleteAccountClick: () -> Unit = {},
@@ -92,7 +95,9 @@ data class BuyerProfileCallbacks(
 private data class BuyerProfileListUi(
     val summary: ProfileDisplaySummary,
     val isGuest: Boolean,
-    val profileUpdatedNotice: Boolean
+    val profileUpdatedNotice: Boolean,
+    val hasActiveMerchant: Boolean,
+    val merchantStoreName: String?
 )
 
 @Composable
@@ -101,6 +106,8 @@ fun BuyerProfileScreen(viewModel: BuyerProfileViewModel = hiltViewModel(), callb
     val scope = rememberCoroutineScope()
     val state by viewModel.viewState.collectAsState()
     val isGuest = state.isGuest
+    val hasActiveMerchant = state.hasActiveMerchant || callbacks.hasActiveMerchant
+    val resolvedStoreName = state.merchantStoreName ?: callbacks.merchantStoreName
 
     var summary by remember { mutableStateOf(ProfileDisplaySummary()) }
     var isSaving by remember { mutableStateOf(false) }
@@ -108,12 +115,15 @@ fun BuyerProfileScreen(viewModel: BuyerProfileViewModel = hiltViewModel(), callb
     var profileUpdatedNotice by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.dispatchIntent(BuyerProfileViewIntent.LoadProfile) }
+    LaunchedEffect(state.hasActiveMerchant) {
+        if (state.hasActiveMerchant) callbacks.onMerchantStatusSynced(true)
+    }
     LaunchedEffect(state.profile, isGuest, state.isLoading) {
         summary = resolveProfileDisplay(state.profile, isGuest, state.isLoading)
     }
 
     BuyerProfileListContent(
-        ui = BuyerProfileListUi(summary, isGuest, profileUpdatedNotice),
+        ui = BuyerProfileListUi(summary, isGuest, profileUpdatedNotice, hasActiveMerchant, resolvedStoreName),
         callbacks = callbacks,
         onOpenEditSheet = { showEditProfileSheet = true },
         modifier = modifier
@@ -162,6 +172,8 @@ private fun BuyerProfileListContent(ui: BuyerProfileListUi, callbacks: BuyerProf
             MerchantModeToggleCard(
                 isGuest = isGuest,
                 isMerchantMode = callbacks.isMerchantMode,
+                hasActiveMerchant = ui.hasActiveMerchant,
+                merchantStoreName = ui.merchantStoreName,
                 onToggle = { enable -> if (isGuest) callbacks.onGuestActionRequired() else callbacks.onToggleMerchantMode(enable) }
             )
         }
@@ -253,31 +265,38 @@ private fun ProfileHeaderActionControl(isGuest: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MerchantModeToggleCard(isGuest: Boolean, isMerchantMode: Boolean, onToggle: (Boolean) -> Unit) {
+private fun MerchantModeToggleCard(
+    isGuest: Boolean,
+    isMerchantMode: Boolean,
+    hasActiveMerchant: Boolean,
+    merchantStoreName: String?,
+    onToggle: (Boolean) -> Unit
+) {
+    val isChecked = !isGuest && (isMerchantMode || hasActiveMerchant)
+    val openStoreAction = { onToggle(true) }
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SensusPurple.copy(alpha = MERCHANT_CARD_ALPHA)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = openStoreAction)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(SensusPurple), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(text = "Soy Comercio / Vendedor", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
-                    Text(text = "Publica excedentes y recupera dinero", fontSize = 11.sp, color = SensusTextSecondary)
-                }
-            }
+            MerchantToggleLabelContent(
+                hasActiveMerchant = !isGuest && hasActiveMerchant,
+                merchantStoreName = merchantStoreName,
+                onStoreTextClick = openStoreAction,
+                modifier = Modifier.weight(1f)
+            )
             Switch(
-                checked = !isGuest && isMerchantMode,
+                checked = isChecked,
                 enabled = !isGuest,
-                onCheckedChange = onToggle,
+                onCheckedChange = { requested -> onToggle(if (hasActiveMerchant) true else requested) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = SensusPurple,
@@ -285,6 +304,41 @@ private fun MerchantModeToggleCard(isGuest: Boolean, isMerchantMode: Boolean, on
                     uncheckedTrackColor = Color(SWITCH_UNCHECKED_HEX)
                 )
             )
+        }
+    }
+}
+
+@Composable
+private fun MerchantToggleLabelContent(hasActiveMerchant: Boolean, merchantStoreName: String?, onStoreTextClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(SensusPurple), contentAlignment = Alignment.Center) {
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.clickable(enabled = hasActiveMerchant, onClick = onStoreTextClick)) {
+            if (hasActiveMerchant) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = merchantStoreName?.takeIf { it.isNotBlank() } ?: "Mi Comercio en Sensus",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SensusPurple
+                    )
+                    Surface(shape = RoundedCornerShape(6.dp), color = SensusSuccessBg) {
+                        Text(
+                            text = "Activo",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SensusSuccess,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Text(text = "Pulsa el texto para abrir tu comercio", fontSize = 11.sp, color = SensusTextSecondary)
+            } else {
+                Text(text = "Soy Comercio / Vendedor", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                Text(text = "Publica excedentes y recupera dinero", fontSize = 11.sp, color = SensusTextSecondary)
+            }
         }
     }
 }

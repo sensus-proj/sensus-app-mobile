@@ -4,6 +4,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.SessionType
+import com.example.sensus.data.local.StoredMerchantStatus
 import com.example.sensus.data.mapper.MerchantMapper.toDomain
 import com.example.sensus.data.mapper.MerchantMapper.toDto
 import com.example.sensus.data.mapper.UserMapper.toDomain
@@ -11,6 +12,7 @@ import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
+import com.example.sensus.data.remote.dto.ActivateMerchantRequest
 import com.example.sensus.data.remote.dto.AuthResponse
 import com.example.sensus.data.remote.dto.DeleteAccountRequest
 import com.example.sensus.data.remote.dto.LoginRequest
@@ -28,18 +30,12 @@ import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import retrofit2.Response
 
@@ -47,40 +43,49 @@ private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_FORBIDDEN = 403
 private const val HTTP_NOT_FOUND = 404
+private const val HTTP_METHOD_NOT_ALLOWED = 405
+private const val HTTP_CONFLICT = 409
 private const val HTTP_UNPROCESSABLE = 422
 private const val HTTP_TOO_MANY_REQUESTS = 429
 private const val HTTP_SERVER_ERROR = 500
-private const val CLOUDINARY_TIMEOUT_SECONDS = 30L
+private const val OFFLINE_ERROR_MESSAGE = "Sin conexión a internet. Verifica tu red e inténtalo de nuevo."
+private val URL_LEAK_REGEX = Regex("""https?://\S+""", RegexOption.IGNORE_CASE)
 
 internal suspend inline fun <T> safeNetworkCall(unexpectedMessage: String, crossinline block: suspend () -> Result<T>): Result<T> =
     withContext(Dispatchers.IO) {
         try {
             block()
-        } catch (e: IOException) {
-            Result.Failure(AppError.Network("No se pudo conectar con el servidor: ${e.localizedMessage}"))
-        } catch (e: HttpException) {
-            Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
-        } catch (e: SerializationException) {
-            Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
-        } catch (e: IllegalStateException) {
-            Result.Failure(AppError.Generic(e.localizedMessage ?: unexpectedMessage))
+        } catch (_: IOException) {
+            Result.Failure(AppError.Network(OFFLINE_ERROR_MESSAGE))
+        } catch (_: HttpException) {
+            Result.Failure(AppError.Generic(unexpectedMessage))
+        } catch (_: SerializationException) {
+            Result.Failure(AppError.Generic(unexpectedMessage))
+        } catch (_: IllegalStateException) {
+            Result.Failure(AppError.Generic(unexpectedMessage))
         }
     }
 
 internal fun parseBackendErrorMessage(raw: String?): String? {
-    if (raw.isNullOrBlank()) return null
-    return try {
-        val json = Json.parseToJsonElement(raw).jsonObject
-        json["detail"]?.jsonPrimitive?.content
-            ?: json["message"]?.jsonPrimitive?.content
-            ?: json["error"]?.jsonPrimitive?.content
-            ?: json["title"]?.jsonPrimitive?.content
-            ?: raw
-    } catch (_: SerializationException) {
-        raw
-    } catch (_: IllegalArgumentException) {
-        raw
-    }
+    val trimmed = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val extracted = extractJsonErrorField(trimmed) ?: trimmed
+    return sanitizeUserErrorMessage(extracted)
+}
+
+private val errorJsonKeys = listOf("detail", "message", "error", "title")
+
+private fun extractJsonErrorField(trimmed: String): String? = try {
+    val json = Json.parseToJsonElement(trimmed).jsonObject
+    errorJsonKeys.firstNotNullOfOrNull { key -> json[key]?.jsonPrimitive?.content }
+} catch (_: SerializationException) {
+    null
+} catch (_: IllegalArgumentException) {
+    null
+}
+
+private fun sanitizeUserErrorMessage(candidate: String?): String? {
+    val clean = candidate?.replace(URL_LEAK_REGEX, "")?.trim()
+    return clean?.takeIf { it.isNotBlank() && !it.startsWith("<") && !it.startsWith("{") }
 }
 
 private val httpDefaultErrorMessages = mapOf(
@@ -124,6 +129,11 @@ class RetrofitAuthRepository(
             email = domainUser.correo,
             photoUrl = domainUser.fotoPerfilUrl
         )
+        val hasMerchantRole = domainUser.roles.any {
+            it.equals("Comerciante", ignoreCase = true) || it.equals("Merchant", ignoreCase = true)
+        }
+        val preservedStoreName = if (hasMerchantRole) securePreferences.storedMerchantStatus.storeName else null
+        securePreferences.storedMerchantStatus = StoredMerchantStatus(isRegistered = hasMerchantRole, storeName = preservedStoreName)
         onSessionUpdated?.invoke()
         return Result.Success(domainUser)
     }
@@ -211,13 +221,7 @@ class RetrofitProfileRepository(
     private val onSessionUpdated: (() -> Unit)? = null
 ) : ProfileRepository {
 
-    private val cloudinaryHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(CLOUDINARY_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(CLOUDINARY_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .writeTimeout(CLOUDINARY_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .build()
-    }
+    private val cloudinaryUploader = CloudinarySignedUploader()
 
     override suspend fun getProfile(): Result<UserProfile> = safeNetworkCall("Error al obtener perfil.") {
         val response = profileApi.getProfile()
@@ -274,34 +278,11 @@ class RetrofitProfileRepository(
         }
     }
 
-    private fun uploadBytesToCloudinary(imageBytes: ByteArray, sig: PhotoSignatureResponse): Result<String> {
-        val multipartBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("file", "profile_avatar.jpg", imageBytes.toRequestBody("image/jpeg".toMediaType()))
-            .addFormDataPart("api_key", sig.apiKey)
-            .addFormDataPart("timestamp", sig.timestamp.toString())
-            .addFormDataPart("folder", sig.folder)
-            .addFormDataPart("signature", sig.signature)
-            .build()
-
-        val request = Request.Builder()
-            .url("https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload")
-            .post(multipartBody)
-            .build()
-
-        cloudinaryHttpClient.newCall(request).execute().use { uploadResp ->
-            if (!uploadResp.isSuccessful) {
-                return Result.Failure(AppError.Generic("Error al subir imagen a Cloudinary (${uploadResp.code})."))
-            }
-            val respBody = uploadResp.body?.string().orEmpty()
-            val secureUrl = Json.parseToJsonElement(respBody).jsonObject["secure_url"]?.jsonPrimitive?.content
-            return if (secureUrl.isNullOrBlank()) {
-                Result.Failure(AppError.Generic("Cloudinary no devolvió una URL segura válida."))
-            } else {
-                Result.Success(secureUrl)
-            }
+    private fun uploadBytesToCloudinary(imageBytes: ByteArray, sig: PhotoSignatureResponse): Result<String> =
+        when (val upload = cloudinaryUploader.upload(imageBytes, "image/jpeg", "profile_avatar.jpg", sig)) {
+            is Result.Success -> Result.Success(upload.data.url)
+            is Result.Failure -> upload
         }
-    }
 
     private fun persistSessionProfile(profile: UserProfile) {
         securePreferences?.saveUserSession(
@@ -313,7 +294,7 @@ class RetrofitProfileRepository(
     }
 
     private fun <T> mapHttpError(response: Response<T>): Result<Nothing> {
-        val errorMsg = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
+        val errorMsg = parseBackendErrorMessage(response.errorBody()?.string())
         return Result.Failure(
             mapCommonHttpStatus(
                 code = response.code(),
@@ -326,17 +307,85 @@ class RetrofitProfileRepository(
 }
 
 class RetrofitMerchantRepository(
-    private val merchantApi: MerchantApiService
+    private val merchantApi: MerchantApiService,
+    private val securePreferences: SecurePreferences? = null,
+    private val onSessionUpdated: (() -> Unit)? = null
 ) : MerchantRepository {
 
-    override suspend fun getMyMerchant(): Result<MerchantProfile> = safeNetworkCall("Error al consultar comercio.") {
-        val response = merchantApi.getMyComercio()
-        val body = response.body()
-        if (response.isSuccessful && body != null) {
-            Result.Success(body.toDomain())
-        } else {
-            mapMerchantError(response)
+    override suspend fun getMyMerchant(): Result<MerchantProfile> {
+        val networkResult = safeNetworkCall("Error al consultar comercio.") {
+            val primary = merchantApi.getMyComercio()
+            val primaryBody = primary.body()
+            if (primary.isSuccessful && primaryBody != null) {
+                Result.Success(persistAndMapMerchant(primaryBody.toDomain()))
+            } else if (shouldTryLegacyFallback(primary.code())) {
+                fetchLegacyMyComercio(primary)
+            } else {
+                mapMerchantError(primary, default404 = "Comercio no encontrado.")
+            }
         }
+        return if (networkResult is Result.Failure) resolveCachedMerchantOrFailure(networkResult) else networkResult
+    }
+
+    private suspend fun fetchLegacyMyComercio(primaryResponse: Response<com.example.sensus.data.remote.dto.ComercioDto>): Result<MerchantProfile> = try {
+        val legacy = merchantApi.getMyComercioFallback()
+        val legacyBody = legacy.body()
+        if (legacy.isSuccessful && legacyBody != null) {
+            Result.Success(persistAndMapMerchant(legacyBody.toDomain()))
+        } else {
+            mapMerchantError(legacy, default404 = "Comercio no encontrado.")
+        }
+    } catch (_: Exception) {
+        mapMerchantError(primaryResponse, default404 = "Comercio no encontrado.")
+    }
+
+    override suspend fun activateMerchant(
+        nombreComercial: String,
+        direccion: String,
+        codigoPostal: String,
+        latitud: Double?,
+        longitud: Double?
+    ): Result<MerchantProfile> = safeNetworkCall("Error al activar comercio.") {
+        val request = ActivateMerchantRequest(
+            nombreComercial = nombreComercial,
+            direccion = direccion,
+            codigoPostal = codigoPostal,
+            latitud = latitud,
+            longitud = longitud
+        )
+        val primary = merchantApi.activateMerchant(request)
+        val primaryBody = primary.body()
+        if (primary.isSuccessful && primaryBody != null) {
+            Result.Success(handleActivationSuccess(primaryBody))
+        } else if (shouldTryLegacyFallback(primary.code())) {
+            activateViaLegacyEndpoint(request, primary)
+        } else {
+            mapMerchantError(
+                response = primary,
+                default404 = "No fue posible registrar el comercio. Verifica tu sesión e inténtalo de nuevo."
+            )
+        }
+    }
+
+    private suspend fun activateViaLegacyEndpoint(
+        request: ActivateMerchantRequest,
+        primaryResponse: Response<com.example.sensus.data.remote.dto.RegisterComercioResponseDto>
+    ): Result<MerchantProfile> = try {
+        val legacy = merchantApi.registerComercioFallback(request)
+        val legacyBody = legacy.body()
+        if (legacy.isSuccessful && legacyBody != null) {
+            Result.Success(handleActivationSuccess(legacyBody))
+        } else {
+            mapMerchantError(
+                response = legacy,
+                default404 = "No fue posible registrar el comercio. Verifica tu sesión e inténtalo de nuevo."
+            )
+        }
+    } catch (_: Exception) {
+        mapMerchantError(
+            response = primaryResponse,
+            default404 = "No fue posible registrar el comercio. Verifica tu sesión e inténtalo de nuevo."
+        )
     }
 
     override suspend fun updateMerchantProfile(
@@ -344,32 +393,113 @@ class RetrofitMerchantRepository(
         direccion: String,
         codigoPostal: String,
         horarios: List<HorarioDia>
+    ): Result<MerchantProfile> = updateMerchantProfile(nombreComercial, direccion, codigoPostal, horarios, null)
+
+    override suspend fun updateMerchantProfile(
+        nombreComercial: String?,
+        direccion: String,
+        codigoPostal: String,
+        horarios: List<HorarioDia>,
+        coordinates: com.example.sensus.domain.model.MerchantCoordinates?
     ): Result<MerchantProfile> = safeNetworkCall("Error al actualizar comercio.") {
         val request = UpdateMerchantProfileRequest(
             nombreComercial = nombreComercial,
             direccion = direccion,
             codigoPostal = codigoPostal,
-            horarios = horarios.map { it.toDto() }
+            horarios = horarios.map { it.toDto() },
+            latitud = coordinates?.latitude,
+            longitud = coordinates?.longitude
         )
         val response = merchantApi.updateMerchantProfile(request)
         val body = response.body()
         if (response.isSuccessful && body != null) {
-            Result.Success(body.toDomain(fallbackHorarios = horarios))
+            Result.Success(persistAndMapMerchant(body.toDomain(fallbackHorarios = horarios)))
+        } else if (shouldTryLegacyFallback(response.code())) {
+            updateViaLegacyEndpoint(request, horarios, response)
         } else {
-            mapMerchantError(response)
+            mapMerchantError(response, default404 = "Comercio no encontrado.")
         }
     }
 
-    private fun <T> mapMerchantError(response: Response<T>): Result<Nothing> {
-        val errorMsg = response.errorBody()?.string()?.takeIf { it.isNotBlank() }
+    private suspend fun updateViaLegacyEndpoint(
+        request: UpdateMerchantProfileRequest,
+        horarios: List<HorarioDia>,
+        primaryResponse: Response<com.example.sensus.data.remote.dto.ComercioDto>
+    ): Result<MerchantProfile> = try {
+        val legacy = merchantApi.updateMyComercioFallback(request)
+        val legacyBody = legacy.body()
+        if (legacy.isSuccessful && legacyBody != null) {
+            Result.Success(persistAndMapMerchant(legacyBody.toDomain(fallbackHorarios = horarios)))
+        } else {
+            mapMerchantError(legacy, default404 = "Comercio no encontrado.")
+        }
+    } catch (_: Exception) {
+        mapMerchantError(primaryResponse, default404 = "Comercio no encontrado.")
+    }
+
+    override suspend fun getNearbyMerchants(latitude: Double, longitude: Double, radiusMeters: Int): Result<List<MerchantProfile>> {
+        val networkResult = safeNetworkCall("Error al cargar comercios cercanos.") {
+            val primary = merchantApi.getNearbyMerchants(latitude, longitude, radiusMeters)
+            val resolved = if (shouldTryLegacyFallback(primary.code())) {
+                merchantApi.getNearbyComerciosFallback(latitude, longitude, radiusMeters)
+            } else {
+                primary
+            }
+            val body = resolved.body()
+            when {
+                resolved.isSuccessful && body != null -> Result.Success(body.map { it.toDomain() })
+                resolved.code() == HTTP_NOT_FOUND -> Result.Success(emptyList())
+                else -> mapMerchantError(resolved, default404 = "Comercios no disponibles.")
+            }
+        }
+        return if (networkResult is Result.Failure) Result.Success(emptyList()) else networkResult
+    }
+
+    private fun handleActivationSuccess(body: com.example.sensus.data.remote.dto.RegisterComercioResponseDto): MerchantProfile {
+        if (body.token.isNotBlank()) {
+            securePreferences?.saveAuthToken(body.token)
+        }
+        return persistAndMapMerchant(body.comercio.toDomain())
+    }
+
+    private fun persistAndMapMerchant(domain: MerchantProfile): MerchantProfile {
+        securePreferences?.storedMerchantStatus = StoredMerchantStatus(
+            isRegistered = true,
+            storeName = domain.nombreComercial,
+            address = domain.direccion,
+            postalCode = domain.codigoPostal
+        )
+        onSessionUpdated?.invoke()
+        return domain
+    }
+
+    private fun resolveCachedMerchantOrFailure(failure: Result.Failure): Result<MerchantProfile> {
+        val cached = securePreferences?.storedMerchantStatus
+        val cachedName = cached?.storeName?.takeIf { cached.isRegistered && it.isNotBlank() } ?: return failure
+        return Result.Success(
+            MerchantProfile(
+                id = "local_merchant",
+                usuarioId = "local_user",
+                nombreComercial = cachedName,
+                direccion = cached.address.orEmpty(),
+                codigoPostal = cached.postalCode.orEmpty()
+            )
+        )
+    }
+
+    private fun shouldTryLegacyFallback(code: Int): Boolean = code == HTTP_NOT_FOUND || code == HTTP_METHOD_NOT_ALLOWED
+
+    private fun <T> mapMerchantError(response: Response<T>, default404: String): Result<Nothing> {
+        val errorMsg = parseBackendErrorMessage(response.errorBody()?.string())
         val mapped = when (response.code()) {
             HTTP_UNPROCESSABLE -> AppError.Unprocessable(errorMsg ?: "No fue posible geocodificar la dirección.")
             HTTP_FORBIDDEN -> AppError.Forbidden(errorMsg ?: "Solo comerciantes pueden gestionar datos de local.")
+            HTTP_CONFLICT -> AppError.Validation(errorMsg ?: "Ya cuentas con un comercio activo registrado.")
             else -> mapCommonHttpStatus(
                 code = response.code(),
                 message = errorMsg,
                 default401 = "Sesión requerida.",
-                default404 = "Comercio no encontrado."
+                default404 = default404
             )
         }
         return Result.Failure(mapped)

@@ -30,23 +30,26 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/users/photo-signature` | `RetrofitProfileRepository` -> `ProfileApiService` | Bearer | 10/min por usuario | OK (FT-10, 2026-11-11; UserEndpoints.cs) |
 | `POST /api/v1/media/moderate` | `ImageModerationService` -> `MediaApiService` (previo a `/media/upload` en FT-15) | Bearer | 20/min por usuario | OK (FT-10, 2026-11-11; MediaEndpoints.cs) |
 | `GET /api/v1/comercios/me` | `MerchantApiService` (legacy espanol; retirado en cliente por `/api/v1/merchants/me`) | Bearer `MERCHANT` | 30/min por usuario | Retirado cliente (FT-10, 2026-11-11; backend transicional) |
-| `GET /api/v1/merchants/me` | `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | OK cliente FT-10 (2026-11-11; backend pendiente Spec 006/008) |
-| `GET /api/v1/offers/nearby` | `GetNearbyOffersUseCase` -> `OffersRepository` -> `OffersApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | Pendiente (FT-11, spec 007) |
-| `GET /api/v1/offers/{id}` | `GetOfferDetailUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-12, spec 032) |
-| `POST /api/v1/offers/{id}/view` | `RegisterOfferViewUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-12, spec 032) |
-| `POST /api/v1/offers/{id}/claim` | `CreateClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer (no invitado) | 20/min por usuario | Pendiente (FT-13, spec 033) |
+| `GET /api/v1/merchants/me` | `GetMyMerchantUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | OK cliente (`FT-10` / `FT-29`, alineado a `Spec 006`) |
+| `POST /api/v1/merchants/activate` | `ActivateMerchantUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer (usuario registrado) | 10/min por usuario | Implementado cliente / MockWebServer validado (`FT-29`, 2026-11-13; alineado a `Spec 005`) |
+| `PUT /api/v1/merchants/profile` | `UpdateMerchantProfileUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-06` / `FT-29`, 2026-11-13; alineado a `Spec 031`) |
+| `GET /api/v1/merchants/nearby` | `GetNearbyMerchantsUseCase` -> `MerchantRepository` -> `MerchantApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | Implementado cliente (`FT-11`/`SE-008`, alineado a `Spec 008`) |
+| `GET /api/v1/offers/nearby` | `GetNearbyOffersUseCase` -> `OffersRepository` -> `OffersApiService` | Publico (invitado 2 km) o Bearer | 60/min por IP | OK cliente (`FT-11`, `Spec 007`) |
+| `GET /api/v1/offers/{id}` | `GetOfferDetailUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Cliente conectado a detalle MVI; contrato backend 032 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
+| `POST /api/v1/offers/{id}/view` | `RegisterOfferViewUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Cliente conectado a detalle MVI; contrato backend 032 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
+| `POST /api/v1/offers/{id}/claim` | `CreateClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer (no invitado) | 20/min por usuario | Cliente conectado a confirmación de una unidad/QR real; backend 033 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
 | `GET /api/v1/offers/claims` | `GetMyClaimsUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-13) |
 | `PATCH /api/v1/offers/claims/{id}/cancel` | `CancelClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | 10/min por usuario | Propuesto / por confirmar backend (FT-13) |
-| `POST /api/v1/offers/claims/{code}/redeem` | `RedeemClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-14, spec 033) |
+| `POST /api/v1/offers/claims/{code}/redeem` | `RedeemClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer `MERCHANT` | 30/min por usuario | Cliente conectado a canje manual MVI; backend 033 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
 | `POST /api/v1/media/upload` | `MediaRepository` -> `MediaApiService` (`@Multipart <= 4.5 MB`, moderado) | Bearer | 20/dia por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 022) |
 | `POST /api/v1/offers` | `CreateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 20/hora por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 034) |
-| `GET /api/v1/merchants/my-offers` | `GetMerchantInventoryUseCase` -> `OffersRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 037) |
-| `PUT /api/v1/offers/{id}` | `UpdateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 035) |
-| `PUT /api/v1/offers/{id}/status` | `ChangeOfferStatusUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Pendiente (FT-16, spec 036) |
+| `GET /api/v1/merchants/my-offers` | `GetMerchantInventoryUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 037`) |
+| `PUT /api/v1/offers/{id}` | `UpdateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 035`) |
+| `PUT /api/v1/offers/{id}/status` | `ChangeOfferStatusUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 036`) |
 | `POST /api/v1/users/favorites/{id}` | `ToggleFavoriteUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-17, spec 038) |
 | `GET /api/v1/users/favorites` | `GetFavoritesUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-17) |
-| `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-18, spec 026) |
-| `POST /api/v1/feed/posts` | `CreateFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 10/hora por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-18, spec 024) |
+| `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Cliente implementado; GET oficial 404; backend spec 026 pendiente en main 01dad6e (2026-11-14, FT-18) |
+| `POST /api/v1/feed/posts` | `CreateFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 10/hora por usuario | Cliente implementado; backend spec 024 pendiente en main 01dad6e; sin POST real de prueba (2026-11-14, FT-18) |
 | `DELETE /api/v1/feed/posts/{id}` | `DeletePostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer autor | 20/hora por usuario | Pendiente (FT-19, spec 024) |
 | `POST /api/v1/feed/posts/{id}/like` | `TogglePostLikeUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-19, spec 039) |
 | `GET /api/v1/feed/posts/{id}/comments` | `GetPostCommentsUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Pendiente (FT-19, spec 025) |
@@ -55,13 +58,16 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `GET /api/v1/ml/search` | `SearchOffersUseCase` -> `DiscoveryRepository` -> `DiscoveryApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-20, spec 041) |
 | `GET /api/v1/ml/recommendations` | `GetRecommendationsUseCase` -> `DiscoveryRepository` -> `DiscoveryApiService` | Bearer | 30/min por usuario | Pendiente (FT-20, spec 042) |
 | `GET /api/v1/ml/alternatives` | `GetOfferAlternativesUseCase` -> `DiscoveryRepository` -> `DiscoveryApiService` | Publico o Bearer | 60/min por IP | Pendiente (FT-20, spec 043) |
-| `PUT /api/v1/users/device-token` | `RegisterDeviceTokenUseCase` -> `NotificationsRepository` -> `NotificationsApiService` | Bearer | 10/hora por usuario | Pendiente (FT-21, spec 027) |
-| `PUT /api/v1/users/settings` | `UpdateNotificationSettingsUseCase` -> `NotificationsRepository` -> `NotificationsApiService` | Bearer | 20/min por usuario | Pendiente (FT-21, spec 044) |
+| `PUT /api/v1/users/device-token` | `RegisterDeviceTokenUseCase` -> `NotificationsRepository` -> `NotificationsApiService` | Bearer | 10/hora por usuario | Cliente conectado a registro FCM real; requiere configuración Firebase oficial (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
+| `PUT /api/v1/users/settings` | `UpdateNotificationSettingsUseCase` -> `NotificationsRepository` -> `NotificationsApiService` | Bearer | 20/min por usuario | Cliente conectado a ajustes MVI; backend 044 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
+| `GET /api/v1/users/settings` | `NotificationsGetSettingsUseCase` -> `NotificationsRepository` -> `NotificationsApiService` | Bearer | Política backend; sin medición local | Cliente conectado a ajustes; backend 044 y GET oficial 401 verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
+| `POST /api/v1/offers/{id}/republish` | `RepublishOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | Política backend; sin medición local | Cliente conectado a historial/edición; contrato backend y Allow POST oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente, FT-16) |
 | `GET /api/v1/notifications` | `NotificationsRepository` -> `NotificationsApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-21) |
 | `PATCH /api/v1/notifications/read-all` | `MarkNotificationsReadUseCase` -> `NotificationsRepository` -> `NotificationsApiService` | Bearer | 20/min por usuario | Propuesto / por confirmar backend (FT-21) |
-| `POST /api/v1/ai/conversations` | `LoadAiConversationUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 20/hora por usuario | Borrador / pendiente backend (FT-24) |
-| `POST /api/v1/ai/messages` | `SendSensiMessageUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 30/hora por usuario | Borrador / pendiente backend (FT-24) |
-| `GET /api/v1/ai/conversations/{id}` | `LoadAiConversationUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer | 30/min por usuario | Borrador / pendiente backend (FT-24) |
+| `POST /api/v1/ai/conversations` | `LoadAiConversationUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 10/min por usuario | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
+| `POST /api/v1/ai/messages` | `SendSensiMessageUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 10/min por usuario (20/día) | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
+| `GET /api/v1/ai/conversations/{id}` | `LoadAiConversationUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer | 30/min por usuario | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
+| `DELETE /api/v1/ai/conversations/{id}` | `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 10/min por usuario | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
 | `GET /api/v1/friends` | `GetFriendsUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 30/min por usuario | Borrador / pendiente backend (FT-25) |
 | `POST /api/v1/friends` | `ConnectFriendByQrUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 20/hora por usuario | Borrador / pendiente backend (FT-25) |
 | `PATCH /api/v1/friends/{id}` | `RespondFriendRequestUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 20/hora por usuario | Borrador / pendiente backend (FT-25) |
@@ -80,6 +86,7 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | FT-06 | `PUT /api/users/profile`, `PUT /api/merchants/profile` | Recalculo `GEOGRAPHY(POINT, 4326)` en backend. |
 | FT-07 | `GET /api/offers/nearby` | Invitado: `radiusMeters = 2000` estricto. |
 | FT-08 | `DELETE /api/users/account` | 204/404 exito; purga local y remota. |
+| FT-29 | `POST /api/v1/merchants/activate`, `GET /api/v1/merchants/me`, `PUT /api/v1/merchants/profile` | Coordenadas opcionales de mapa interactivo; JWT renovado y estado comercial persistidos. |
 
 ## Plantilla para nuevas filas
 

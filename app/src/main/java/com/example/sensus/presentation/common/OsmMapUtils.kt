@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.location.Geocoder
@@ -45,6 +46,8 @@ private const val CAT_CIRCLE_RATIO = 0.78f
 private const val CAT_BORDER_WIDTH_DP = 2.5f
 private const val CAT_BITMAP_RATIO = 0.58f
 private const val PIN_HEIGHT_DP = 34
+private const val PIN_TAIL_DP = 6
+private const val PIN_TAIL_HALF_WIDTH_DP = 6f
 private const val PIN_TEXT_SIZE_SP = 11f
 private const val PIN_PRICE_SIZE_SP = 11.5f
 private const val PIN_NAME_LIMIT = 12
@@ -55,22 +58,6 @@ private const val PIN_MIN_WIDTH_DP = 64
 private const val PIN_CORNER_DP = 17f
 private const val PIN_BORDER_WIDTH_DP = 1.5f
 private const val PIN_RECT_INSET = 2f
-private const val OFFSET_42M_LAT = 0.00032
-private const val OFFSET_42M_LNG = 0.00022
-private const val OFFSET_88M_LAT = -0.00065
-private const val OFFSET_88M_LNG = 0.00048
-private const val OFFSET_195M_LAT = 0.00140
-private const val OFFSET_195M_LNG = -0.00110
-private const val OFFSET_415M_LAT = -0.00300
-private const val OFFSET_415M_LNG = -0.00240
-private const val OFFSET_1030M_LAT = 0.00720
-private const val OFFSET_1030M_LNG = -0.00620
-private const val OFFSET_1800M_LAT = -0.01250
-private const val OFFSET_1800M_LNG = 0.01100
-private const val OFFSET_2510M_LAT = 0.01780
-private const val OFFSET_2510M_LNG = 0.01480
-private const val OFFSET_3950M_LAT = -0.02750
-private const val OFFSET_3950M_LNG = -0.02400
 
 enum class MapLayerStyle(
     val title: String,
@@ -199,34 +186,22 @@ object OsmMapUtils {
     }
 
     fun localizeAndMeasureOffers(userLocation: UserLocation, offers: List<ProductOffer>): List<ProductOffer> {
-        val offsets = listOf(
-            OFFSET_42M_LAT to OFFSET_42M_LNG,
-            OFFSET_88M_LAT to OFFSET_88M_LNG,
-            OFFSET_195M_LAT to OFFSET_195M_LNG,
-            OFFSET_415M_LAT to OFFSET_415M_LNG,
-            OFFSET_1030M_LAT to OFFSET_1030M_LNG,
-            OFFSET_1800M_LAT to OFFSET_1800M_LNG,
-            OFFSET_2510M_LAT to OFFSET_2510M_LNG,
-            OFFSET_3950M_LAT to OFFSET_3950M_LNG
-        )
-        return offers.mapIndexed { index, offer ->
-            val (latOffset, lngOffset) = offsets[index % offsets.size]
-            val targetLat = userLocation.latitude + latOffset
-            val targetLng = userLocation.longitude + lngOffset
+        return offers.map { offer ->
             val distResults = FloatArray(1)
             Location.distanceBetween(
                 userLocation.latitude,
                 userLocation.longitude,
-                targetLat,
-                targetLng,
+                offer.latitude,
+                offer.longitude,
                 distResults
             )
-            val realMeters = distResults[0].toInt().coerceAtLeast(MIN_OFFER_METERS)
-            offer.copy(
-                latitude = targetLat,
-                longitude = targetLng,
-                distanceMeters = realMeters
-            )
+            val measuredMeters = distResults[0].toInt()
+            val realMeters = when {
+                measuredMeters > 0 -> measuredMeters
+                offer.distanceMeters > 0 -> offer.distanceMeters
+                else -> MIN_OFFER_METERS
+            }
+            offer.copy(distanceMeters = realMeters)
         }.sortedBy { it.distanceMeters }
     }
 
@@ -304,7 +279,9 @@ object OsmMapUtils {
 
     fun createStorePinBitmap(context: Context, storeName: String, price: String, isSelected: Boolean): Bitmap {
         val density = context.resources.displayMetrics.density
-        val heightPx = (PIN_HEIGHT_DP * density).toInt()
+        val pillHeightPx = (PIN_HEIGHT_DP * density).toInt()
+        val tailPx = (PIN_TAIL_DP * density).toInt()
+        val totalHeightPx = pillHeightPx + tailPx
         val textPaint = createPinTextPaint(density, isSelected)
         val pricePaint = createPinPricePaint(density, isSelected)
 
@@ -316,11 +293,12 @@ object OsmMapUtils {
         val minWidthPx = (PIN_MIN_WIDTH_DP * density).toInt()
         val widthPx = (nameWidth + priceWidth + (paddingHorizontal * 2) + spaceBetween).toInt().coerceAtLeast(minWidthPx)
 
-        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(widthPx, totalHeightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        drawPinBackgroundAndBorder(canvas, density, widthPx, heightPx, isSelected)
+        drawPinBackgroundAndBorder(canvas, density, widthPx, pillHeightPx, isSelected)
+        drawPinPointerTail(canvas, density, PinTailBounds(widthPx, pillHeightPx, totalHeightPx), isSelected)
 
-        val baselineY = (heightPx / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
+        val baselineY = (pillHeightPx / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
         canvas.drawText(displayName, paddingHorizontal, baselineY, textPaint)
         canvas.drawText(price, paddingHorizontal + nameWidth + spaceBetween, baselineY, pricePaint)
         return bitmap
@@ -361,4 +339,35 @@ private fun drawPinBackgroundAndBorder(canvas: Canvas, density: Float, widthPx: 
         strokeWidth = PIN_BORDER_WIDTH_DP * density
     }
     canvas.drawRoundRect(rect, corner, corner, borderPaint)
+}
+
+private data class PinTailBounds(
+    val widthPx: Int,
+    val pillHeightPx: Int,
+    val totalHeightPx: Int
+)
+
+private fun drawPinPointerTail(canvas: Canvas, density: Float, bounds: PinTailBounds, isSelected: Boolean) {
+    val centerX = bounds.widthPx / 2f
+    val halfBase = PIN_TAIL_HALF_WIDTH_DP * density
+    val overlapY = bounds.pillHeightPx - PIN_RECT_INSET
+    val tipY = bounds.totalHeightPx - PIN_RECT_INSET
+    val tailPath = Path().apply {
+        moveTo(centerX - halfBase, overlapY)
+        lineTo(centerX + halfBase, overlapY)
+        lineTo(centerX, tipY)
+        close()
+    }
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = if (isSelected) android.graphics.Color.parseColor("#6E4DDB") else android.graphics.Color.WHITE
+        style = Paint.Style.FILL
+    }
+    val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = if (isSelected) android.graphics.Color.parseColor("#5A3CB8") else android.graphics.Color.parseColor("#E2E8F0")
+        style = Paint.Style.STROKE
+        strokeWidth = PIN_BORDER_WIDTH_DP * density
+    }
+    canvas.drawPath(tailPath, fillPaint)
+    canvas.drawLine(centerX - halfBase, overlapY, centerX, tipY, strokePaint)
+    canvas.drawLine(centerX + halfBase, overlapY, centerX, tipY, strokePaint)
 }

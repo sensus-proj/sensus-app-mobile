@@ -37,19 +37,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.sensus.domain.model.ApartadoOrder
+import com.example.sensus.R
 import com.example.sensus.domain.model.CartItem
+import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
@@ -64,7 +67,10 @@ private const val LIST_MAX_HEIGHT_DP = 240
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CartBottomSheet(viewModel: CartViewModel = hiltViewModel(), onDismiss: () -> Unit, onCheckoutOrder: (ApartadoOrder) -> Unit) {
+fun CartBottomSheet(viewModel: CartViewModel = hiltViewModel(), onDismiss: () -> Unit, onClaimOffer: (ProductOffer) -> Unit) {
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect -> if (effect is CartViewEffect.OpenClaim) onClaimOffer(effect.offer) }
+    }
     val cartState by viewModel.viewState.collectAsState()
     val cart = cartState.storeCart
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -84,6 +90,7 @@ fun CartBottomSheet(viewModel: CartViewModel = hiltViewModel(), onDismiss: () ->
                 cart = cart,
                 onClearCart = { viewModel.dispatchIntent(CartViewIntent.ClearCart) }
             )
+            cartState.checkoutError?.let { Text(stringResource(R.string.cart_one_unit_contract), color = SensusRed) }
             Spacer(modifier = Modifier.height(14.dp))
             if (cart.isEmpty) {
                 EmptyCartContent()
@@ -93,9 +100,7 @@ fun CartBottomSheet(viewModel: CartViewModel = hiltViewModel(), onDismiss: () ->
                     onUpdateQuantity = { id, next -> viewModel.dispatchIntent(CartViewIntent.UpdateQuantity(id, next)) },
                     onRemoveOffer = { id -> viewModel.dispatchIntent(CartViewIntent.RemoveOffer(id)) },
                     onGenerateQr = {
-                        val order = ApartadoOrder.fromCart(cart)
-                        viewModel.dispatchIntent(CartViewIntent.ClearCart)
-                        onCheckoutOrder(order)
+                        viewModel.dispatchIntent(CartViewIntent.CheckoutApartado)
                     }
                 )
             }
@@ -141,14 +146,14 @@ private fun EmptyCartContent() {
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = "Tu bolsa de compras está vacía", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "Agrega ofertas de una tienda para apartarlas juntas con un solo QR.", fontSize = 12.sp, color = SensusTextMuted)
+            Text(text = stringResource(R.string.cart_one_unit_contract), fontSize = 12.sp, color = SensusTextMuted)
         }
     }
 }
 
 @Composable
 private fun FilledCartContent(cart: StoreCart, onUpdateQuantity: (String, Int) -> Unit, onRemoveOffer: (String) -> Unit, onGenerateQr: () -> Unit) {
-    SingleStoreBanner(storeName = cart.storeName.orEmpty())
+    SingleStoreBanner()
     Spacer(modifier = Modifier.height(12.dp))
     LazyColumn(
         modifier = Modifier
@@ -174,18 +179,18 @@ private fun FilledCartContent(cart: StoreCart, onUpdateQuantity: (String, Int) -
     ) {
         Icon(imageVector = Icons.Default.QrCode, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "Generar Código QR (${cart.totalItemsCount} productos)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(text = stringResource(R.string.cart_start_claim), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
     Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
-private fun SingleStoreBanner(storeName: String) {
+private fun SingleStoreBanner() {
     Surface(color = SensusPurple.copy(alpha = INFO_BG_ALPHA), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Todas las ofertas son de $storeName. Se generará un solo QR.", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = SensusPurple)
+            Text(text = stringResource(R.string.cart_one_unit_contract), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = SensusPurple)
         }
     }
 }

@@ -1,65 +1,48 @@
 package com.example.sensus.presentation.buyer
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sensus.R
 import com.example.sensus.domain.model.NotificationItem
-import com.example.sensus.theme.SensusBackground
-import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusPurpleLight
-import com.example.sensus.theme.SensusSuccess
-import com.example.sensus.theme.SensusTextMuted
-import com.example.sensus.theme.SensusTextPrimary
-import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.domain.model.NotificationsPreferences
+import kotlin.math.roundToInt
 
-private const val SECURITY_COLOR_HEX = 0xFFE11D48
-private const val ICON_BG_ALPHA = 0.12f
-private const val ACTION_BG_ALPHA = 0.08f
-
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel(),
@@ -67,178 +50,101 @@ fun NotificationsScreen(
     onNotificationActionClick: (NotificationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val notifState by viewModel.viewState.collectAsState()
-    var selectedCategory by remember { mutableStateOf("Todas") }
-    val categories = listOf("Todas", "Ofertas", "Reservas", "Seguridad")
-    val filteredNotifications = remember(selectedCategory, notifState.notifications) {
-        if (selectedCategory == "Todas") {
-            notifState.notifications
-        } else {
-            notifState.notifications.filter { it.category == selectedCategory }
+    val state by viewModel.viewState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val snackbars = remember { SnackbarHostState() }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        viewModel.processIntent(if (granted) NotificationsViewIntent.ActivateDevice else NotificationsViewIntent.PermissionDenied)
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect ->
+            val message = when (effect) {
+                NotificationsViewEffect.Saved -> R.string.notification_preferences_saved
+                NotificationsViewEffect.DeviceRegistered -> R.string.notification_preferences_registered
+            }
+            snackbars.showSnackbar(context.getString(message))
         }
     }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SensusBackground)
-    ) {
-        NotificationsTopBar(onNavigateBack = onNavigateBack)
-        NotificationCategoryFilterRow(
-            categories = categories,
-            selectedCategory = selectedCategory,
-            onSelectCategory = { selectedCategory = it }
-        )
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .navigationBarsPadding(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(filteredNotifications, key = { it.id }) { notif ->
-                NotificationCard(
-                    item = notif,
-                    onActionClick = { onNotificationActionClick(notif) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NotificationsTopBar(onNavigateBack: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shadowElevation = 2.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar",
-                        tint = SensusPurple
-                    )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Notificaciones",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SensusTextPrimary
-                )
-            }
-            TextButton(onClick = {}) {
-                Text(
-                    text = "Marcar leídas",
-                    fontSize = 12.sp,
-                    color = SensusPurple,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NotificationCategoryFilterRow(categories: List<String>, selectedCategory: String, onSelectCategory: (String) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        categories.forEach { cat ->
-            val isSelected = selectedCategory == cat
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) SensusPurple else Color.White,
-                shadowElevation = if (isSelected) 2.dp else 0.dp,
-                modifier = Modifier.clickable { onSelectCategory(cat) }
+    Column(modifier.fillMaxSize().padding(16.dp)) {
+        NotificationsPreferencesContent(state, viewModel::processIntent, onNavigateBack, {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
-                Text(
-                    text = cat,
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else SensusTextPrimary,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                )
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.processIntent(NotificationsViewIntent.ActivateDevice)
             }
+        }, Modifier.weight(1f))
+        SnackbarHost(snackbars)
+    }
+}
+
+@Composable
+fun NotificationsPreferencesContent(
+    state: NotificationsViewState,
+    onIntent: (NotificationsViewIntent) -> Unit,
+    onNavigateBack: () -> Unit,
+    onActivate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        IconButton(onClick = onNavigateBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.notification_preferences_back))
+        }
+        Text(stringResource(R.string.notification_preferences_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.notification_preferences_inbox))
+        if (state.isLoading) Text(stringResource(R.string.notification_preferences_loading))
+        state.error?.let { Text(stringResource(it.messageResource()), color = MaterialTheme.colorScheme.error) }
+        state.preferences?.let { preferences ->
+            NotificationsPreferenceControls(preferences, !state.isSaving && !state.isLoading) {
+                onIntent(NotificationsViewIntent.Edit(it))
+            }
+            Button(onClick = { onIntent(NotificationsViewIntent.Save) }, enabled = state.canSave) {
+                Text(stringResource(if (state.isSaving) R.string.notification_preferences_working else R.string.notification_preferences_save))
+            }
+        }
+        if (state.preferences == null && !state.isLoading) {
+            Button(onClick = { onIntent(NotificationsViewIntent.Retry) }) { Text(stringResource(R.string.notification_preferences_retry)) }
+        }
+        Text(stringResource(R.string.notification_preferences_activation_note))
+        Button(onClick = onActivate, enabled = !state.isRegistering) {
+            Text(stringResource(if (state.isRegistering) R.string.notification_preferences_working else R.string.notification_preferences_activate))
         }
     }
 }
 
 @Composable
-private fun NotificationCard(item: NotificationItem, onActionClick: () -> Unit) {
-    val (icon, iconColor) = resolveNotificationStyle(item.category)
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(iconColor.copy(alpha = ICON_BG_ALPHA)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            NotificationCardBody(item = item, onActionClick = onActionClick, modifier = Modifier.weight(1f))
-        }
-    }
+private fun NotificationsPreferenceControls(value: NotificationsPreferences, enabled: Boolean, edit: (NotificationsPreferences) -> Unit) {
+    NotificationsPreferenceSwitch(R.string.notification_preferences_push, value.pushEnabled, enabled) { edit(value.copy(pushEnabled = it)) }
+    NotificationsPreferenceSwitch(R.string.notification_preferences_offers, value.offerAlerts, enabled) { edit(value.copy(offerAlerts = it)) }
+    NotificationsPreferenceSwitch(R.string.notification_preferences_social, value.socialAlerts, enabled) { edit(value.copy(socialAlerts = it)) }
+    Text(stringResource(R.string.notification_preferences_radius, value.radiusKm))
+    val radiusDescription = stringResource(R.string.notification_preferences_radius, value.radiusKm)
+    Slider(
+        value = value.radiusKm.toFloat(),
+        onValueChange = { edit(value.copy(radiusKm = it.roundToInt())) },
+        enabled = enabled,
+        valueRange = NotificationsPreferences.MIN_RADIUS_KM.toFloat()..NotificationsPreferences.MAX_RADIUS_KM.toFloat(),
+        modifier = Modifier.semantics { contentDescription = radiusDescription },
+        steps = NotificationsPreferences.MAX_RADIUS_KM - NotificationsPreferences.MIN_RADIUS_KM - 1
+    )
 }
 
 @Composable
-private fun NotificationCardBody(item: NotificationItem, onActionClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-            Text(text = item.timeAgo, fontSize = 11.sp, color = SensusTextMuted)
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = item.message, fontSize = 12.sp, color = SensusTextSecondary, lineHeight = 16.sp)
-        if (item.actionText != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = SensusPurple.copy(alpha = ACTION_BG_ALPHA),
-                modifier = Modifier.clickable { onActionClick() }
-            ) {
-                Text(
-                    text = item.actionText,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SensusPurple,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
-        }
+private fun NotificationsPreferenceSwitch(label: Int, checked: Boolean, enabled: Boolean, change: (Boolean) -> Unit) {
+    val description = stringResource(label)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(stringResource(label), Modifier.weight(1f))
+        Switch(checked, change, enabled = enabled, modifier = Modifier.semantics { contentDescription = description })
     }
 }
 
-private fun resolveNotificationStyle(category: String) = when (category) {
-    "Ofertas" -> Icons.Default.LocalOffer to SensusPurpleLight
-    "Reservas" -> Icons.Default.AccessTime to SensusPurple
-    "Seguridad" -> Icons.Default.Security to Color(SECURITY_COLOR_HEX)
-    else -> Icons.Default.CheckCircle to SensusSuccess
+private fun NotificationsError.messageResource(): Int = when (this) {
+    NotificationsError.NETWORK -> R.string.notification_preferences_network
+    NotificationsError.SESSION -> R.string.notification_preferences_session
+    NotificationsError.UNAVAILABLE -> R.string.notification_preferences_unavailable
+    NotificationsError.VALIDATION -> R.string.notification_preferences_validation
+    NotificationsError.GENERIC -> R.string.notification_preferences_error
+    NotificationsError.FIREBASE -> R.string.notification_preferences_firebase
+    NotificationsError.PERMISSION -> R.string.notification_preferences_permission
 }

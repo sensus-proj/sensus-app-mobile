@@ -1,0 +1,14 @@
+<resources>
+    <string name="detail_refreshing">Actualizando disponibilidad…</string>
+    <string name="detail_retry">Reintentar</string>
+    <string name="detail_unavailable">Esta oferta no está disponible para apartar.</string>
+    <string name="detail_active_claim">Ya tienes un apartado activo de esta oferta.</string>
+    <string name="detail_claim_one">Apartar 1 unidad</string>
+    <string name="detail_feature_unavailable">Esta función aún no está disponible.</string>
+    <string name="detail_share_title">Compartir oferta</string>
+    <string name="detail_share_text">%1$s en %2$s</string>
+    <string name="detail_added_to_cart">Agregado a la bolsa</string>
+    <string name="cart_one_unit_contract">El apartado disponible reserva una unidad de una oferta. Selecciona una oferta y una unidad para continuar.</string>
+    <string name="cart_start_claim">Continuar al apartado</string>
+    <string name="detail_view_active_claim">Ver apartado activo</string>
+</resources>

@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import com.example.sensus.domain.model.GuestRadiusPolicy
+import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.base.ViewEffect
@@ -10,7 +11,9 @@ import com.example.sensus.presentation.common.MapLayerStyle
 
 data class BuyerMapViewState(
     val offers: List<ProductOffer> = emptyList(),
+    val nearbyMerchants: List<MerchantProfile> = emptyList(),
     val selectedOffer: ProductOffer? = null,
+    val selectedMerchant: MerchantProfile? = null,
     val userLocation: UserLocation = UserLocation(),
     val hasRealLocation: Boolean = false,
     val isLocating: Boolean = false,
@@ -24,10 +27,12 @@ data class BuyerMapViewState(
 
 sealed interface BuyerMapViewIntent : ViewIntent {
     data class OfferSelected(val offer: ProductOffer?) : BuyerMapViewIntent
+    data class MerchantSelected(val merchant: MerchantProfile?) : BuyerMapViewIntent
     data class LocationPermissionGranted(val granted: Boolean) : BuyerMapViewIntent
     data class RefreshLocation(val forceFresh: Boolean = true) : BuyerMapViewIntent
     data class RadiusSelected(val radiusKm: Float) : BuyerMapViewIntent
     data class LayerSelected(val layer: MapLayerStyle) : BuyerMapViewIntent
+    data object RefreshNearby : BuyerMapViewIntent
 }
 
 sealed interface BuyerMapViewEffect : ViewEffect {

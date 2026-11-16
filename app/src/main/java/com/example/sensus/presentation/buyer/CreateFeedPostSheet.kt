@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.sensus.R
+import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.FeedPolicy
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
@@ -65,7 +66,10 @@ internal fun CreateFeedPostSheet(state: CommunityViewState, onIntent: (Community
             FeedAttachmentControls(state.copy(isPublishing = state.isPublishing || isReadingImage), onIntent) {
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             }
-            state.errorMessage?.let { Text(it, color = SensusRed) }
+            state.publishError?.let {
+                val message = if (it is AppError.NotFound) stringResource(R.string.community_publish_unavailable) else it.message
+                Text(message, color = SensusRed)
+            }
             Button(
                 onClick = { onIntent(CommunityViewIntent.Submit) },
                 enabled = !state.isPublishing && !isReadingImage && state.draftText.isNotBlank(),

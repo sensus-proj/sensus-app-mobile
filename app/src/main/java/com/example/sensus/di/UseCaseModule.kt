@@ -9,7 +9,6 @@ import com.example.sensus.domain.usecase.RegisterUseCase
 import com.example.sensus.domain.usecase.RequestPasswordResetUseCase
 import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
-import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import dagger.Module
 import dagger.Provides
@@ -52,10 +51,6 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideUpdateProfileUseCase(container: SensusContainer): UpdateProfileUseCase = container.updateProfileUseCase
-
-    @Provides
-    @Singleton
-    fun provideUpdateMerchantProfileUseCase(container: SensusContainer): UpdateMerchantProfileUseCase = container.updateMerchantProfileUseCase
 
     @Provides
     @Singleton

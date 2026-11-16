@@ -34,3 +34,21 @@
 - Las pruebas instrumentadas de UI y SQLCipher están escritas y compiladas; su ejecución en dispositivo sigue pendiente.
 - La integración con los contratos desplegados del backend y la revisión formal de la slice siguen pendientes.
 - Cambios únicamente locales, sin commit, push, tag ni modificación de configuración de escáneres.
+
+
+## Corrección de integración — 2026-11-14
+
+- [x] T18.12 Contrastar contrato backend 024/026 y despliegue sin cambiar URL base, autenticación ni rutas documentadas; registrar evidencia del 404 y ausencia de endpoints.
+- [x] T18.13 Separar fallos de lectura/publicación en CommunityViewState/MVI; conservar borrador/foto y evitar que errores de carga aparezcan en el formulario.
+- [x] T18.14 Mostrar estado de servicio no disponible para NotFound y ocultar estado vacío al fallar carga; textos en recursos Android.
+- [x] T18.15 Agregar regresiones HTTP 404/autenticación, ViewModel y Compose; ejecutar compilación, tests, Kover, análisis y gates sin APK/AAB.
+- [ ] T18.16 Integración E2E con backend implementado/desplegado y contrato de respuesta aprobado (dependencia backend 024/026, no resuelta desde el cliente).
+
+
+### Evidencia de corrección local — 2026-11-14
+
+- 188 pruebas unitarias, 0 fallos/errores/omisiones; 6 regresiones nuevas de HTTP/estado. Kover actualizado 81.41% global; CommunityViewModel 59/63 líneas cubiertas (93.65%).
+- compileDebugKotlin, compileDebugAndroidTestSources, testDebugUnitTest, koverXmlReportDebug/koverVerifyDebug, detekt, ktlintCheck y lint: BUILD SUCCESSFUL. Los 5 scripts Python PASS.
+- 4 pruebas Compose nuevas compiladas, ejecución en dispositivo pendiente. No se generaron APK/AAB.
+- SAST disponible: 66 reglas, 0 hallazgos. La configuración completa no puede validarse porque el paquete remoto p/mobile devuelve 404; no se omite, sustituye ni modifica CI, y no se declara suite DevSecOps completa aprobada.
+- T18.16 sigue pendiente: backend main 01dad6e no registra feed; specs 024/026 pendientes. Informe en app/build/reports/community-backend-diagnosis.md. Sin commit/push ni despliegue.

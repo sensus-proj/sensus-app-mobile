@@ -237,6 +237,32 @@ Criterio de salida de FT-00: `compileDebugKotlin` verde, `check_layers.py` PASS 
 | Apartado CI/CD (2026-11-04) | Requerimiento de apartado visual y documental de CI/CD | Integrado job `cicd-summary` en `.github/workflows/ci.yml` para emitir tablero visual en `$GITHUB_STEP_SUMMARY`, creada guía `docs/cicd-pipeline.md` y añadido apartado oficial en `README.md` |
 | Conciliación Kotlin (2026-11-06) | Drift entre constitución (2.4.21) y build (2.3.20) | Ratificado uso de Kotlin 2.3.20 por instrucción de jefatura; constitución actualizada a v1.2.1 |
 
+### 6.6 Auditoría código contra SDD (2026-11-15)
+
+Se contrastó cada tarea abierta con el código de `app/src/` y se actualizaron `tasks.md`, `checklists/checklist.md`
+y `specs/README.md`. Las tareas parciales conservan `[ ]` con una nota que explica qué falta.
+
+| Feature | Tareas antes | Tareas ahora | Estado en el índice |
+|---|---|---|---|
+| FT-11 Ofertas cercanas | 0/16 | 4/16 (+7 parciales) | En implementacion |
+| FT-12 Detalle y vistas | 4/15 | 9/15 (+4 parciales) | En implementacion |
+| FT-16 Inventario y ciclo de vida | 1/12 | 6/12 (+6 parciales) | En implementacion |
+| FT-13, FT-14, FT-18, FT-21 | sin cambio | sin cambio (pendientes dependen de backend, dispositivo o Firebase) | En implementacion |
+| FT-15 | 14/14 | 14/14 | En revision |
+
+Evidencia: `testDebugUnitTest` (257 pruebas, 0 fallos), `compileDebugAndroidTestSources`, `koverVerifyDebug`, `detekt`
+y `ktlintCheck` verdes; `check_sdd`, `check_layers`, `check_endpoints`, `check_secrets` y `check_coverage --min 80`
+PASS. `lint` no se ejecutó.
+
+Hallazgos abiertos:
+
+- `MockDataProvider` sigue en `main`: respaldo de `getOffers()`, `getSampleStore()` en dashboard y perfil de comercio,
+  amigos de ejemplo (FT-25) y mensajes de ejemplo en Sensi (FT-24).
+- Sin paginación en ofertas cercanas (FT-11) ni filtros `C-35` (FT-12).
+- Favoritos (FT-17) muestra "no disponible"; FT-19, FT-20 y FT-26 sin código.
+- **Cruce con backend:** la app usa `POST /api/v1/media/moderate`, que la spec 017 del backend prohíbe como endpoint
+  público. Retirarlo en el backend sin coordinar rompe la carga de imágenes.
+
 ---
 
 ## 7. Estado actual del código
@@ -688,3 +714,175 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - No se generaron APK/AAB ni se modificaron gates, configuración de CI o exclusiones de análisis.
 
 - Validación posterior al logo: compilación Debug/Release e instrumentada, pruebas unitarias, Kover >=80%, detekt, ktlint y lint: BUILD SUCCESSFUL; scripts SDD/capas/endpoints/secretos en PASS.
+
+### FT-29 Activación de comercio con ubicación interactiva y persistencia en perfil — 2026-11-13
+
+- Se mantuvo el formulario mínimo de 3 campos (`nombreComercial`, `direccion`, `codigoPostal`) en `MerchantRegisterScreen` y se integró el botón adherido `PeekingCatLocationButton` + `PeekingCatPinBadge` (cabeza curiosa del gato Sensus en blanco y `SensusPurple`/`SensusPurpleDark`, sin amarillo/ámbar per Constitución §9.2) sobre un ícono de ubicación.
+- Al pulsar la opción se solicita permiso de ubicación en runtime (con fallback manual si falta permiso o falla el GPS), se consulta ubicación actual con `GetUserLocationUseCase.fresh()` y se abre `MerchantLocationPickerModal` (`osmdroid`) para mover/afinar el pin manualmente y aplicar dirección/código postal por geocodificación inversa (`AndroidReverseGeocodingRepository`, API `<33` y `>=33`) más `latitud`/`longitud` opcionales hacia `POST /api/v1/merchants/activate`.
+- La respuesta de activación (`MerchantActivationResult` con JWT actualizado y comercio) y la consulta `GET /api/v1/merchants/me` persisten en `SecurePreferences`/`SessionRepository` (`isMerchantRegistered`, `merchantStoreName`) de modo que en `BuyerProfileScreen` el switch de comerciante permanezca activo con el nombre comercial y permita entrar directo al modo comerciante al pulsar el texto o la tarjeta.
+- Evidencia móvil (`movil_Beto`): `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt` (`0` hallazgos), `ktlintCheck`, `lint`, `testDebugUnitTest` (`27` suites, `158` tests unitarios, `0` fallos, `0` errores, `0` omitidos), `koverVerifyDebug` y los 5 scripts Python (`check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py --min 80` con `90.72%`) en PASS.
+- Evidencia backend sincronizada (`sensus-back` en `Sprint3_B`, Specs `005` y `031` con coordenadas opcionales redondeadas a 6 decimales vía `ComercioCoordinateHelper`): `dotnet format --verify-no-changes`, `dotnet build --configuration Release` (`0` advertencias, `0` errores) y `node .github/scripts/check-specs.mjs specs` (`47` specs) en PASS; `dotnet test` local quedó bloqueado en este equipo por la directiva de Control de aplicaciones de Windows (`0x800711C7` al cargar `Sensus.Domain.dll`). Sin `git commit` ni `git push` hasta autorización explícita.
+
+### FT-15 — Conexión de SE-019..SE-021 y política de red de publicación — 2026-11-14
+
+- Verificado el flujo completo `MerchantNewOfferScreen` -> `MerchantNewOfferViewModel` (MVI) -> `CreateOfferUseCase`
+  -> `MediaRepository` (`POST /api/v1/media/upload`) + `OffersRepository` (`POST /api/v1/offers`) -> Retrofit, inyectado por
+  `PublishingModule`. La vista ya estaba conectada; no se cambiaron pantalla, ViewModel, dominio ni contratos.
+- Brecha corregida: ambos clientes usaban el timeout genérico de 15 s. Ahora siguen `docs/rate-matrix.md`:
+  ofertas 20 s / 0 reintentos; subida multipart 45 s / 1 reintento solo ante `IOException` (incluye timeout).
+  Las respuestas HTTP no se reintentan, para conservar el rechazo fail-closed de la moderación. Sin logger de cuerpos.
+- Pruebas nuevas en `PublishingApiTest` (timeouts, reintento único, fallo tras reintento, sin reintento HTTP y oferta
+  sin reintento ni caché ante timeout). Evidencia: 151 tests (0 fallos/errores/omisiones); Kover, detekt, ktlint, lint
+  y compilación instrumentada: BUILD SUCCESSFUL; SDD/capas/endpoints/secretos/cobertura PASS.
+- Solo cambios locales: sin commit, push, PR, APK/AAB ni cambios de gates, CI o umbrales. Medición real contra backend pendiente.
+
+### FT-15 — Diagnóstico del error de publicación en teléfono — 2026-11-14
+
+- La usuaria reportó «Ocurrio un error inesperado al procesar la solicitud» al registrar un producto.
+- Lectura del cliente: parseBackendErrorMessage prioriza `detail`; MediaRepositoryImpl y OffersRepositoryImpl propagan el mensaje HTTP hasta el ViewModel.
+- Consulta GET pública a `/openapi/v1.json`: HTTP 500, `title` «Error interno del servidor», `detail` «Ocurrió un error inesperado al procesar la solicitud.». GET `/api/v1/offers/nearby` con coordenadas públicas: HTTP 401 sin credenciales. No se enviaron tokens, fotos ni productos.
+- La coincidencia del mensaje es evidencia de una posible respuesta del backend, no prueba de la causa ni del endpoint que falló en el teléfono. Pendiente capturar método, ruta, estado HTTP e identificador de correlación del intento real, sin cuerpos ni credenciales, y contrastar el contrato desplegado.
+- `git fetch origin` y comparación HEAD...origin/main: 0/0, commit a122726; cambios locales conservados. Sin cambios de código, APK/AAB, commit ni push.
+
+### Diagnóstico — activación de comercio sin confirmación remota — 2026-11-14
+
+- La usuaria confirma que sin imagen se muestra «Solo comerciantes pueden publicar ofertas». OffersRepositoryImpl utiliza ese texto como fallback HTTP 403; falta captura HTTP para distinguir texto remoto y fallback.
+- Hallazgo comprobado: MerchantRegisterScreen muestra Toast de éxito y ejecuta onRegisterSuccess inmediatamente tras despachar ActivateMerchant (líneas 144–145). MerchantRegisterViewModel solo invoca syncSession y emite ActivationSuccess sin confirmación remota (líneas 20–21); SessionRepositoryImpl.syncSession relee estado local. No registra comercio ni actualiza credenciales en ese recorrido.
+- MainAppContainer activa isMerchantRegistered/isMerchantMode en memoria tras ese callback. La UI habilitada no acredita autorización del backend. Corrige la evaluación anterior: conectar FT-15 a Retrofit no completa el prerrequisito de alta/autorización de comercio.
+- No se encontró contrato de alta/activación de comercio en el catálogo ni en MerchantApiService (solo GET me y PUT profile). Pendiente obtener contrato backend y semántica de actualización de permisos antes de implementar, sin inventar rutas ni roles.
+- Captura de App Inspection: No Process Selected. Seleccionar proceso depurable de la app en el teléfono para capturar ruta/estado, sin compartir Authorization.
+- Sin cambios de código, compilación, APK/AAB, commit ni push en este diagnóstico.
+
+### Integración local de develop — 2026-11-14
+
+- A solicitud de la usuaria, descargada origin/develop e integrada por fast-forward en movil_Rocio, de a122726 a 87646f7 (2 commits; 96 archivos).
+- Cambios locales previos respaldados en stash `codex-local-before-develop-2026-11-14` y restaurados. Resueltos conflictos de MediaRepositoryImpl, PublishingApiTest y memoria.md conservando las novedades remotas y los ajustes locales de timeout/reintento y sus pruebas.
+- La versión recibida incorpora alta remota de comercio, actualización de sesión, ubicación y ciclo de vida de ofertas. Su funcionamiento contra el backend desplegado requiere verificación en teléfono.
+- Gates Python de estructura, capas, endpoints y secretos: PASS. Gradle: compileDebugKotlin, testDebugUnitTest (182 pruebas, 0 fallos/errores/omisiones), koverVerify, detekt, ktlintCheck, lint y compileDebugAndroidTestSources: BUILD SUCCESSFUL. check_coverage.py --min 80: PASS.
+- Sin commit, push ni generación de APK/AAB; respaldo stash conservado.
+
+### Auditoría Swagger y conexiones de vistas — 2026-11-14
+
+- Solicitud: contrastar las vistas con https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/swagger/index.html.
+- HTML e index.js: HTTP 200. La configuración apunta a /swagger/v1/swagger.json, que devolvió HTTP 500; no fue posible leer el inventario OpenAPI desplegado. No se atribuyen al Swagger rutas extraídas solo del catálogo local.
+- Comparación estática: 49 operaciones /api/v1 del catálogo local; 27 operaciones Retrofit (incluye alternativas), 18 coincidencias exactas, 31 sin declaración Retrofit (15 pendientes y 16 propuestas/borradores). Hay 9 rutas Retrofit sin fila /api/v1 exacta en el catálogo.
+- Brechas comprobadas: detalle/vistas de oferta, apartados/cancelación/canje QR, favoritos, interacciones del feed, ML/búsqueda, notificaciones, amigos, Sensi y reseñas. MerchantSalesScreen muestra verificación local sin validación remota. ActiveApartadoScreen dibuja un QR sin codificar un identificador recibido del servidor.
+- Conexiones existentes tras develop: activación/sesión de comercio, perfil, cercanía/mapa, creación/edición/stock/estado de ofertas y carga/publicación del feed. Esto no acredita E2E contra backend desplegado.
+- Informe detallado con operaciones y referencias: app/build/reports/endpoint-ui-audit-2026-11-14.md. Sin cambios de código, APK/AAB, pruebas nuevas, commit ni push.
+
+### SE-027/SE-028 — «Servicio no disponible» en Comunidad — 2026-11-14
+
+- La usuaria compartió captura de Comunidad y formulario de post con «Servicio no disponible» y foto seleccionada.
+- Comprobación GET sin credenciales ni datos de usuario: `/api/v1/feed/nearby?lat=19.4326&lng=-99.1332&radiusMeters=2000&page=1&pageSize=20` devolvió HTTP 404 y cuerpo vacío. `/swagger/v1/swagger.json` continúa devolviendo HTTP 500. Falta confirmar contrato publicado y petición autenticada del teléfono para distinguir ruta equivocada, despliegue ausente u otra política del servidor.
+- FeedRepositoryImpl.createPost usa «Servicio no disponible.» como fallback para 404; la lectura usa «La comunidad no está disponible.». La coincidencia es compatible con error de publicación, pero no acredita HTTP/endpoint exacto del intento del teléfono (puede venir mensaje remoto).
+- La pantalla y el formulario muestran el mismo CommunityViewState.errorMessage: el texto duplicado no prueba dos peticiones fallidas. CommunityScreen también muestra estado vacío cuando hay error, por lo que «Todavía no hay publicaciones» no acredita un feed vacío.
+- No se enviaron POST reales ni fotos ni credenciales; no se cambiaron rutas a valores supuestos. Diagnóstico sin cambios de código, APK/AAB, commit ni push.
+
+
+### Corrección FT-18 sin cambiar conexión — 2026-11-14
+
+- Autorización de la usuaria: diagnosticar y corregir Comunidad manteniendo la conexión habitual, metodología SDD y Clean Architecture + MVI.
+- Evidencia de causa: se consultó repositorio backend sensus-proj/sensus-back (copia de lectura bajo app/build/backend-contract-audit, no se editaron fuentes backend). Main 01dad6e1e7adc07f9da969cb4875414b3d77ece1 registra Auth/User/Merchant/Offer/Media, no feed; specs 024 y 026 tienen contrato borrador y tareas pendientes. No se encontraron archivos Feed/Post/Publicacion en src de main ni de Sprint3_B 3ae254c, sprint3_oscar 6ce4b36 y Back_Rodrigo 79a7d92 consultadas. El 404 del GET oficial coincide con ese servicio ausente; no se conoce el hash exacto desplegado en AWS.
+- Se conservan URL base, rutas de FeedApiService, DTO/repositorio remoto, Retrofit e interceptor. No se reemplaza servidor, no se inventan rutas ni se falsea publicación exitosa.
+- Corrección móvil: CommunityViewState separa feedError/publishError con AppError y carga exitosa explícita. CommunityViewModel no borra el error de publicación al refrescar ni el de lectura al editar. Tras fallo conserva borrador/foto/comercio. Compose muestra NotFound con strings.xml, no duplica errores entre formulario/feed ni muestra vacío tras fallo; paginación automática se detiene ante error para evitar bucle.
+- SDD actualizado: spec, plan, tasks T18.12..15 y checklist; T18.16 permanece pendiente de backend implementado/desplegado y E2E. Catálogo documenta estado real de specs 024/026.
+- Verificación: 188 pruebas unitarias, 0 fallos/errores/omisiones. 6 regresiones nuevas (2 HTTP con autenticación original, 4 de ViewModel). Kover XML regenerado: 81.41% global; CommunityViewModel 59/63 líneas cubiertas (93.65%). 4 pruebas Compose nuevas compiladas; ejecución instrumentada pendiente.
+- compileDebugKotlin, compileDebugAndroidTestSources, testDebugUnitTest, koverXmlReportDebug, koverVerifyDebug, detekt, ktlintCheck y lint: BUILD SUCCESSFUL. Estructura/capas/endpoints/secretos/cobertura Python: PASS. Estilo corregido sin cambiar umbrales ni exclusiones.
+- SAST: configuración completa solicitada con p/default, p/owasp-top-ten y p/mobile falla porque p/mobile devuelve 404. Evidencia guardada; no se modifica CI/configuración ni se declara toda la suite aprobada. Corrida separada de paquetes disponibles: 66 reglas aplicables sobre 4 archivos Kotlin modificados, 0 hallazgos.
+- Informes: app/build/reports/community-backend-diagnosis.md, community-full-check.log y community-semgrep*.json. Sin commit, push, APK/AAB ni despliegue. El móvil se corrige, pero carga/publicación real permanecen bloqueadas hasta implementar/desplegar backend 024/026 en la misma URL y completar su contrato.
+
+
+### Vinculación de endpoints publicados al frontend — 2026-11-14
+
+- Autorización: implementar únicamente endpoints ya publicados, conservar conexión oficial previa a esta conversación y seguir SDD/Clean Architecture + MVI/Hilt; sin inventar rutas ni subir cambios. Se preservan todos los cambios locales anteriores; Comunidad se deja como estaba tras su corrección previa.
+- Conexión corroborada en historial GitHub móvil: 3a6e99a usaba localhost de desarrollo, 5fd03fc migró a EC2; 78556bb (2026-11-09, previo a esta conversación) estableció https://zqqdwovx81.execute-api.us-east-2.amazonaws.com/. Main a122726 y develop 87646f7 conservan esa URL. No se sustituye por Swagger: Swagger es documentación del mismo servidor.
+- Contratos corroborados en sensus-proj/sensus-back main 01dad6e1e7adc07f9da969cb4875414b3d77ece1. Verificación no mutante de publicación: GET detalle 401; GET sobre view/claim/redeem/republish/device-token 405 con Allow POST o PUT; OPTIONS users/settings 405 Allow GET,PUT. No se ejecutaron mutaciones reales, no se usaron credenciales/fotos/códigos de usuarios para probar.
+- Ocho operaciones vinculadas: GET offers/{id}, POST offers/{id}/view, POST offers/{id}/claim, POST offers/claims/{code}/redeem, POST offers/{id}/republish, GET/PUT users/settings y PUT users/device-token (todas bajo /api/v1).
+- FT-12: adaptador/repo dedicados de detalle, DTO exacto, caché pública OfferDao/SQLCipher, casos de uso y ProductDetailViewModel. ProductDetailScreen refresca disponibilidad y registra una vista sin bloquear ante fallo de métrica; bloquea apartado sin detalle válido, vencido/sin stock o con apartado existente. No inventa horarios, pagos, verificación ni reseñas del comercio. Ver apartado activo abre código confirmado de esta sesión sin crear otro.
+- FT-13/14: ClaimsApiService/ClaimsRepositoryImpl/casos puros/Hilt, guardas de sesión/rol/identidad, payload/JSON/fechas inválidos rechazados. ClaimOfferScreen confirma explícitamente una unidad, solo codifica el qrPayload real con ZXing y oculta QR vencido. Confirmaciones por oferta solo en memoria, eliminadas al cambiar autenticación. No existe GET publicado para recuperarlas tras reinicio; se informa limitación sin fabricar código ni otro POST. MerchantSalesScreen realiza canje manual, sin éxito simulado ni cámara declarada como operativa.
+- Navegación: eliminadas rutas activas a apartados/QR generados localmente y fallback de oferta ficticia. Bolsa prepara solo una oferta/una unidad y navega a confirmación sin vaciar antes de respuesta. No se afirma retirada automática posterior de bolsa. Historial/cancelación/favoritos/Sensi/amigos/reseñas y demás propuestas no se conectan por no estar publicados. Rutas de mantenimiento/administrador no se exponen a los roles comprador/comercio.
+- FT-16: Republicar desde Mi Tienda -> De baja -> Gestionar; solo archivadas/vencidas, nuevo stock/fechas futuras, request exacto y respuesta HTTP 200 autoritativa, actualiza caché. Refresco al reingresar dashboard mantiene consulta remota existente.
+- FT-21: Notificaciones muestra preferencias reales GET/PUT (radio 1..50 validado por contrato), sin bandeja fake ni marcar-leídas sin endpoint. Activación solicita permiso Android13+ y usa ID/token reales del SDK, sin persistencia manual/logging de credenciales. Guardas previas a API/SDK y descarte de resultados de otra identidad. Recursos oficiales Firebase no existen en esta copia: activación falla cerrada; no se inventan configuraciones. Recepción/canales/renovación completa permanecen pendientes.
+- Dependencias verificadas en Maven oficial: ZXing core 3.5.3, Firebase Messaging 24.1.2 y desugar_jdk_libs 2.1.5. Se comprobó que Firebase 26.0.2 introducía metadata Kotlin 2.1 incompatible con Room 2.6.1; se utiliza 24.1.2 compatible sin cambiar Kotlin/Room/arquitectura ni omitir Kapt. OSV no reportó vulnerabilidades conocidas en esos tres artefactos/versiones consultados; no sustituye SCA transitiva de CI.
+- Validación final real: 257 tests unitarios, 0 fallos/errores/omisiones; Kover XML regenerado 82.82% (1924 líneas cubiertas/399 no cubiertas). compileDebugKotlin, compileDebugAndroidTestSources, testDebugUnitTest, koverXmlReportDebug, koverVerifyDebug, lint, detekt y ktlintCheck: BUILD SUCCESSFUL. Nuevas pruebas Compose compiladas, no ejecutadas en dispositivo. No se generaron APK/AAB.
+- Cinco scripts SDD/capas/endpoints/secretos/cobertura: PASS. Hallazgos de estilo y fixture JVM de excepción externa se corrigieron sin relajar aserciones, umbrales ni reglas; fixtures de sesión generan valores efímeros en ejecución en vez de literales con apariencia de secretos.
+- SAST final disponible: 67 reglas aplicables sobre 64 archivos Kotlin modificados, 0 hallazgos. La suite configurada completa mantiene bloqueo externo por p/mobile 404; no se cambia CI/configuración ni se afirma ejecución remota CodeQL/Snyk/otros ni aprobación de merge.
+- SDD/bitácora conciliados para FT-12/13/14/16/21 sin cerrar features completas. Guía de pantallas, contratos, rutas excluidas y prerrequisitos: docs/published-endpoints-frontend.md. Evidencia local: app/build/reports/published-endpoints-result.log, reportes JUnit/Kover/Lint y published-endpoints-semgrep-final.json.
+- Sin commit, push, PR, tag ni despliegue; sin cambios de constitución, scripts, umbrales o workflows. E2E con cuentas reales y dispositivo pendiente de autorización/entorno.
+---
+
+## Bitácora - FT-24 Sensi IA: Resolución de D-6, enmienda en backend y conciliación de artefactos
+
+- **Fecha:** 2026-11-13
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`) · **Backend:** `C:\Users\Rodrigo\source\repos\sensus-back`
+- **Decisión D-6 resuelta:** vía generativa **con enmienda**. Se descartaron la vía determinista pura (no cumple el asistente conversacional comprometido en Tesina y Formato de Aceptación) y el retiro de P-25.
+- **Hallazgo que motivó la enmienda:** `constitution.md` §2.2 del backend admitía solo tres proveedores externos (moderación, push, Cloudinary) y exigía enmienda para cualquier otro; ADR 0009 vetaba servicios de ML gestionados; `FR-045-07` fija techo de 1.00 USD/mes. La excepción de OpenAI existente estaba acotada a moderación, por lo que un GPT generativo no cabía sin enmienda.
+- **Backend (`sensus-back`), artefactos creados o modificados:**
+  1. `docs/adr/0011-asistente-generativo-sensi.md` (Aceptada): recuperación determinista en backend + redacción generativa acotada a un conjunto cerrado de candidatos; total recalculado en backend; moderación de entrada y salida fail-closed; degradación determinista ante fallo; clave en Secrets Manager. No sustituye ADR 0009 (041–043 siguen deterministas).
+  2. `constitution.md` **v1.3.0 → v1.4.0**: cuarta excepción de proveedor externo y alta en el stack (§2.1, §2.2); nueva prohibición de acceso del proveedor a datos/credenciales/herramientas (§2.2); moderación generativa y cálculo de importes en backend (§2.4); alcance ampliado (§2.5); registro §4.6; excepción **`EX-001`** a P-VI en Apéndice E (techo 1.00 USD, responsable por asignar).
+  3. `specs/046-asistente-sensi-ia/` (4 artefactos + `contracts/openapi.yaml`): 17 FR, 7 NFR, 9 CA; Constitution Check **PASS CON OBSERVACIONES** por `EX-001`.
+  4. `specs/requirements.md` (+24 filas 046), `specs/README.md` (48 specs, Ola 5: 5), `docs/adr/README.md`.
+  - Evidencia: `node .github/scripts/check-specs.mjs specs` → **48 especificaciones, estructura SDD correcta**.
+- **Móvil, conciliación de `specs/FT-24-sensi-ia/`:** estado `Borrador` → `Aprobada`; contrato unificado en los tres endpoints ya registrados en `docs/endpoints-internos.md` (retirado `POST /api/v1/ai/chat` del plan); nombres canónicos fijados (`AiChatApiService`, `AiChatRepositoryImpl`, `SendSensiMessageUseCase`, `AiMessageEntity`/`AiMessageDao`; retirados `SensiAiApiService`, `SensiRepositoryImpl`, `AskSensiUseCase`); RF-24-06..11 añadidos. `docs/endpoints-internos.md` y `docs/rate-matrix.md` actualizados.
+- **Auditoría de código de Sensi (corrige la bitácora del 2026-11-11):**
+  - `SensiChatScreen.sendUserMessage(...)` **fabrica la respuesta de Sensi en `app/src/main`** (`"Combo Express Inteligente"`, `SAMPLE_COMBO_PRICE`), violando la prohibición del propio `plan.md`.
+  - La pantalla muta una `MutableList` local y nunca despacha `SensiChatViewIntent.SendMessage`: el flujo MVI está puenteado.
+  - **`SensiChatScreen` no bloquea invitados**: `GuestPromptDialog` solo existe en `MainAppMenu.kt` y cubre el apartado, no P-25. La afirmación del 2026-11-11 era inexacta para esta pantalla.
+  - `SensiChatViewModel` sigue sembrando desde `MockDataProvider.sampleChatMessages` vía `StoreRepository.getSampleChatMessages()`.
+- **Pendiente:** despliegue de Spec 046 en AWS; asignar responsable de `EX-001`; implementación de T24.2–T24.8. Sin cambios en código Kotlin, Gradle, CI ni gates; sin commit, push, PR ni tag.
+
+---
+
+## Bitácora - FT-24 Sensi IA: Conexión Frontend Móvil a Endpoints Oficiales, Caché Room v5 y Retiro Total de Mocks
+
+- **Fecha:** 2026-11-15
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`)
+- **Objetivo completado:** Implementación integral de FT-24 conectando `SensiChatScreen` y `SensiChatViewModel` a los endpoints REST de Sensi IA (`/api/v1/ai/*`), saneamiento de datos simulados y persistencia cifrada en Room (versión 5).
+- **Saneamiento de mocks (RF-24-05, RF-24-06):**
+  - Eliminado por completo `MockDataProvider.sampleChatMessages`, `StoreRepository.getSampleChatMessages()` y su implementación en `StoreRepositoryImpl`.
+  - Eliminada la respuesta simulada fabricada en `SensiChatScreen.sendUserMessage(...)` y la constante `SAMPLE_COMBO_PRICE`. Verificación: `grep -rn "SAMPLE_COMBO_PRICE\|sampleChatMessages\|Combo Express Inteligente" app/src/main` devuelve 0 resultados.
+- **Capa Domain (RF-24-08):**
+  - Modelos puros creados en `domain/model/AiChatModels.kt`: `ScreenContext`, `CitedOffer`, `RecommendedPackage`, `AiConversation`, `AiChatMessage`, `AiTurn`, `SensiResult`. Sin dependencias de Android ni serialización.
+  - Interfaz de repositorio `AiChatRepository` en `domain/repository/`.
+  - Casos de uso `SendSensiMessageUseCase` (con validación de 1..1500 caracteres y bloqueo a invitados) y `LoadAiConversationUseCase` en `domain/usecase/`.
+- **Capa Data (RF-24-09, RF-24-10, RF-24-11):**
+  - `data/remote/dto/AiDtos.kt`: DTOs con `@Serializable` y `@SerialName` exactos (`screen_context` en `snake_case`, `recommendedPackage.items`, `ProblemDetailsDto`).
+  - `data/remote/api/AiChatApiService.kt`: Rutas oficiales `POST /api/v1/ai/conversations`, `POST /api/v1/ai/messages`, `GET /api/v1/ai/conversations/{id}`, `DELETE /api/v1/ai/conversations/{id}`.
+  - `data/remote/NetworkClient.kt`: Timeout de 30 s (`AI_CHAT_TIMEOUT_SECONDS`) y `publishingHttpClient` sin `loggingInterceptor` para no registrar el texto del usuario ni su ubicación en logcat.
+  - `data/local/db/entity/AiMessageEntity.java` y `data/local/db/dao/AiMessageDao.java`: Caché local de mensajes Room con índice en `conversationId`.
+  - Migración `MIGRATION_4_5` en `SensusDatabaseMigrations.java`, incremento de base de datos a `version = 5` en `SensusDatabase.java` y registro en `DatabaseFactory.kt`.
+  - `data/repository/AiChatRepositoryImpl.kt`: Manejo de errores HTTP (400 ProblemDetails, 401, 403, 404, 429 con `Retry-After`), inversión cronológica de mensajes de lectura y fallback a caché local.
+- **Capa Presentation & MVI (RF-24-01, RF-24-07):**
+  - `SensiChatContract.kt`: `SensiChatViewState` inmutable (con `messages`, `isTyping`, `isSending`, `isGuest`, `showGuestPrompt`, `isDegraded`, `retryAfterSeconds`, `errorMessage`), `SensiChatViewIntent` y `SensiChatViewEffect`.
+  - `SensiChatViewModel.kt`: Flujo MVI reactivo con envío optimista, ticker de cuenta regresiva en 429, reintento único ante 404, degradación visual y bloqueo de invitado.
+  - `SensiChatScreen.kt`: Sin estado local mutable; UI conectada a `viewState`, tarjetas de `RecommendedPackage` con desglose de ofertas citadas (precio, ahorro, stock, distancia), aviso de modo básico y diálogo `GuestPromptDialog` para invitados.
+- **Inyección de dependencias:**
+  - `di/AiChatModule.kt`, `di/DatabaseModule.kt` y `data/di/SensusContainer.kt`.
+- **Pruebas añadidas:**
+  - `AiDtosTest`: serialización de `screen_context`, deserialización con y sin `recommendedPackage`, y RFC 9110 ProblemDetails.
+  - `AiChatUseCasesTest`: validaciones de 1..1500 caracteres, bloqueo de invitado y delegación.
+  - `AiChatApiTest`: pruebas MockWebServer para 200 normal, 200 degraded, 400 moderación, 403, 404, 429 Retry-After, timeout y verificación de que el cliente HTTP no registra cuerpos.
+  - `SensiChatViewModelTest`: pruebas con Turbine para todo el ciclo de vida MVI.
+- **Verificación:** `check_endpoints.py`, `check_sdd.py`, `check_layers.py`, `check_secrets.py` en PASS. Sin commit ni push en el móvil.
+
+## Bitácora - FT-24 Sensi IA: Renderizado Markdown de las respuestas del agente (2026-11-16)
+
+- **Contexto:** con el backend ya respondiendo con el modelo, las respuestas llegaban con marcadores Markdown (`**Producto:**`, listas) que se mostraban como texto plano.
+- **Cambio:** `presentation/common/MarkdownParser.kt` (parser puro de un subconjunto seguro: negritas, cursivas, código en línea, encabezados, viñetas, listas numeradas; marcadores sin cierre quedan literales; HTML y enlaces no se interpretan) y `MarkdownText.kt` (Compose, sin dependencias). `SensiChatScreen.ChatBubble` lo usa solo para mensajes del asistente; los del usuario siguen en texto plano.
+- **Verificación:** `MarkdownParserTest` (12 pruebas), 312 pruebas en verde, `check_layers`, `check_sdd`, `check_secrets` y cobertura Kover 84.01 % en PASS. No se instaló en el dispositivo (sin conexión `adb`) ni se verificó visualmente. Sin commit ni push.
+
+## Bitácora - FT-24 Sensi IA: cierre de la app al entrar a Sensi (E-01 y E-02) (2026-11-16)
+
+- **Síntoma:** la app se cerraba al abrir la pestaña de Sensi. Ocurrió dos veces con causas distintas.
+- **E-01 (2026-11-15):** `IllegalStateException: Cannot access database on the main thread`. Los DAO de Room se llamaban desde el hilo principal en `AiChatRepositoryImpl`; las pruebas con DAO simulados no lo detectaron. Corregido con `withContext(Dispatchers.IO)`.
+- **E-02 (2026-11-16):** `SQLiteException: file is not a database` (SQLCipher). `SecurePreferences.clearAll()` (cierre de sesión, borrado de cuenta y 401 en `AuthInterceptor`) borraba también la clave de la base; al siguiente arranque se generaba otra y el archivo cifrado con la anterior no abría. Corregido: `clearAll()` conserva `KEY_DB_PASSPHRASE`; `DatabaseFactory` recrea la base si no se descifra; el repositorio de Sensi trata cualquier fallo de Room como caché vacía.
+- **Prevención:** nuevo `docs/errores-conocidos.md` con diagnóstico por `adb logcat`, regla 15 en `AGENTS.md` y sección nueva en `CHECKLIST_PR.md`. Pruebas de regresión: `SecurePreferencesClearAllTest` y `AiChatLocalCacheFailureTest`.
+- **Lección:** una suite de pruebas en verde no garantiza que la pantalla abra. Los cambios de persistencia o sesión se verifican en el teléfono (abrir Sensi, cerrar sesión, volver a entrar, abrir Sensi).
+
+## Bitácora - FT-24 Sensi IA: tarjeta de oferta con acciones (2026-11-16)
+
+- **Cambio:** las ofertas que el texto de Sensi menciona se muestran como tarjeta bajo la burbuja (`SensiOfferComponents.kt`): imagen, badge de descuento, tienda y distancia, descripción, precios y ahorro, stock, vigencia y dirección. Botones: **Apartar** (flujo de apartado existente), **Cómo llegar** (solo si el backend envía coordenadas) y **Ver detalle**.
+- **Datos:** `CitedOffer`/`CitedOfferDto` ampliados (descripción, descuento, imagen, categoría, vigencia, dirección, coordenadas). El backend los completa desde el repositorio (FR-046-18, `CitedOfferEnricher`); mientras no esté desplegado la tarjeta se muestra con los datos básicos. `visibleOfferCards` filtra en el cliente a las ofertas mencionadas (tope 5).
+- **Room v6:** columna `offersJson` en `ai_messages` con `MIGRATION_5_6` para que las tarjetas sobrevivan al reabrir el chat.
+- **Cobertura:** la lógica (`SensiOfferMapper.kt`) cuenta en Kover y tiene pruebas; la UI Compose va en un archivo `*Components*`, excluido por convención como el resto de pantallas. Cobertura 84.24 %.
+- **Verificación:** 335 pruebas en verde y `check_layers`/`check_sdd`/`check_secrets` en PASS. En el teléfono se comprobó que el chat abre, que el Markdown se ve bien y que la tarjeta aparece con el backend actual. **No se verificó en el teléfono** el toque de los botones ni la tarjeta con datos completos (imagen, dirección, Cómo llegar): requiere el backend desplegado. Sin commit ni push.

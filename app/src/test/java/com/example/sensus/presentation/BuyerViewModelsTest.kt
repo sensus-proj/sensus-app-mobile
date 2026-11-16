@@ -3,22 +3,27 @@ package com.example.sensus.presentation
 import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.AiConversation
 import com.example.sensus.domain.model.MapLayer
+import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.model.UserProfile
+import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.CartRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
-import com.example.sensus.domain.repository.StoreRepository
+import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.LoadAiConversationUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
+import com.example.sensus.domain.usecase.SendSensiMessageUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import com.example.sensus.presentation.buyer.BuyerHomeViewEffect
 import com.example.sensus.presentation.buyer.BuyerHomeViewIntent
@@ -31,7 +36,6 @@ import com.example.sensus.presentation.buyer.BuyerProfileViewModel
 import com.example.sensus.presentation.buyer.CartViewIntent
 import com.example.sensus.presentation.buyer.CartViewModel
 import com.example.sensus.presentation.buyer.CommunityViewModel
-import com.example.sensus.presentation.buyer.NotificationsViewIntent
 import com.example.sensus.presentation.buyer.NotificationsViewModel
 import com.example.sensus.presentation.buyer.RouteMapViewIntent
 import com.example.sensus.presentation.buyer.RouteMapViewModel
@@ -278,10 +282,8 @@ class BuyerViewModelsTest {
         coEvery { cartRepo.cart } returns cartFlow
 
         val offer = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
-        val sampleOrder = com.example.sensus.domain.model.ApartadoOrder.fromSingleOffer(offer, 2)
-        coEvery { cartRepo.createApartadoOrder() } returns sampleOrder
 
-        val vm = CartViewModel(cartRepo)
+        val vm = CartViewModel(cartRepo, com.example.sensus.domain.usecase.PrepareCartClaimUseCase())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.dispatchIntent(CartViewIntent.AddOffer(offer, 2))
@@ -295,31 +297,45 @@ class BuyerViewModelsTest {
 
         vm.dispatchIntent(CartViewIntent.CheckoutApartado)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertNotNull(vm.viewState.value.activeOrder)
+        assertNotNull(vm.viewState.value.checkoutError)
 
         vm.dispatchIntent(CartViewIntent.ClearCart)
         coVerify { cartRepo.clearCart() }
     }
 
     @Test
-    fun notifications_category_updatesState() = runTest {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
-        val vm = NotificationsViewModel(storeRepo)
+    fun notifications_loadsPublishedSettingsAndDoesNotTreatMissingInboxAsRemoteData() = runTest {
+        val get = mockk<com.example.sensus.domain.usecase.NotificationsGetSettingsUseCase>()
+        val update = mockk<com.example.sensus.domain.usecase.NotificationsUpdateSettingsUseCase>()
+        val register = mockk<com.example.sensus.domain.usecase.NotificationsRegisterDeviceUseCase>()
+        val preferences = com.example.sensus.domain.model.NotificationsPreferences(true, true, false, 2)
+        coEvery { get() } returns com.example.sensus.common.Result.Success(preferences)
+        coEvery { get.sessionChanges } returns MutableStateFlow(Unit)
+        val vm = NotificationsViewModel(get, update, register)
         testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.dispatchIntent(NotificationsViewIntent.CategorySelected("Ofertas"))
-        assertEquals("Ofertas", vm.viewState.value.selectedCategory)
+        assertEquals(preferences, vm.viewState.value.preferences)
     }
 
     @Test
     fun sensiChat_sendMessage_addsMessage() = runTest {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
-        val vm = SensiChatViewModel(storeRepo)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true, isGuest = false))
+        val loadConv = mockk<LoadAiConversationUseCase>(relaxed = true)
+        val sendMsg = mockk<SendSensiMessageUseCase>(relaxed = true)
+        val aiRepo = mockk<AiChatRepository>(relaxed = true)
+        val locRepo = mockk<LocationRepository>(relaxed = true)
+
+        coEvery { loadConv.createOrResume(any(), any()) } returns Result.Success(
+            AiConversation("conv_1", "Active", "Fast", 0)
+        )
+        coEvery { loadConv.getMessages("conv_1") } returns Result.Success(emptyList())
+
+        val vm = SensiChatViewModel(loadConv, sendMsg, aiRepo, sessionRepo, locRepo)
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.dispatchIntent(SensiChatViewIntent.SendMessage("Hola"))
         assertEquals(1, vm.viewState.value.messages.size)
-        assertEquals("Hola", vm.viewState.value.messages.first().text)
+        assertEquals("Hola", vm.viewState.value.messages.first().content)
     }
 
     @Test
@@ -332,7 +348,8 @@ class BuyerViewModelsTest {
 
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isGuest = false, activeEmail = "r@sensus.com"))
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true))
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>(relaxed = true)
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true), getMyMerchantUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("Rodrigo", vm.viewState.value.profile?.nombreCompleto)
 
@@ -352,7 +369,8 @@ class BuyerViewModelsTest {
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns sessionFlow
 
-        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true))
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>(relaxed = true)
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true), getMyMerchantUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.isGuest)
         assertEquals("Invitado Sensus", vm.viewState.value.profile?.nombreCompleto)
@@ -364,17 +382,46 @@ class BuyerViewModelsTest {
             isGuest = false,
             activeName = "Rodrigo Pérez",
             activeEmail = "rodrigo@sensus.app",
-            activeToken = "jwt-1"
+            activeToken = "jwt-1",
+            isMerchantRegistered = true,
+            merchantStoreName = "Café Local"
         )
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.viewState.value.isGuest)
         assertEquals("Rodrigo Pérez", vm.viewState.value.profile?.nombreCompleto)
         assertEquals("rodrigo@sensus.app", vm.viewState.value.profile?.correo)
+        assertTrue(vm.viewState.value.hasActiveMerchant)
+        assertEquals("Café Local", vm.viewState.value.merchantStoreName)
 
         // Cierre de sesión limpia el perfil en memoria
         sessionFlow.value = SessionState(isSessionActive = false, isGuest = false)
         testDispatcher.scheduler.advanceUntilIdle()
         assertNull(vm.viewState.value.profile)
+        assertFalse(vm.viewState.value.hasActiveMerchant)
+    }
+
+    @Test
+    fun buyerProfile_syncsMerchantStoreName_whenUserHasMerchantRole() = runTest {
+        val profileRepo = mockk<ProfileRepository>()
+        val updateUseCase = mockk<UpdateProfileUseCase>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>()
+        val sessionFlow = MutableStateFlow(SessionState(isSessionActive = true, isGuest = false, activeEmail = "m@sensus.app"))
+
+        coEvery { sessionRepo.sessionState } returns sessionFlow
+        coEvery { profileRepo.getProfile() } returns Result.Success(
+            UserProfile(id = "u1", nombreCompleto = "Beto", correo = "m@sensus.app", roles = listOf("Consumidor", "Comerciante"))
+        )
+        coEvery { getMyMerchantUseCase() } returns Result.Success(
+            MerchantProfile(id = "c1", usuarioId = "u1", nombreComercial = "Panadería Sensus", direccion = "Av. Centro 1", codigoPostal = "06000")
+        )
+
+        val vm = BuyerProfileViewModel(profileRepo, updateUseCase, sessionRepo, mockk(relaxed = true), getMyMerchantUseCase)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.viewState.value.hasActiveMerchant)
+        assertEquals("Panadería Sensus", vm.viewState.value.merchantStoreName)
+        coVerify(exactly = 1) { sessionRepo.setMerchantStatus(true, "Panadería Sensus") }
     }
 
     @Test
