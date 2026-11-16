@@ -13,10 +13,7 @@ class LoadAiConversationUseCase @Inject constructor(
     private val aiChatRepository: AiChatRepository,
     private val sessionRepository: SessionRepository
 ) {
-    suspend fun createOrResume(
-        forceNew: Boolean = false,
-        screenContext: ScreenContext? = null
-    ): Result<AiConversation> {
+    suspend fun createOrResume(forceNew: Boolean = false, screenContext: ScreenContext? = null): Result<AiConversation> {
         val session = sessionRepository.sessionState.value
         if (session.isGuest || !session.isSessionActive) {
             return Result.Failure(AppError.Forbidden("Los invitados no tienen acceso a Sensi."))
@@ -24,11 +21,7 @@ class LoadAiConversationUseCase @Inject constructor(
         return aiChatRepository.createOrResume(forceNew, screenContext)
     }
 
-    suspend fun getMessages(
-        conversationId: String,
-        page: Int = 1,
-        pageSize: Int = 20
-    ): Result<List<AiChatMessage>> {
+    suspend fun getMessages(conversationId: String, page: Int = 1, pageSize: Int = 20): Result<List<AiChatMessage>> {
         return aiChatRepository.getConversation(conversationId, page, pageSize)
     }
 }

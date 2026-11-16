@@ -14,12 +14,10 @@ import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.CartRepository
 import com.example.sensus.domain.repository.LocationRepository
-import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
-import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
@@ -326,14 +324,13 @@ class BuyerViewModelsTest {
         val sendMsg = mockk<SendSensiMessageUseCase>(relaxed = true)
         val aiRepo = mockk<AiChatRepository>(relaxed = true)
         val locRepo = mockk<LocationRepository>(relaxed = true)
-        val mapPref = mockk<MapPreferencesRepository>(relaxed = true)
 
         coEvery { loadConv.createOrResume(any(), any()) } returns Result.Success(
             AiConversation("conv_1", "Active", "Fast", 0)
         )
         coEvery { loadConv.getMessages("conv_1") } returns Result.Success(emptyList())
 
-        val vm = SensiChatViewModel(loadConv, sendMsg, aiRepo, sessionRepo, locRepo, mapPref)
+        val vm = SensiChatViewModel(loadConv, sendMsg, aiRepo, sessionRepo, locRepo)
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.dispatchIntent(SensiChatViewIntent.SendMessage("Hola"))

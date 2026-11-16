@@ -187,8 +187,7 @@ class SensusContainer(
         AiChatRepositoryImpl(
             api = aiChatApi,
             dao = aiMessageDao,
-            sessionRepository = sessionRepository,
-            locationRepository = locationRepository
+            sessionRepository = sessionRepository
         )
     }
     val sendSensiMessageUseCase by lazy {

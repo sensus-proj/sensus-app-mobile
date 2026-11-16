@@ -33,73 +33,103 @@ object MarkdownParser {
         for (rawLine in markdown.replace("\r\n", "\n").split('\n')) {
             val line = rawLine.trimEnd()
             when {
-                line.isBlank() -> if (blocks.isNotEmpty() && blocks.last() != MarkdownBlock.Blank) {
-                    blocks += MarkdownBlock.Blank
-                }
+                line.isBlank() -> addBlankLine(blocks)
                 ruleRegex.matches(line) -> Unit
-                headingRegex.matches(line) -> blocks += MarkdownBlock.Heading(
-                    parseInline(headingRegex.matchEntire(line)!!.groupValues[1])
-                )
-                numberedRegex.matches(line) -> numberedRegex.matchEntire(line)!!.let {
-                    blocks += MarkdownBlock.Numbered(it.groupValues[1].toInt(), parseInline(it.groupValues[2]))
-                }
-                bulletRegex.matches(line) -> blocks += MarkdownBlock.Bullet(
-                    parseInline(bulletRegex.matchEntire(line)!!.groupValues[1])
-                )
-                else -> blocks += MarkdownBlock.Paragraph(parseInline(line.trim()))
+                else -> blocks += parseLine(line)
             }
         }
         while (blocks.lastOrNull() == MarkdownBlock.Blank) blocks.removeAt(blocks.lastIndex)
         return blocks
     }
 
-    fun parseInline(text: String): List<MarkdownSpan> {
-        val spans = mutableListOf<MarkdownSpan>()
-        val buffer = StringBuilder()
-        var bold = false
-        var italic = false
-        var code = false
+    private fun addBlankLine(blocks: MutableList<MarkdownBlock>) {
+        if (blocks.isNotEmpty() && blocks.last() != MarkdownBlock.Blank) blocks += MarkdownBlock.Blank
+    }
 
-        fun flush() {
+    private fun parseLine(line: String): MarkdownBlock {
+        val heading = headingRegex.matchEntire(line)
+        val numbered = numberedRegex.matchEntire(line)
+        val bullet = bulletRegex.matchEntire(line)
+        return when {
+            heading != null -> MarkdownBlock.Heading(parseInline(heading.groupValues[1]))
+            numbered != null -> MarkdownBlock.Numbered(numbered.groupValues[1].toInt(), parseInline(numbered.groupValues[2]))
+            bullet != null -> MarkdownBlock.Bullet(parseInline(bullet.groupValues[1]))
+            else -> MarkdownBlock.Paragraph(parseInline(line.trim()))
+        }
+    }
+
+    fun parseInline(text: String): List<MarkdownSpan> {
+        val scanner = InlineScanner(text)
+        while (!scanner.finished) scanner.step()
+        return scanner.finish()
+    }
+
+    /** Recorre el texto y mantiene el formato activo (negritas, cursivas, código). */
+    private class InlineScanner(private val text: String) {
+        private val spans = mutableListOf<MarkdownSpan>()
+        private val buffer = StringBuilder()
+        private var bold = false
+        private var italic = false
+        private var code = false
+        private var index = 0
+
+        val finished: Boolean get() = index >= text.length
+
+        fun step() {
+            when {
+                isBacktickToggle() -> toggle(1) { code = !code }
+                code -> appendCurrent()
+                isBoldToggle() -> toggle(BOLD_MARKER.length) { bold = !bold }
+                isItalicToggle() -> toggle(1) { italic = !italic }
+                else -> appendCurrent()
+            }
+        }
+
+        fun finish(): List<MarkdownSpan> {
+            flush()
+            return spans
+        }
+
+        private fun isBacktickToggle() = text[index] == '`' && (code || hasCloser("`", index + 1))
+
+        private fun isBoldToggle() = text.startsWith(BOLD_MARKER, index) && (bold || hasCloser(BOLD_MARKER, index + BOLD_MARKER.length))
+
+        private fun isItalicToggle() = text[index] == '*' && !text.startsWith(BOLD_MARKER, index) && (italic || hasSingleCloser(index + 1))
+
+        private fun toggle(length: Int, change: () -> Unit) {
+            flush()
+            change()
+            index += length
+        }
+
+        private fun appendCurrent() {
+            buffer.append(text[index])
+            index += 1
+        }
+
+        private fun flush() {
             if (buffer.isNotEmpty()) {
                 spans += MarkdownSpan(buffer.toString(), bold, italic, code)
                 buffer.clear()
             }
         }
 
-        var i = 0
-        while (i < text.length) {
-            when {
-                text[i] == '`' && (code || hasCloser(text, "`", i + 1)) -> {
-                    flush(); code = !code; i += 1
+        private fun hasCloser(marker: String, from: Int): Boolean = from < text.length && text.indexOf(marker, from) > from
+
+        private fun hasSingleCloser(from: Int): Boolean {
+            if (from >= text.length || text[from].isWhitespace()) return false
+            var j = from
+            while (j < text.length) {
+                if (text[j] == '*') {
+                    if (!text.startsWith(BOLD_MARKER, j)) return j > from
+                    j += BOLD_MARKER.length
+                } else {
+                    j++
                 }
-                code -> { buffer.append(text[i]); i += 1 }
-                text.startsWith("**", i) && (bold || hasCloser(text, "**", i + 2)) -> {
-                    flush(); bold = !bold; i += 2
-                }
-                text[i] == '*' && !text.startsWith("**", i) && (italic || hasSingleCloser(text, i + 1)) -> {
-                    flush(); italic = !italic; i += 1
-                }
-                else -> { buffer.append(text[i]); i += 1 }
             }
+            return false
         }
-        flush()
-        return spans
     }
 
-    private fun hasCloser(text: String, marker: String, from: Int): Boolean =
-        from < text.length && text.indexOf(marker, from) > from
-
-    private fun hasSingleCloser(text: String, from: Int): Boolean {
-        if (from >= text.length || text[from].isWhitespace()) return false
-        var j = from
-        while (j < text.length) {
-            if (text[j] == '*') {
-                if (text.startsWith("**", j)) { j += 2; continue }
-                return j > from
-            }
-            j++
-        }
-        return false
-    }
+    private const val BOLD_MARKER = "**"
 }

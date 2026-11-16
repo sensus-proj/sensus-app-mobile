@@ -49,10 +49,18 @@ data class AiConversation(
     val updatedAtUtc: String? = null
 )
 
+/** Ubicación y radio de búsqueda que acompañan a un mensaje para que Sensi encuentre ofertas cercanas. */
+data class SensiLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val radiusKm: Double
+)
+
+/** [role] es `"User"` o `"Assistant"`. */
 data class AiChatMessage(
     val id: String,
     val conversationId: String = "",
-    val role: String, // "User" | "Assistant"
+    val role: String,
     val content: String,
     val recommendedPackage: RecommendedPackage? = null,
     val offersCited: List<CitedOffer> = emptyList(),
