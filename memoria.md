@@ -237,6 +237,32 @@ Criterio de salida de FT-00: `compileDebugKotlin` verde, `check_layers.py` PASS 
 | Apartado CI/CD (2026-11-04) | Requerimiento de apartado visual y documental de CI/CD | Integrado job `cicd-summary` en `.github/workflows/ci.yml` para emitir tablero visual en `$GITHUB_STEP_SUMMARY`, creada guía `docs/cicd-pipeline.md` y añadido apartado oficial en `README.md` |
 | Conciliación Kotlin (2026-11-06) | Drift entre constitución (2.4.21) y build (2.3.20) | Ratificado uso de Kotlin 2.3.20 por instrucción de jefatura; constitución actualizada a v1.2.1 |
 
+### 6.6 Auditoría código contra SDD (2026-11-15)
+
+Se contrastó cada tarea abierta con el código de `app/src/` y se actualizaron `tasks.md`, `checklists/checklist.md`
+y `specs/README.md`. Las tareas parciales conservan `[ ]` con una nota que explica qué falta.
+
+| Feature | Tareas antes | Tareas ahora | Estado en el índice |
+|---|---|---|---|
+| FT-11 Ofertas cercanas | 0/16 | 4/16 (+7 parciales) | En implementacion |
+| FT-12 Detalle y vistas | 4/15 | 9/15 (+4 parciales) | En implementacion |
+| FT-16 Inventario y ciclo de vida | 1/12 | 6/12 (+6 parciales) | En implementacion |
+| FT-13, FT-14, FT-18, FT-21 | sin cambio | sin cambio (pendientes dependen de backend, dispositivo o Firebase) | En implementacion |
+| FT-15 | 14/14 | 14/14 | En revision |
+
+Evidencia: `testDebugUnitTest` (257 pruebas, 0 fallos), `compileDebugAndroidTestSources`, `koverVerifyDebug`, `detekt`
+y `ktlintCheck` verdes; `check_sdd`, `check_layers`, `check_endpoints`, `check_secrets` y `check_coverage --min 80`
+PASS. `lint` no se ejecutó.
+
+Hallazgos abiertos:
+
+- `MockDataProvider` sigue en `main`: respaldo de `getOffers()`, `getSampleStore()` en dashboard y perfil de comercio,
+  amigos de ejemplo (FT-25) y mensajes de ejemplo en Sensi (FT-24).
+- Sin paginación en ofertas cercanas (FT-11) ni filtros `C-35` (FT-12).
+- Favoritos (FT-17) muestra "no disponible"; FT-19, FT-20 y FT-26 sin código.
+- **Cruce con backend:** la app usa `POST /api/v1/media/moderate`, que la spec 017 del backend prohíbe como endpoint
+  público. Retirarlo en el backend sin coordinar rompe la carga de imágenes.
+
 ---
 
 ## 7. Estado actual del código
@@ -783,3 +809,80 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - SAST final disponible: 67 reglas aplicables sobre 64 archivos Kotlin modificados, 0 hallazgos. La suite configurada completa mantiene bloqueo externo por p/mobile 404; no se cambia CI/configuración ni se afirma ejecución remota CodeQL/Snyk/otros ni aprobación de merge.
 - SDD/bitácora conciliados para FT-12/13/14/16/21 sin cerrar features completas. Guía de pantallas, contratos, rutas excluidas y prerrequisitos: docs/published-endpoints-frontend.md. Evidencia local: app/build/reports/published-endpoints-result.log, reportes JUnit/Kover/Lint y published-endpoints-semgrep-final.json.
 - Sin commit, push, PR, tag ni despliegue; sin cambios de constitución, scripts, umbrales o workflows. E2E con cuentas reales y dispositivo pendiente de autorización/entorno.
+---
+
+## Bitácora - FT-24 Sensi IA: Resolución de D-6, enmienda en backend y conciliación de artefactos
+
+- **Fecha:** 2026-11-13
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`) · **Backend:** `C:\Users\Rodrigo\source\repos\sensus-back`
+- **Decisión D-6 resuelta:** vía generativa **con enmienda**. Se descartaron la vía determinista pura (no cumple el asistente conversacional comprometido en Tesina y Formato de Aceptación) y el retiro de P-25.
+- **Hallazgo que motivó la enmienda:** `constitution.md` §2.2 del backend admitía solo tres proveedores externos (moderación, push, Cloudinary) y exigía enmienda para cualquier otro; ADR 0009 vetaba servicios de ML gestionados; `FR-045-07` fija techo de 1.00 USD/mes. La excepción de OpenAI existente estaba acotada a moderación, por lo que un GPT generativo no cabía sin enmienda.
+- **Backend (`sensus-back`), artefactos creados o modificados:**
+  1. `docs/adr/0011-asistente-generativo-sensi.md` (Aceptada): recuperación determinista en backend + redacción generativa acotada a un conjunto cerrado de candidatos; total recalculado en backend; moderación de entrada y salida fail-closed; degradación determinista ante fallo; clave en Secrets Manager. No sustituye ADR 0009 (041–043 siguen deterministas).
+  2. `constitution.md` **v1.3.0 → v1.4.0**: cuarta excepción de proveedor externo y alta en el stack (§2.1, §2.2); nueva prohibición de acceso del proveedor a datos/credenciales/herramientas (§2.2); moderación generativa y cálculo de importes en backend (§2.4); alcance ampliado (§2.5); registro §4.6; excepción **`EX-001`** a P-VI en Apéndice E (techo 1.00 USD, responsable por asignar).
+  3. `specs/046-asistente-sensi-ia/` (4 artefactos + `contracts/openapi.yaml`): 17 FR, 7 NFR, 9 CA; Constitution Check **PASS CON OBSERVACIONES** por `EX-001`.
+  4. `specs/requirements.md` (+24 filas 046), `specs/README.md` (48 specs, Ola 5: 5), `docs/adr/README.md`.
+  - Evidencia: `node .github/scripts/check-specs.mjs specs` → **48 especificaciones, estructura SDD correcta**.
+- **Móvil, conciliación de `specs/FT-24-sensi-ia/`:** estado `Borrador` → `Aprobada`; contrato unificado en los tres endpoints ya registrados en `docs/endpoints-internos.md` (retirado `POST /api/v1/ai/chat` del plan); nombres canónicos fijados (`AiChatApiService`, `AiChatRepositoryImpl`, `SendSensiMessageUseCase`, `AiMessageEntity`/`AiMessageDao`; retirados `SensiAiApiService`, `SensiRepositoryImpl`, `AskSensiUseCase`); RF-24-06..11 añadidos. `docs/endpoints-internos.md` y `docs/rate-matrix.md` actualizados.
+- **Auditoría de código de Sensi (corrige la bitácora del 2026-11-11):**
+  - `SensiChatScreen.sendUserMessage(...)` **fabrica la respuesta de Sensi en `app/src/main`** (`"Combo Express Inteligente"`, `SAMPLE_COMBO_PRICE`), violando la prohibición del propio `plan.md`.
+  - La pantalla muta una `MutableList` local y nunca despacha `SensiChatViewIntent.SendMessage`: el flujo MVI está puenteado.
+  - **`SensiChatScreen` no bloquea invitados**: `GuestPromptDialog` solo existe en `MainAppMenu.kt` y cubre el apartado, no P-25. La afirmación del 2026-11-11 era inexacta para esta pantalla.
+  - `SensiChatViewModel` sigue sembrando desde `MockDataProvider.sampleChatMessages` vía `StoreRepository.getSampleChatMessages()`.
+- **Pendiente:** despliegue de Spec 046 en AWS; asignar responsable de `EX-001`; implementación de T24.2–T24.8. Sin cambios en código Kotlin, Gradle, CI ni gates; sin commit, push, PR ni tag.
+
+---
+
+## Bitácora - FT-24 Sensi IA: Conexión Frontend Móvil a Endpoints Oficiales, Caché Room v5 y Retiro Total de Mocks
+
+- **Fecha:** 2026-11-15
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`)
+- **Objetivo completado:** Implementación integral de FT-24 conectando `SensiChatScreen` y `SensiChatViewModel` a los endpoints REST de Sensi IA (`/api/v1/ai/*`), saneamiento de datos simulados y persistencia cifrada en Room (versión 5).
+- **Saneamiento de mocks (RF-24-05, RF-24-06):**
+  - Eliminado por completo `MockDataProvider.sampleChatMessages`, `StoreRepository.getSampleChatMessages()` y su implementación en `StoreRepositoryImpl`.
+  - Eliminada la respuesta simulada fabricada en `SensiChatScreen.sendUserMessage(...)` y la constante `SAMPLE_COMBO_PRICE`. Verificación: `grep -rn "SAMPLE_COMBO_PRICE\|sampleChatMessages\|Combo Express Inteligente" app/src/main` devuelve 0 resultados.
+- **Capa Domain (RF-24-08):**
+  - Modelos puros creados en `domain/model/AiChatModels.kt`: `ScreenContext`, `CitedOffer`, `RecommendedPackage`, `AiConversation`, `AiChatMessage`, `AiTurn`, `SensiResult`. Sin dependencias de Android ni serialización.
+  - Interfaz de repositorio `AiChatRepository` en `domain/repository/`.
+  - Casos de uso `SendSensiMessageUseCase` (con validación de 1..1500 caracteres y bloqueo a invitados) y `LoadAiConversationUseCase` en `domain/usecase/`.
+- **Capa Data (RF-24-09, RF-24-10, RF-24-11):**
+  - `data/remote/dto/AiDtos.kt`: DTOs con `@Serializable` y `@SerialName` exactos (`screen_context` en `snake_case`, `recommendedPackage.items`, `ProblemDetailsDto`).
+  - `data/remote/api/AiChatApiService.kt`: Rutas oficiales `POST /api/v1/ai/conversations`, `POST /api/v1/ai/messages`, `GET /api/v1/ai/conversations/{id}`, `DELETE /api/v1/ai/conversations/{id}`.
+  - `data/remote/NetworkClient.kt`: Timeout de 30 s (`AI_CHAT_TIMEOUT_SECONDS`) y `publishingHttpClient` sin `loggingInterceptor` para no registrar el texto del usuario ni su ubicación en logcat.
+  - `data/local/db/entity/AiMessageEntity.java` y `data/local/db/dao/AiMessageDao.java`: Caché local de mensajes Room con índice en `conversationId`.
+  - Migración `MIGRATION_4_5` en `SensusDatabaseMigrations.java`, incremento de base de datos a `version = 5` en `SensusDatabase.java` y registro en `DatabaseFactory.kt`.
+  - `data/repository/AiChatRepositoryImpl.kt`: Manejo de errores HTTP (400 ProblemDetails, 401, 403, 404, 429 con `Retry-After`), inversión cronológica de mensajes de lectura y fallback a caché local.
+- **Capa Presentation & MVI (RF-24-01, RF-24-07):**
+  - `SensiChatContract.kt`: `SensiChatViewState` inmutable (con `messages`, `isTyping`, `isSending`, `isGuest`, `showGuestPrompt`, `isDegraded`, `retryAfterSeconds`, `errorMessage`), `SensiChatViewIntent` y `SensiChatViewEffect`.
+  - `SensiChatViewModel.kt`: Flujo MVI reactivo con envío optimista, ticker de cuenta regresiva en 429, reintento único ante 404, degradación visual y bloqueo de invitado.
+  - `SensiChatScreen.kt`: Sin estado local mutable; UI conectada a `viewState`, tarjetas de `RecommendedPackage` con desglose de ofertas citadas (precio, ahorro, stock, distancia), aviso de modo básico y diálogo `GuestPromptDialog` para invitados.
+- **Inyección de dependencias:**
+  - `di/AiChatModule.kt`, `di/DatabaseModule.kt` y `data/di/SensusContainer.kt`.
+- **Pruebas añadidas:**
+  - `AiDtosTest`: serialización de `screen_context`, deserialización con y sin `recommendedPackage`, y RFC 9110 ProblemDetails.
+  - `AiChatUseCasesTest`: validaciones de 1..1500 caracteres, bloqueo de invitado y delegación.
+  - `AiChatApiTest`: pruebas MockWebServer para 200 normal, 200 degraded, 400 moderación, 403, 404, 429 Retry-After, timeout y verificación de que el cliente HTTP no registra cuerpos.
+  - `SensiChatViewModelTest`: pruebas con Turbine para todo el ciclo de vida MVI.
+- **Verificación:** `check_endpoints.py`, `check_sdd.py`, `check_layers.py`, `check_secrets.py` en PASS. Sin commit ni push en el móvil.
+
+## Bitácora - FT-24 Sensi IA: Renderizado Markdown de las respuestas del agente (2026-11-16)
+
+- **Contexto:** con el backend ya respondiendo con el modelo, las respuestas llegaban con marcadores Markdown (`**Producto:**`, listas) que se mostraban como texto plano.
+- **Cambio:** `presentation/common/MarkdownParser.kt` (parser puro de un subconjunto seguro: negritas, cursivas, código en línea, encabezados, viñetas, listas numeradas; marcadores sin cierre quedan literales; HTML y enlaces no se interpretan) y `MarkdownText.kt` (Compose, sin dependencias). `SensiChatScreen.ChatBubble` lo usa solo para mensajes del asistente; los del usuario siguen en texto plano.
+- **Verificación:** `MarkdownParserTest` (12 pruebas), 312 pruebas en verde, `check_layers`, `check_sdd`, `check_secrets` y cobertura Kover 84.01 % en PASS. No se instaló en el dispositivo (sin conexión `adb`) ni se verificó visualmente. Sin commit ni push.
+
+## Bitácora - FT-24 Sensi IA: cierre de la app al entrar a Sensi (E-01 y E-02) (2026-11-16)
+
+- **Síntoma:** la app se cerraba al abrir la pestaña de Sensi. Ocurrió dos veces con causas distintas.
+- **E-01 (2026-11-15):** `IllegalStateException: Cannot access database on the main thread`. Los DAO de Room se llamaban desde el hilo principal en `AiChatRepositoryImpl`; las pruebas con DAO simulados no lo detectaron. Corregido con `withContext(Dispatchers.IO)`.
+- **E-02 (2026-11-16):** `SQLiteException: file is not a database` (SQLCipher). `SecurePreferences.clearAll()` (cierre de sesión, borrado de cuenta y 401 en `AuthInterceptor`) borraba también la clave de la base; al siguiente arranque se generaba otra y el archivo cifrado con la anterior no abría. Corregido: `clearAll()` conserva `KEY_DB_PASSPHRASE`; `DatabaseFactory` recrea la base si no se descifra; el repositorio de Sensi trata cualquier fallo de Room como caché vacía.
+- **Prevención:** nuevo `docs/errores-conocidos.md` con diagnóstico por `adb logcat`, regla 15 en `AGENTS.md` y sección nueva en `CHECKLIST_PR.md`. Pruebas de regresión: `SecurePreferencesClearAllTest` y `AiChatLocalCacheFailureTest`.
+- **Lección:** una suite de pruebas en verde no garantiza que la pantalla abra. Los cambios de persistencia o sesión se verifican en el teléfono (abrir Sensi, cerrar sesión, volver a entrar, abrir Sensi).
+
+## Bitácora - FT-24 Sensi IA: tarjeta de oferta con acciones (2026-11-16)
+
+- **Cambio:** las ofertas que el texto de Sensi menciona se muestran como tarjeta bajo la burbuja (`SensiOfferComponents.kt`): imagen, badge de descuento, tienda y distancia, descripción, precios y ahorro, stock, vigencia y dirección. Botones: **Apartar** (flujo de apartado existente), **Cómo llegar** (solo si el backend envía coordenadas) y **Ver detalle**.
+- **Datos:** `CitedOffer`/`CitedOfferDto` ampliados (descripción, descuento, imagen, categoría, vigencia, dirección, coordenadas). El backend los completa desde el repositorio (FR-046-18, `CitedOfferEnricher`); mientras no esté desplegado la tarjeta se muestra con los datos básicos. `visibleOfferCards` filtra en el cliente a las ofertas mencionadas (tope 5).
+- **Room v6:** columna `offersJson` en `ai_messages` con `MIGRATION_5_6` para que las tarjetas sobrevivan al reabrir el chat.
+- **Cobertura:** la lógica (`SensiOfferMapper.kt`) cuenta en Kover y tiene pruebas; la UI Compose va en un archivo `*Components*`, excluido por convención como el resto de pantallas. Cobertura 84.24 %.
+- **Verificación:** 335 pruebas en verde y `check_layers`/`check_sdd`/`check_secrets` en PASS. En el teléfono se comprobó que el chat abre, que el Markdown se ve bien y que la tarjeta aparece con el backend actual. **No se verificó en el teléfono** el toque de los botones ni la tarjeta con datos completos (imagen, dirección, Cómo llegar): requiere el backend desplegado. Sin commit ni push.

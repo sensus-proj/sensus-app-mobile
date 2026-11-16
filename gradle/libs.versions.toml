@@ -30,6 +30,7 @@ kover = "0.8.3"
 androidxHiltNavigationCompose = "1.2.0"
 detekt = "1.23.8"
 ktlint = "12.2.0"
+pitest = "1.17.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }

@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.sensus.domain.model.ChatMessage
 import com.example.sensus.domain.model.FriendShare
 import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.repository.SessionRepository
@@ -112,7 +111,6 @@ class FT10UiSanitizationTest {
 
         override fun getSampleNotifications() = emptyList<com.example.sensus.domain.model.NotificationItem>()
         override fun getSampleFriends(): List<FriendShare> = emptyList()
-        override fun getSampleChatMessages(): List<ChatMessage> = emptyList()
     }
 
     private class FakeSessionRepository : SessionRepository {

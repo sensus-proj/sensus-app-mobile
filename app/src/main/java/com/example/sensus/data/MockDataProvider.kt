@@ -23,19 +23,6 @@ object MockDataProvider {
 
     val sampleStore = MerchantStore()
 
-    val sampleChatMessages = listOf(
-        ChatMessage(
-            id = "msg_1",
-            isFromUser = true,
-            text = "Quiero limpiar mi casa y solo tengo $200 MXN"
-        ),
-        ChatMessage(
-            id = "msg_2",
-            isFromUser = false,
-            text = "¡Sí alcanza! Revisa las ofertas activas de comercios cercanos para armar tu paquete sin salir de tu presupuesto."
-        )
-    )
-
     val sampleNotifications = listOf(
         NotificationItem(
             id = "notif_1",

@@ -18,26 +18,14 @@ data class StoredMerchantStatus(
     val postalCode: String? = null
 )
 
-class SecurePreferences(private val context: Context) {
+class SecurePreferences private constructor(preferencesFactory: () -> SharedPreferences) {
 
-    private val prefs: SharedPreferences by lazy {
-        try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+    constructor(context: Context) : this({ buildPreferences(context) })
 
-            EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILENAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (_: Exception) {
-            // Fallback para entornos sin Keystore / pruebas
-            context.getSharedPreferences(PREFS_FILENAME, Context.MODE_PRIVATE)
-        }
-    }
+    /** Solo para pruebas unitarias con un [SharedPreferences] en memoria. */
+    internal constructor(preferences: SharedPreferences) : this({ preferences })
+
+    private val prefs: SharedPreferences by lazy(preferencesFactory)
 
     fun saveAuthToken(token: String) {
         prefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
@@ -112,11 +100,42 @@ class SecurePreferences(private val context: Context) {
             }
         }
 
+    /**
+     * Borra los datos de sesión y de usuario, pero **conserva la clave de cifrado de la base SQLCipher**
+     * ([KEY_DB_PASSPHRASE]). Si se borrara, el siguiente arranque generaría una clave nueva y el archivo
+     * `sensus_encrypted.db`, aún cifrado con la anterior, dejaría de abrirse ("file is not a database").
+     */
     fun clearAll() {
-        prefs.edit().clear().apply()
+        val databasePassphrase = prefs.getString(KEY_DB_PASSPHRASE, null)
+        prefs.edit().apply {
+            clear()
+            if (!databasePassphrase.isNullOrBlank()) {
+                putString(KEY_DB_PASSPHRASE, databasePassphrase)
+            }
+        }.apply()
     }
 
     companion object {
+        /** Clave bajo la que se guarda la frase de paso de SQLCipher. Nunca debe borrarse con la sesión. */
+        const val KEY_DB_PASSPHRASE = "sensus_db_encrypted_passphrase"
+
+        private fun buildPreferences(context: Context): SharedPreferences = try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_FILENAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Exception) {
+            // Fallback para entornos sin Keystore / pruebas
+            context.getSharedPreferences(PREFS_FILENAME, Context.MODE_PRIVATE)
+        }
+
         private const val DEFAULT_GUEST_RADIUS_METERS = 2000
         private const val PREFS_FILENAME = "sensus_secure_prefs"
         private const val KEY_AUTH_TOKEN = "key_auth_token"

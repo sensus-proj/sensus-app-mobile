@@ -183,15 +183,6 @@ data class MerchantStore(
     val postalCode: String = ""
 )
 
-data class ChatMessage(
-    val id: String,
-    val isFromUser: Boolean,
-    val text: String,
-    val comboTitle: String? = null,
-    val comboPrice: Double? = null,
-    val comboItems: List<String> = emptyList()
-)
-
 data class NotificationItem(
     val id: String,
     val title: String,

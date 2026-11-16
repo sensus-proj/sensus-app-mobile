@@ -35,7 +35,7 @@
 | Apartado, canje y republicación | `POST /api/v1/offers/{id}/claim`, `POST /api/v1/offers/claims/{code}/redeem`, `POST /api/v1/offers/{id}/republish` | 20 s | 0 | — | Cliente oficial sanitizado (FT-13/14/16; sin reintento automático de escritura) |
 | Consulta/edición ajustes y registro dispositivo | `GET`/`PUT /api/v1/users/settings`, `PUT /api/v1/users/device-token` | 15 s | 0 | — | Cliente oficial sanitizado (FT-21; token FCM real, no se registra en logs) |
 | Device token y settings push | `PUT /api/v1/users/device-token`, `PUT /api/v1/users/settings` | 15 s | 1 | — | Propuesto (FT-21) |
-| Sensi IA (Borrador) | `POST /api/v1/ai/conversations`, `POST /api/v1/ai/messages` | 30 s | 0 | — | Borrador (FT-24) |
+| Sensi IA | `POST /api/v1/ai/conversations`, `POST /api/v1/ai/messages`, `GET /api/v1/ai/conversations/{id}`, `DELETE /api/v1/ai/conversations/{id}` | 30 s | 0 | 20 (historial) | Especificado backend Spec 046; despliegue pendiente (FT-24). Sin reintento automático: el backend ya degrada a paquete determinista |
 | Amigos QR y reseñas (Borrador) | `/api/v1/friends`, `/api/v1/reviews` | 20 s | 0 | 20 | Borrador (FT-25, FT-26) |
 
 ## Valores iniciales (genericos)
