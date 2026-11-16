@@ -3,6 +3,7 @@ package com.example.sensus.presentation
 import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.AiConversation
 import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.ProductOffer
@@ -10,8 +11,10 @@ import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.model.UserProfile
+import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.CartRepository
 import com.example.sensus.domain.repository.LocationRepository
+import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -20,7 +23,9 @@ import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.LoadAiConversationUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
+import com.example.sensus.domain.usecase.SendSensiMessageUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import com.example.sensus.presentation.buyer.BuyerHomeViewEffect
 import com.example.sensus.presentation.buyer.BuyerHomeViewIntent
@@ -315,13 +320,25 @@ class BuyerViewModelsTest {
 
     @Test
     fun sensiChat_sendMessage_addsMessage() = runTest {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
-        val vm = SensiChatViewModel(storeRepo)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true, isGuest = false))
+        val loadConv = mockk<LoadAiConversationUseCase>(relaxed = true)
+        val sendMsg = mockk<SendSensiMessageUseCase>(relaxed = true)
+        val aiRepo = mockk<AiChatRepository>(relaxed = true)
+        val locRepo = mockk<LocationRepository>(relaxed = true)
+        val mapPref = mockk<MapPreferencesRepository>(relaxed = true)
+
+        coEvery { loadConv.createOrResume(any(), any()) } returns Result.Success(
+            AiConversation("conv_1", "Active", "Fast", 0)
+        )
+        coEvery { loadConv.getMessages("conv_1") } returns Result.Success(emptyList())
+
+        val vm = SensiChatViewModel(loadConv, sendMsg, aiRepo, sessionRepo, locRepo, mapPref)
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.dispatchIntent(SensiChatViewIntent.SendMessage("Hola"))
         assertEquals(1, vm.viewState.value.messages.size)
-        assertEquals("Hola", vm.viewState.value.messages.first().text)
+        assertEquals("Hola", vm.viewState.value.messages.first().content)
     }
 
     @Test

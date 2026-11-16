@@ -39,6 +39,7 @@ import com.example.sensus.presentation.buyer.ProductDetailCallbacks
 import com.example.sensus.presentation.buyer.ProductDetailScreen
 import com.example.sensus.presentation.buyer.RouteMapScreen
 import com.example.sensus.presentation.buyer.SensiChatScreen
+import com.example.sensus.presentation.buyer.SensiOfferActions
 import com.example.sensus.presentation.buyer.StoreCatalogScreen
 import com.example.sensus.presentation.merchant.MerchantDashboardCallbacks
 import com.example.sensus.presentation.merchant.MerchantDashboardScreen
@@ -286,7 +287,15 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
                 onOpenCart = openCartGuarded
             )
         )
-        TAB_SENSI -> SensiChatScreen(onApartarComboClick = openApartadoGuarded)
+        TAB_SENSI -> SensiChatScreen(
+            actions = SensiOfferActions(
+                onApartarPackage = openApartadoGuarded,
+                onDetail = { state.selectedProductForDetail = it },
+                onApartar = { openPublishedClaim(state, isGuest, it) },
+                onRoute = { state.activeRouteOffer = it }
+            ),
+            onRequireAuth = { state.showGuestPrompt = true }
+        )
         TAB_COMMUNITY -> CommunityScreen(
             onRequireAuth = { state.showGuestPrompt = true },
             onMerchantClick = { id ->

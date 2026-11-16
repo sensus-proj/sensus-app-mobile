@@ -27,15 +27,16 @@ La Tesina, el Formato de Aceptación y la hoja *Sensi IA* del Drive especifican 
 |---|---|
 | RF-24-01 | Bloquear el envío en modo invitado mostrando `GuestPromptDialog` desde `SensiChatScreen`, sin depender del gate de `MainAppMenu`. |
 | RF-24-02 | Iniciar o recuperar conversación mediante `POST /api/v1/ai/conversations` / `GET /api/v1/ai/conversations/{id}` y persistir caché local en `AiMessageDao`. |
-| RF-24-03 | Al enviar mensaje con presupuesto/consulta (`POST /api/v1/ai/messages`), adjuntar ubicación aproximada y radio actual; el backend devuelve texto de Sensi y lista opcional de ofertas (`budgetPackageItems`) con su total ya validado. |
+| RF-24-03 | Al enviar mensaje con presupuesto/consulta (`POST /api/v1/ai/messages`), adjuntar ubicación aproximada, radio actual (1.0–5.0 km) y `screenContext`; el backend devuelve texto de Sensi y paquete opcional de ofertas (`recommendedPackage.items`) con su total ya validado y lista de `offersCited`. |
 | RF-24-04 | Renderizar dentro de la burbuja de Sensi tarjetas compactas de cada oferta sugerida con botón para abrir su `ProductDetailScreen` o agregarlas al apartado. |
 | RF-24-05 | Retirar por completo `MockDataProvider.sampleChatMessages`, `StoreRepository.getSampleChatMessages()` y su implementación en `StoreRepositoryImpl`. |
 | RF-24-06 | Eliminar la respuesta fabricada de `SensiChatScreen.sendUserMessage(...)` y la constante `SAMPLE_COMBO_PRICE`. Ninguna respuesta de Sensi puede originarse en el cliente. |
 | RF-24-07 | Restaurar el flujo MVI: la pantalla despacha `SensiChatViewIntent.SendMessage` y observa `SensiChatViewState`; sin estado mutable local de mensajes. |
 | RF-24-08 | Mostrar indicador `Sensi está pensando...` mientras la solicitud está en vuelo (`isTyping` en `SensiChatViewState`). |
 | RF-24-09 | Mostrar el total que devuelve el backend tal cual; el cliente no recalcula ni reordena el paquete. |
-| RF-24-10 | Manejar la degradación del backend: cuando la respuesta llega sin texto generado, mostrar el paquete con la redacción fija recibida, sin error. |
-| RF-24-11 | Manejar `422` (mensaje rechazado por moderación) y `429` (límite de tasa o límite diario) con mensajes accionables y distintos entre sí. |
+| RF-24-10 | Manejar la degradación del backend (`degraded = true`): mostrar la respuesta normalmente con aviso informativo discreto (“Sensi está en modo básico”), sin estado de error. |
+| RF-24-11 | Manejar `400` (rechazo por moderación o prompt injection con `title`/`detail`), `403` (invitado), `404` (conversación inexistente con recreación automática), `429` (límite con `Retry-After`) y `5xx`/timeout con mensajes accionables y distintos entre sí. |
+| RF-24-12 | Soportar eliminación de conversación mediante `DELETE /api/v1/ai/conversations/{id}`, purgando la caché local en `AiMessageDao`. |
 
 ## 3. Requisitos no funcionales
 
@@ -47,12 +48,13 @@ La Tesina, el Formato de Aceptación y la hoja *Sensi IA* del Drive especifican 
 
 ```text
 domain/
-  model/AiChatModels.kt         # AiConversation, AiChatMessage, BudgetPackage
+  model/AiChatModels.kt         # AiConversation, AiChatMessage, RecommendedPackage, CitedOffer, ScreenContext
   repository/AiChatRepository.kt
   usecase/SendSensiMessageUseCase.kt, LoadAiConversationUseCase.kt
 data/
   local/db/entity/AiMessageEntity.java, dao/AiMessageDao.java
-  remote/api/AiChatApiService.kt # POST /api/v1/ai/conversations, /messages, GET /{id}
+  remote/api/AiChatApiService.kt # POST /api/v1/ai/conversations, POST /api/v1/ai/messages, GET /api/v1/ai/conversations/{id}, DELETE /api/v1/ai/conversations/{id}
+  remote/dto/AiDtos.kt
   repository/AiChatRepositoryImpl.kt
 presentation/buyer/
   SensiChatContract.kt, SensiChatViewModel.kt, SensiChatScreen.kt
@@ -66,15 +68,15 @@ Nombres canónicos de esta feature. Quedan retirados los nombres alternos que ci
 - **Given** una tarjeta sugerida dentro del chat **When** el usuario la toca **Then** navega a `ProductDetailScreen` de esa oferta.
 - **Given** usuario sin red **When** abre `SensiChatScreen` **Then** consulta últimos mensajes desde `AiMessageDao` y deshabilita envío hasta recuperar conexión.
 - **Given** una sesión invitada **When** intenta enviar un mensaje **Then** se muestra `GuestPromptDialog` y no se emite la solicitud.
-- **Given** el backend responde `429` **When** se envía un mensaje **Then** se informa el límite alcanzado sin perder el texto escrito.
-- **Given** el backend degrada por fallo del proveedor **When** llega la respuesta sin texto generado **Then** se muestra el paquete con la redacción fija y sin estado de error.
+- **Given** el backend responde `429` **When** se envía un mensaje **Then** se informa el límite alcanzado sin perder el texto escrito con cuenta regresiva `Retry-After`.
+- **Given** el backend degrada (`degraded = true`) **When** llega la respuesta **Then** se muestra la respuesta normalmente con aviso de modo básico y sin estado de error.
 - **Given** la app compilada **When** se busca en `app/src/main/**` **Then** no existe ninguna respuesta de Sensi generada en el cliente.
 
 ## 6. Plan de pruebas
 
-- **Unitarias:** `SendSensiMessageUseCaseTest` (validación mensaje no vacío, bloqueo invitado).
-- **ViewModel:** `SensiChatViewModelTest` con Turbine (estado enviando -> paquete recibido -> error timeout -> degradación sin texto generado).
-- **Integración (`MockWebServer` + `AiMessageDao`):** parseo de respuesta con `budgetPackageItems`, códigos `422` y `429`, y persistencia local.
+- **Unitarias:** `SendSensiMessageUseCaseTest` (validación mensaje no vacío, límite 1,500 chars, bloqueo invitado).
+- **ViewModel:** `SensiChatViewModelTest` con Turbine (estado enviando -> paquete recibido -> error timeout -> degradación modo básico -> 429 rate limit).
+- **Integración (`MockWebServer` + `AiMessageDao`):** parseo de respuesta con `recommendedPackage.items`, códigos `400` (moderación/inyección), `403`, `404` (recreación), `429` (`Retry-After`), `200` degraded y persistencia local en Room.
 - **UI (Compose Test Rule):** burbujas de usuario/Sensi, tarjetas de paquete de presupuesto, clic hacia detalle, `GuestPromptDialog` en invitado e indicador `isTyping`.
 
 ## 7. Riesgos, limites y deuda

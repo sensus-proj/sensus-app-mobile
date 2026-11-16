@@ -830,3 +830,59 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
   - **`SensiChatScreen` no bloquea invitados**: `GuestPromptDialog` solo existe en `MainAppMenu.kt` y cubre el apartado, no P-25. La afirmación del 2026-11-11 era inexacta para esta pantalla.
   - `SensiChatViewModel` sigue sembrando desde `MockDataProvider.sampleChatMessages` vía `StoreRepository.getSampleChatMessages()`.
 - **Pendiente:** despliegue de Spec 046 en AWS; asignar responsable de `EX-001`; implementación de T24.2–T24.8. Sin cambios en código Kotlin, Gradle, CI ni gates; sin commit, push, PR ni tag.
+
+---
+
+## Bitácora - FT-24 Sensi IA: Conexión Frontend Móvil a Endpoints Oficiales, Caché Room v5 y Retiro Total de Mocks
+
+- **Fecha:** 2026-11-15
+- **Rama móvil:** `Movil_Rodrigo` (`C:\Users\Rodrigo\Sensus\Sensus`)
+- **Objetivo completado:** Implementación integral de FT-24 conectando `SensiChatScreen` y `SensiChatViewModel` a los endpoints REST de Sensi IA (`/api/v1/ai/*`), saneamiento de datos simulados y persistencia cifrada en Room (versión 5).
+- **Saneamiento de mocks (RF-24-05, RF-24-06):**
+  - Eliminado por completo `MockDataProvider.sampleChatMessages`, `StoreRepository.getSampleChatMessages()` y su implementación en `StoreRepositoryImpl`.
+  - Eliminada la respuesta simulada fabricada en `SensiChatScreen.sendUserMessage(...)` y la constante `SAMPLE_COMBO_PRICE`. Verificación: `grep -rn "SAMPLE_COMBO_PRICE\|sampleChatMessages\|Combo Express Inteligente" app/src/main` devuelve 0 resultados.
+- **Capa Domain (RF-24-08):**
+  - Modelos puros creados en `domain/model/AiChatModels.kt`: `ScreenContext`, `CitedOffer`, `RecommendedPackage`, `AiConversation`, `AiChatMessage`, `AiTurn`, `SensiResult`. Sin dependencias de Android ni serialización.
+  - Interfaz de repositorio `AiChatRepository` en `domain/repository/`.
+  - Casos de uso `SendSensiMessageUseCase` (con validación de 1..1500 caracteres y bloqueo a invitados) y `LoadAiConversationUseCase` en `domain/usecase/`.
+- **Capa Data (RF-24-09, RF-24-10, RF-24-11):**
+  - `data/remote/dto/AiDtos.kt`: DTOs con `@Serializable` y `@SerialName` exactos (`screen_context` en `snake_case`, `recommendedPackage.items`, `ProblemDetailsDto`).
+  - `data/remote/api/AiChatApiService.kt`: Rutas oficiales `POST /api/v1/ai/conversations`, `POST /api/v1/ai/messages`, `GET /api/v1/ai/conversations/{id}`, `DELETE /api/v1/ai/conversations/{id}`.
+  - `data/remote/NetworkClient.kt`: Timeout de 30 s (`AI_CHAT_TIMEOUT_SECONDS`) y `publishingHttpClient` sin `loggingInterceptor` para no registrar el texto del usuario ni su ubicación en logcat.
+  - `data/local/db/entity/AiMessageEntity.java` y `data/local/db/dao/AiMessageDao.java`: Caché local de mensajes Room con índice en `conversationId`.
+  - Migración `MIGRATION_4_5` en `SensusDatabaseMigrations.java`, incremento de base de datos a `version = 5` en `SensusDatabase.java` y registro en `DatabaseFactory.kt`.
+  - `data/repository/AiChatRepositoryImpl.kt`: Manejo de errores HTTP (400 ProblemDetails, 401, 403, 404, 429 con `Retry-After`), inversión cronológica de mensajes de lectura y fallback a caché local.
+- **Capa Presentation & MVI (RF-24-01, RF-24-07):**
+  - `SensiChatContract.kt`: `SensiChatViewState` inmutable (con `messages`, `isTyping`, `isSending`, `isGuest`, `showGuestPrompt`, `isDegraded`, `retryAfterSeconds`, `errorMessage`), `SensiChatViewIntent` y `SensiChatViewEffect`.
+  - `SensiChatViewModel.kt`: Flujo MVI reactivo con envío optimista, ticker de cuenta regresiva en 429, reintento único ante 404, degradación visual y bloqueo de invitado.
+  - `SensiChatScreen.kt`: Sin estado local mutable; UI conectada a `viewState`, tarjetas de `RecommendedPackage` con desglose de ofertas citadas (precio, ahorro, stock, distancia), aviso de modo básico y diálogo `GuestPromptDialog` para invitados.
+- **Inyección de dependencias:**
+  - `di/AiChatModule.kt`, `di/DatabaseModule.kt` y `data/di/SensusContainer.kt`.
+- **Pruebas añadidas:**
+  - `AiDtosTest`: serialización de `screen_context`, deserialización con y sin `recommendedPackage`, y RFC 9110 ProblemDetails.
+  - `AiChatUseCasesTest`: validaciones de 1..1500 caracteres, bloqueo de invitado y delegación.
+  - `AiChatApiTest`: pruebas MockWebServer para 200 normal, 200 degraded, 400 moderación, 403, 404, 429 Retry-After, timeout y verificación de que el cliente HTTP no registra cuerpos.
+  - `SensiChatViewModelTest`: pruebas con Turbine para todo el ciclo de vida MVI.
+- **Verificación:** `check_endpoints.py`, `check_sdd.py`, `check_layers.py`, `check_secrets.py` en PASS. Sin commit ni push en el móvil.
+
+## Bitácora - FT-24 Sensi IA: Renderizado Markdown de las respuestas del agente (2026-11-16)
+
+- **Contexto:** con el backend ya respondiendo con el modelo, las respuestas llegaban con marcadores Markdown (`**Producto:**`, listas) que se mostraban como texto plano.
+- **Cambio:** `presentation/common/MarkdownParser.kt` (parser puro de un subconjunto seguro: negritas, cursivas, código en línea, encabezados, viñetas, listas numeradas; marcadores sin cierre quedan literales; HTML y enlaces no se interpretan) y `MarkdownText.kt` (Compose, sin dependencias). `SensiChatScreen.ChatBubble` lo usa solo para mensajes del asistente; los del usuario siguen en texto plano.
+- **Verificación:** `MarkdownParserTest` (12 pruebas), 312 pruebas en verde, `check_layers`, `check_sdd`, `check_secrets` y cobertura Kover 84.01 % en PASS. No se instaló en el dispositivo (sin conexión `adb`) ni se verificó visualmente. Sin commit ni push.
+
+## Bitácora - FT-24 Sensi IA: cierre de la app al entrar a Sensi (E-01 y E-02) (2026-11-16)
+
+- **Síntoma:** la app se cerraba al abrir la pestaña de Sensi. Ocurrió dos veces con causas distintas.
+- **E-01 (2026-11-15):** `IllegalStateException: Cannot access database on the main thread`. Los DAO de Room se llamaban desde el hilo principal en `AiChatRepositoryImpl`; las pruebas con DAO simulados no lo detectaron. Corregido con `withContext(Dispatchers.IO)`.
+- **E-02 (2026-11-16):** `SQLiteException: file is not a database` (SQLCipher). `SecurePreferences.clearAll()` (cierre de sesión, borrado de cuenta y 401 en `AuthInterceptor`) borraba también la clave de la base; al siguiente arranque se generaba otra y el archivo cifrado con la anterior no abría. Corregido: `clearAll()` conserva `KEY_DB_PASSPHRASE`; `DatabaseFactory` recrea la base si no se descifra; el repositorio de Sensi trata cualquier fallo de Room como caché vacía.
+- **Prevención:** nuevo `docs/errores-conocidos.md` con diagnóstico por `adb logcat`, regla 15 en `AGENTS.md` y sección nueva en `CHECKLIST_PR.md`. Pruebas de regresión: `SecurePreferencesClearAllTest` y `AiChatLocalCacheFailureTest`.
+- **Lección:** una suite de pruebas en verde no garantiza que la pantalla abra. Los cambios de persistencia o sesión se verifican en el teléfono (abrir Sensi, cerrar sesión, volver a entrar, abrir Sensi).
+
+## Bitácora - FT-24 Sensi IA: tarjeta de oferta con acciones (2026-11-16)
+
+- **Cambio:** las ofertas que el texto de Sensi menciona se muestran como tarjeta bajo la burbuja (`SensiOfferComponents.kt`): imagen, badge de descuento, tienda y distancia, descripción, precios y ahorro, stock, vigencia y dirección. Botones: **Apartar** (flujo de apartado existente), **Cómo llegar** (solo si el backend envía coordenadas) y **Ver detalle**.
+- **Datos:** `CitedOffer`/`CitedOfferDto` ampliados (descripción, descuento, imagen, categoría, vigencia, dirección, coordenadas). El backend los completa desde el repositorio (FR-046-18, `CitedOfferEnricher`); mientras no esté desplegado la tarjeta se muestra con los datos básicos. `visibleOfferCards` filtra en el cliente a las ofertas mencionadas (tope 5).
+- **Room v6:** columna `offersJson` en `ai_messages` con `MIGRATION_5_6` para que las tarjetas sobrevivan al reabrir el chat.
+- **Cobertura:** la lógica (`SensiOfferMapper.kt`) cuenta en Kover y tiene pruebas; la UI Compose va en un archivo `*Components*`, excluido por convención como el resto de pantallas. Cobertura 84.24 %.
+- **Verificación:** 335 pruebas en verde y `check_layers`/`check_sdd`/`check_secrets` en PASS. En el teléfono se comprobó que el chat abre, que el Markdown se ve bien y que la tarjeta aparece con el backend actual. **No se verificó en el teléfono** el toque de los botones ni la tarjeta con datos completos (imagen, dirección, Cómo llegar): requiere el backend desplegado. Sin commit ni push.

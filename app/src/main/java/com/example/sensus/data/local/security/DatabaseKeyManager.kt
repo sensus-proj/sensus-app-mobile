@@ -16,7 +16,7 @@ class DatabaseKeyManager @Inject constructor(
     private val securePreferences: SecurePreferences
 ) {
     companion object {
-        private const val KEY_DB_PASSPHRASE = "sensus_db_encrypted_passphrase"
+        private const val KEY_DB_PASSPHRASE = SecurePreferences.KEY_DB_PASSPHRASE
         private const val PASSPHRASE_LENGTH_BYTES = 32 // 256 bits
     }
 

@@ -1,6 +1,7 @@
 package com.example.sensus.data.remote
 
 import com.example.sensus.data.local.SecurePreferences
+import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.ClaimsApiService
 import com.example.sensus.data.remote.api.FeedApiService
@@ -27,6 +28,9 @@ internal const val OFFER_CREATE_TIMEOUT_SECONDS = 20L
 /** `POST /api/v1/media/upload` multipart (docs/rate-matrix.md, FT-15): 45 s. */
 internal const val MEDIA_UPLOAD_TIMEOUT_SECONDS = 45L
 
+/** `POST /api/v1/ai/messages` (docs/rate-matrix.md, FT-24): el backend corta a 25 s; margen de red -> 30 s. */
+internal const val AI_CHAT_TIMEOUT_SECONDS = 30L
+
 class NetworkClient(
     private val securePreferences: SecurePreferences,
     baseUrl: String = DEFAULT_BASE_URL,
@@ -45,7 +49,7 @@ class NetworkClient(
         encodeDefaults = true
     }
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+    internal val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
@@ -73,6 +77,8 @@ class NetworkClient(
     val offerDetailsApi: OfferDetailsApiService by lazy { publishingService<OfferDetailsApiService>(offersHttpClient) }
     val offersApi: OffersApiService by lazy { publishingService<OffersApiService>(offersHttpClient) }
     val mediaUploadApi: MediaApiService by lazy { publishingService<MediaApiService>(mediaUploadHttpClient) }
+    internal val aiChatHttpClient: OkHttpClient by lazy { publishingHttpClient(AI_CHAT_TIMEOUT_SECONDS) }
+    val aiChatApi: AiChatApiService by lazy { publishingService<AiChatApiService>(aiChatHttpClient) }
 
     internal val offersHttpClient: OkHttpClient by lazy { publishingHttpClient(OFFER_CREATE_TIMEOUT_SECONDS) }
     internal val mediaUploadHttpClient: OkHttpClient by lazy { publishingHttpClient(MEDIA_UPLOAD_TIMEOUT_SECONDS) }

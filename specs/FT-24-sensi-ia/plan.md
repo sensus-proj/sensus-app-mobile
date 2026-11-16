@@ -10,12 +10,12 @@
 2. **División de responsabilidades.** El backend recupera candidatos de forma determinista, calcula y valida el paquete, modera entrada y salida, y redacta con el proveedor generativo. El cliente **solo presenta**: no calcula totales, no reordena el paquete y no genera texto.
 3. **Saneamiento previo obligatorio.** Antes de conectar red se retira la respuesta fabricada en `SensiChatScreen.sendUserMessage(...)`, la constante `SAMPLE_COMBO_PRICE`, `MockDataProvider.sampleChatMessages` y `StoreRepository.getSampleChatMessages()`; y se restaura el flujo MVI para que la pantalla despache intents en lugar de mutar una lista local.
 4. **Contrato.** `AiChatApiService` expone:
-   - `POST /api/v1/ai/conversations` → `AiConversationDto { id, createdAt, updatedAt }`
-   - `POST /api/v1/ai/messages` con `{ conversationId, text, lat, lng, radiusMeters }` → `AiMessageResponseDto { message: AiChatMessageDto, budgetPackage: BudgetPackageDto? , degraded: Boolean }`
-   - `GET /api/v1/ai/conversations/{id}?page&size` → historial paginado (`PagedResponse<AiChatMessageDto>`)
-   - `BudgetPackageDto { budget, total, items: List<BudgetPackageItemDto { offerId, title, merchantName, price, quantity }] }`
-   - Errores: `422` moderación, `429` tasa o límite diario, `403` invitado.
-5. **Caché local.** `AiMessageEntity` en Room + SQLCipher con migración no destructiva; `LoadAiConversationUseCase` lee caché primero y sincroniza con `GET` cuando hay red.
+   - `POST /api/v1/ai/conversations` con `{ forceNew, screenContext }` → `ConversationSummaryDto`
+   - `POST /api/v1/ai/messages` con `{ conversationId, message, screenContext, latitude, longitude, radiusKm }` → `AiTurnResponseDto` (`reply`, `recommendedPackage { budgetMxn, totalPriceMxn, savingsMxn, items: List<CitedOfferDto> }`, `offersCited`, `degraded`, `degradationReason`, `correlationId`)
+   - `GET /api/v1/ai/conversations/{id}?page=1&pageSize=20` → `ConversationDetailDto` (`conversation`, `messages[]`, `pagination`)
+   - `DELETE /api/v1/ai/conversations/{id}` → `204` sin cuerpo
+   - Errores ProblemDetails: `400` (`Ai.PromptInjectionDetected`, `Ai.MessageBlockedByModeration`, validación), `401`, `403` (`Ai.GuestForbidden`), `404` (`Ai.ConversationNotFound`), `429` (header `Retry-After`).
+5. **Caché local.** `AiMessageEntity` en Room + SQLCipher con migración `MIGRATION_4_5` en `SensusDatabase` v5; `LoadAiConversationUseCase` lee caché primero y sincroniza con `GET` cuando hay red. Purga en `DELETE` y cierre de sesión.
 
 ## 2. UI y navegación
 

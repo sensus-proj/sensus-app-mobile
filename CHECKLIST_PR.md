@@ -35,6 +35,13 @@
 - [x] Rutas `@Serializable` y `NavHost` centralizado
 - [x] Sin MVVM legacy, `UiState`/`UiEvent` ni Koin
 
+## Persistencia local y sesion
+
+- [ ] `docs/errores-conocidos.md` revisado si el cambio toca Room, SQLCipher, `SecurePreferences` o el cierre de sesion
+- [ ] Accesos a Room en `Dispatchers.IO`; un fallo de Room no cierra la app
+- [ ] `clearAll()` conserva la clave de la base (`SecurePreferencesClearAllTest` en verde)
+- [ ] Probado en el telefono: abrir Sensi, cerrar sesion, iniciar sesion y abrir Sensi; sin `FATAL EXCEPTION` en `adb logcat -d -b crash`
+
 ## Seguridad y SDD
 
 - [x] `security-reviewer` PASS: store cifrado, sin tokens en logs, `allowBackup=false`

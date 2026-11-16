@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.db.DatabaseFactory
 import com.example.sensus.data.local.db.SensusDatabase
+import com.example.sensus.data.local.db.dao.AiMessageDao
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
 import com.example.sensus.data.local.db.dao.UserPreferenceDao
@@ -14,6 +15,8 @@ import com.example.sensus.data.location.FusedLocationRepository
 import com.example.sensus.data.media.AndroidImageCompressor
 import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.NetworkClient
+import com.example.sensus.data.remote.api.AiChatApiService
+import com.example.sensus.data.repository.AiChatRepositoryImpl
 import com.example.sensus.data.repository.MapPreferencesRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
 import com.example.sensus.data.repository.RetrofitAuthRepository
@@ -21,6 +24,7 @@ import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.data.repository.RetrofitProfileRepository
 import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.domain.media.ImageCompressor
+import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
@@ -35,6 +39,7 @@ import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.LoadAiConversationUseCase
 import com.example.sensus.domain.usecase.LoginUseCase
 import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.domain.usecase.RegisterUseCase
@@ -42,6 +47,7 @@ import com.example.sensus.domain.usecase.RequestPasswordResetUseCase
 import com.example.sensus.domain.usecase.ResetPasswordUseCase
 import com.example.sensus.domain.usecase.ResolveAddressFromCoordinatesUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
+import com.example.sensus.domain.usecase.SendSensiMessageUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
@@ -76,6 +82,7 @@ class SensusContainer(
     val userSessionDao: UserSessionDao by lazy { database.userSessionDao() }
     val pendingSyncDao: PendingSyncDao by lazy { database.pendingSyncDao() }
     val userPreferenceDao: UserPreferenceDao by lazy { database.userPreferenceDao() }
+    val aiMessageDao: AiMessageDao by lazy { database.aiMessageDao() }
 
     val networkClient: NetworkClient by lazy {
         NetworkClient(
@@ -173,6 +180,23 @@ class SensusContainer(
     }
     val getPreferredMapLayerUseCase by lazy { GetPreferredMapLayerUseCase(mapPreferencesRepository) }
     val savePreferredMapLayerUseCase by lazy { SavePreferredMapLayerUseCase(mapPreferencesRepository) }
+
+    // Sensi IA (FT-24)
+    val aiChatApi: AiChatApiService by lazy { networkClient.aiChatApi }
+    val aiChatRepository: AiChatRepository by lazy {
+        AiChatRepositoryImpl(
+            api = aiChatApi,
+            dao = aiMessageDao,
+            sessionRepository = sessionRepository,
+            locationRepository = locationRepository
+        )
+    }
+    val sendSensiMessageUseCase by lazy {
+        SendSensiMessageUseCase(aiChatRepository, sessionRepository)
+    }
+    val loadAiConversationUseCase by lazy {
+        LoadAiConversationUseCase(aiChatRepository, sessionRepository)
+    }
 
     companion object {
         @Volatile

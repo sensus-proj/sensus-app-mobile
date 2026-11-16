@@ -44,4 +44,30 @@ public final class SensusDatabaseMigrations {
             db.execSQL("ALTER TABLE `offers` ADD COLUMN `expiresAtMillis` INTEGER NOT NULL DEFAULT 0");
         }
     };
+
+    private static final String MIGRATION_4_5_DDL =
+        "CREATE TABLE IF NOT EXISTS `ai_messages` ("
+            + "`messageId` TEXT NOT NULL, "
+            + "`conversationId` TEXT NOT NULL, "
+            + "`role` TEXT NOT NULL, "
+            + "`content` TEXT NOT NULL, "
+            + "`packageJson` TEXT, "
+            + "`degraded` INTEGER NOT NULL, "
+            + "`createdAtUtc` TEXT NOT NULL, "
+            + "PRIMARY KEY(`messageId`))";
+
+    public static final Migration MIGRATION_4_5 = new Migration(4, 5) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(MIGRATION_4_5_DDL);
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_messages_conversationId` ON `ai_messages` (`conversationId`)");
+        }
+    };
+
+    public static final Migration MIGRATION_5_6 = new Migration(5, 6) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("ALTER TABLE `ai_messages` ADD COLUMN `offersJson` TEXT");
+        }
+    };
 }
