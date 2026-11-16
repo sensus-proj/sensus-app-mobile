@@ -86,13 +86,14 @@ jobs:
           python-version: "3.12"
 
       # Herramienta 4: Semgrep SAST
-      - name: "4. Semgrep SAST (OWASP Top 10 & Mobile Security)"
+      - name: "4. Semgrep SAST (OWASP Top 10, Kotlin y Java)"
         uses: returntocorp/semgrep-action@v1
         with:
           config: >-
             p/default
             p/owasp-top-ten
-            p/mobile
+            p/kotlin
+            p/java
           generateSarif: "1"
         continue-on-error: true
 

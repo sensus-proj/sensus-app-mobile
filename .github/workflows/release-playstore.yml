@@ -107,7 +107,8 @@ jobs:
           config: >-
             p/default
             p/owasp-top-ten
-            p/mobile
+            p/kotlin
+            p/java
 
       - name: Análisis estático (Android Lint, Detekt, Ktlint)
         run: ./gradlew lint detekt ktlintCheck --no-daemon
