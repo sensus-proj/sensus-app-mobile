@@ -88,6 +88,51 @@ principal.
 - Tras cualquier cambio en sesión, cierre de sesión o base de datos: instalar en el dispositivo, **cerrar
   sesión, volver a entrar y abrir Sensi**.
 
+## E-03 — Test intermitente en CI: `IllegalStateException` en `TestMainDispatcherJvm` por `Looper`
+
+| Campo | Valor |
+|---|---|
+| Síntoma | `release-playstore` falla en `pre-flight-gates` con un test de ViewModel en rojo que pasa en local y en el PR |
+| Excepción | `IllegalStateException at TestMainDispatcherJvm.kt:45` · `Caused by: RuntimeException at Looper.java` |
+| Detectado | 2026-11-16, en `main` (`CommunityFeedViewModelTest.successfulPost_…`) |
+| Estado | Corregido |
+
+**Causa raíz.** `CommunityViewModel.openComposer()` hacía `withContext(Dispatchers.IO)`, un salto de hilo real. En
+los tests (que usan `StandardTestDispatcher` y `Dispatchers.setMain`) el test podía terminar y ejecutar
+`resetMain()` antes de que ese hilo regresara; al reanudarse, la corrutina intentaba usar el `Main` original
+(`Looper`, que en JVM no existe) y lanzaba la excepción. `runTest` recoge las excepciones no capturadas de otros
+hilos y las **atribuye al siguiente test**, por eso el rojo aparecía en un test que no tenía nada que ver. Es una
+carrera: depende de la carga de la máquina, así que casi nunca falla en local.
+
+**Corrección.** `CommunityViewModel.ioDispatcher` (`internal var`, por defecto `Dispatchers.IO`) y los tests lo
+sustituyen por el dispatcher de prueba. Así el trabajo de E/S corre en el planificador virtual y termina con
+`advanceUntilIdle()`. Prueba: `openComposer_runsItsIoWorkOnTheInjectedDispatcher…`.
+
+**Regla preventiva.**
+- En un ViewModel, todo `withContext(Dispatchers.IO/Default)` MUST usar un dispatcher sustituible en tests.
+  Si el ViewModel es `@HiltViewModel`, usar una propiedad `internal var` (un parámetro de constructor con
+  dispatcher no se puede proveer con Hilt sin un módulo).
+- Un test que pasa en local pero falla "al azar" en el test siguiente suele ser una corrutina que sobrevive al
+  `resetMain()`. Buscar saltos de hilo reales, `delay` con tiempo real o `viewModelScope` sin cancelar.
+
+---
+
+## E-04 — Semgrep no escanea nada: `Failed to download config from https://semgrep.dev/p/mobile: 404`
+
+| Campo | Valor |
+|---|---|
+| Síntoma | Semgrep imprime `[ERROR] invalid configuration file found` pero el paso aparece en verde |
+| Detectado | 2026-11-16, en `release-playstore` y `security-scanners` |
+| Estado | Corregido |
+
+**Causa raíz.** El pack `p/mobile` ya no existe en el registro de Semgrep (404). `semgrep-action@v1` no hace
+fallar el paso, así que el escaneo SAST quedaba **sin ejecutarse** sin que el CI lo mostrara.
+
+**Corrección.** `config` usa `p/default`, `p/owasp-top-ten`, `p/kotlin` y `p/java` (verificados: devuelven YAML).
+
+**Regla preventiva.** Un paso verde que imprime `[ERROR]` no es un paso sano. Al añadir un pack, comprobar
+`curl -sL https://semgrep.dev/p/<pack>` (debe devolver YAML y código 200).
+
 ---
 
 ## Lista de verificación antes de entregar un cambio de persistencia o sesión
@@ -97,3 +142,4 @@ principal.
 - [ ] Un fallo de Room no cierra la app (E-02).
 - [ ] Probado en el teléfono: abrir Sensi, cerrar sesión, iniciar sesión y abrir Sensi otra vez.
 - [ ] `adb logcat -d -b crash` sin `FATAL EXCEPTION` tras esa secuencia.
+- [ ] Ningún ViewModel salta a un `Dispatchers.IO` real sin dispatcher sustituible en tests (E-03).

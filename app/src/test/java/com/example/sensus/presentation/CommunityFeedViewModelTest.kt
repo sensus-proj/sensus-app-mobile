@@ -19,6 +19,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,7 +59,10 @@ class CommunityFeedViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = CommunityViewModel(getFeed, createPost, locations, session, offers)
+    private fun viewModel() = CommunityViewModel(getFeed, createPost, locations, session, offers).also {
+        // Sin esto, openComposer() salta a un hilo real de Dispatchers.IO y puede terminar tras resetMain().
+        it.ioDispatcher = dispatcher
+    }
 
     @Test
     fun loadAndPagination_deduplicatePostsAndStopAtLastPage() = runTest(dispatcher) {
@@ -134,6 +138,18 @@ class CommunityFeedViewModelTest {
         assertEquals("", vm.viewState.value.draftText)
         assertFalse(vm.viewState.value.isPublishing)
         coVerify(exactly = 1) { createPost(match { it.text == "Oferta vecinal" && it.merchantId == "shop-1" }, null) }
+    }
+
+    @Test
+    fun openComposer_runsItsIoWorkOnTheInjectedDispatcherSoItFinishesBeforeTheTestEnds() = runTest(dispatcher) {
+        val vm = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        vm.dispatchIntent(CommunityViewIntent.NewPost)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.viewState.value.showComposer)
+        verify(exactly = 1) { offers.getOffers() }
     }
 
     @Test

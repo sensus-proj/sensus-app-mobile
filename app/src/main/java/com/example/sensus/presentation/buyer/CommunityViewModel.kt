@@ -14,6 +14,7 @@ import com.example.sensus.domain.usecase.GetNearbyFeedUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -28,6 +29,12 @@ class CommunityViewModel @Inject constructor(
     private val offersRepository: OffersRepository,
     private val storeRepository: com.example.sensus.domain.repository.StoreRepository? = null
 ) : MviViewModel<CommunityViewState, CommunityViewIntent, CommunityViewEffect>(CommunityViewState()) {
+    /**
+     * Dispatcher para el trabajo de E/S. Los tests lo sustituyen por el dispatcher de prueba: un salto de hilo
+     * real con `Dispatchers.IO` puede terminar después de `resetMain()` y dejar una excepción de `Looper` que
+     * `runTest` atribuye al test siguiente (ver docs/errores-conocidos.md, E-03).
+     */
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     private var imageBytes: ByteArray? = null
     private var location: UserLocation? = null
     private var feedJob: Job? = null
@@ -118,7 +125,7 @@ class CommunityViewModel @Inject constructor(
         }
         updateState { copy(showComposer = true, publishError = null) }
         viewModelScope.launch {
-            val merchants = withContext(Dispatchers.IO) {
+            val merchants = withContext(ioDispatcher) {
                 val current = location ?: return@withContext emptyList()
                 com.example.sensus.domain.model.PublishingMerchantPolicy.nearby(
                     offersRepository.getOffers(),

@@ -886,3 +886,10 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Room v6:** columna `offersJson` en `ai_messages` con `MIGRATION_5_6` para que las tarjetas sobrevivan al reabrir el chat.
 - **Cobertura:** la lógica (`SensiOfferMapper.kt`) cuenta en Kover y tiene pruebas; la UI Compose va en un archivo `*Components*`, excluido por convención como el resto de pantallas. Cobertura 84.24 %.
 - **Verificación:** 335 pruebas en verde y `check_layers`/`check_sdd`/`check_secrets` en PASS. En el teléfono se comprobó que el chat abre, que el Markdown se ve bien y que la tarjeta aparece con el backend actual. **No se verificó en el teléfono** el toque de los botones ni la tarjeta con datos completos (imagen, dirección, Cómo llegar): requiere el backend desplegado. Sin commit ni push.
+
+## Bitácora - CI: pre-flight de release fallido en main (E-03 y E-04) (2026-11-16)
+
+- **Síntoma:** `release-playstore` / `pre-flight-gates` falló en `main` (`df88904`): `CommunityFeedViewModelTest` en rojo con `IllegalStateException` por `Looper`. No se publicó nada en Play. Además Semgrep imprimía 404 para `p/mobile`.
+- **E-03:** `CommunityViewModel.openComposer()` usaba `withContext(Dispatchers.IO)` (hilo real); el test terminaba y hacía `resetMain()` antes de que volviera, y `runTest` atribuía la excepción al test siguiente. Corregido con `ioDispatcher` sustituible y un test de regresión.
+- **E-04:** el pack `p/mobile` de Semgrep no existe; el escaneo no corría. Reemplazado por `p/kotlin` y `p/java` en `release-playstore.yml` y `security-scanners.yml`.
+- **Documentación:** entradas E-03 y E-04 en `docs/errores-conocidos.md`.
