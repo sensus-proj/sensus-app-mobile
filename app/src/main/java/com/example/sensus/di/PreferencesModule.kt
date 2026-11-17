@@ -1,6 +1,8 @@
 package com.example.sensus.di
 
 import com.example.sensus.data.di.SensusContainer
+import com.example.sensus.domain.repository.FriendsRepository
+import com.example.sensus.domain.repository.SavedOffersRepository
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
 import dagger.Module
@@ -20,4 +22,12 @@ object PreferencesModule {
     @Provides
     @Singleton
     fun provideSavePreferredMapLayerUseCase(container: SensusContainer): SavePreferredMapLayerUseCase = container.savePreferredMapLayerUseCase
+
+    @Provides
+    @Singleton
+    fun provideSavedOffersRepository(container: SensusContainer): SavedOffersRepository = container.savedOffersRepository
+
+    @Provides
+    @Singleton
+    fun provideFriendsRepository(container: SensusContainer): FriendsRepository = container.friendsRepository
 }

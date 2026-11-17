@@ -1,43 +1,30 @@
-# PLAN — FT-25 Red de Amigos mediante Código QR (Bloqueada por Backend)
+# PLAN — FT-25 Red de Amigos por QR, Invitación y Solicitudes Pendientes
 
-> Derivado de `spec.md`. Historias/Alcance: Pantalla P-24 (tab Amigos), Componente C-38 (Tesina Sensus / Excel Móvil).
+> Derivado de `spec.md`. Historias/Alcance: Pantalla P-24 (`Amigos y QR`), Componente C-38.
 > Rector: `.specify/memory/constitution.md` §2, §4, §5, §6, §10 y §11.
 
 ## 1. Diseño
 
-1. **Gobernanza SDD (`Borrador`).** Los endpoints `GET /api/v1/users/me/friend-qr`, `POST /api/v1/users/friends/add-by-qr` y `GET /api/v1/users/friends` no existen en `sensus-back`.
-2. **Saneamiento de QR falso.** El código QR decorativo dibujado a mano en `CommunityScreen.kt` debe sustituirse por ZXing real (`QrBitmapGenerator` de `FT-13`) cuando el backend emita el token firmado, u ocultarse mientras no exista el endpoint.
+1. **Identidad e invitación (`FriendInviteCodec`).** Código determinístico `SNS-XXXXXX` vía SHA-256 del correo normalizado, URL compartible `https://rodnix.com.mx/sensus?code=...&name=...`, esquema nativo `sensus://invitacion` y verificación Android App Links con `assetlinks.json`.
+2. **Escaneo y QR real.** Generación con ZXing `QRCodeWriter` en `CommunityQrDialog.kt` y lectura con `Camera2` + `ImageReader` + ZXing `QRCodeReader` (y selector de galería) en `QrScannerDialog.kt`.
+3. **Sincronización y solicitudes pendientes.** `FriendsApiService` consume `/api/v1/friends*` (Spec `050`); `FriendsLocalStore` persiste caché en `UserPreferenceDao` y controla IDs ya notificados para disparar notificaciones únicas vía `FriendRequestNotifier`.
+4. **UI (`FriendsCommunityScreen.kt` + `FriendsRequestsComponents.kt`).** Sección desplegable `"Solicitudes pendientes"` con contador, paloma verde para aceptar y tache rojo para cancelar, además de tarjeta de solicitudes enviadas y estado vacío real sin `MockDataProvider`.
 
 ## 2. UI y navegación
 
-- Modal `FriendQrModal` (`C-38`) con tab `Mi código QR` (ZXing) y tab `Escanear amigo` (CameraX).
+- `MainActivity.kt` captura App Links (`https://rodnix.com.mx/sensus?code=...`), esquemas `sensus://invitacion` y taps de notificación (`sensus://amigos/solicitudes`), enrutando mediante `Navigation.kt`, `AppViewModel.kt` y `MainAppContainer.kt` a `Comunidad -> Amigos`.
 
 ## 3. DI
 
 | Binding | Implementación |
 |---|---|
-| `FriendsRepository` | Pendiente de spec en `sensus-back` |
+| `FriendsApiService` | `NetworkClient.friendsApi` |
+| `FriendsRepository` | `FriendsRepositoryImpl` en `SensusContainer` y `@Provides` en `PreferencesModule` |
 
 ## 4. Gates
 
-- `./gradlew.bat compileDebugKotlin` y `compileDebugAndroidTestSources` verdes.
-- `./gradlew.bat detekt ktlintCheck lint` verdes (0 violaciones).
-- `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (cobertura `>= 80%`).
-- `python scripts/check_sdd.py` PASS.
-- `python scripts/check_layers.py` PASS.
-- `python scripts/check_endpoints.py` PASS.
-- `python scripts/check_secrets.py` PASS.
-- `python scripts/check_coverage.py --min 80` PASS.
-
-## 5. Orden de implementación
-
-1. Definir y aprobar spec de red de amigos en `sensus-back` (o retirar tab Amigos de `P-24`).
-2. Crear `FriendsApiService`, `FriendsRepositoryImpl` y casos de uso en `domain/`.
-3. Integrar `QrBitmapGenerator` (ZXing) y `QrCameraScannerPreview` en `C-38`.
-
-## 6. Prohibiciones
-
-- Prohibido renderizar un QR falso/decorativo en Canvas que no codifique un payload real.
+- `.\gradlew.bat ktlintCheck detekt compileDebugKotlin compileDebugAndroidTestKotlin testDebugUnitTest --no-daemon` en verde.
+- `python scripts/check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`.
 
 ## Tareas
 

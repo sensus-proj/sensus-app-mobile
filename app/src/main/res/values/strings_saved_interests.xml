@@ -1,0 +1,17 @@
+<resources>
+    <string name="saved_interests_title">Mis apartados y pedidos</string>
+    <string name="saved_interests_empty_title">Aún no tienes ofertas guardadas</string>
+    <string name="saved_interests_empty_subtitle">Toca el pincho en cualquier oferta o publicación que te interese para guardarla aquí.</string>
+    <string name="saved_interests_explore">Explorar ofertas</string>
+    <string name="saved_interests_tab_all">Todos</string>
+    <string name="saved_interests_tab_offers">Ofertas</string>
+    <string name="saved_interests_tab_posts">Publicaciones</string>
+    <string name="saved_interests_pin_add">Me interesa • Guardar en Mis apartados</string>
+    <string name="saved_interests_pin_saved">Guardada en Mis apartados</string>
+    <string name="saved_interests_toast_added">Guardado en Mis apartados y pedidos</string>
+    <string name="saved_interests_toast_removed">Quitado de Mis apartados y pedidos</string>
+    <string name="saved_interests_unpin">Quitar de guardados</string>
+    <string name="saved_interests_post_interest">Me interesa</string>
+    <string name="saved_interests_post_saved">Guardada</string>
+    <string name="saved_interests_open_offer">Ver oferta</string>
+</resources>

@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.theme.SensusBackground
@@ -38,52 +40,54 @@ import com.example.sensus.theme.SensusTextPrimary
 private const val CATALOG_GRID_COLUMNS = 2
 
 @Composable
-fun StoreCatalogScreen(cluster: MapStoreCluster, onNavigateBack: () -> Unit, onProductClick: (ProductOffer) -> Unit, modifier: Modifier = Modifier) {
+fun StoreCatalogScreen(
+    cluster: MapStoreCluster,
+    onNavigateBack: () -> Unit,
+    onProductClick: (ProductOffer) -> Unit,
+    modifier: Modifier = Modifier,
+    onRequireAuth: () -> Unit = {}
+) {
+    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
+    val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
+    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = onRequireAuth)
+
     val availableCategories = remember(cluster.allStoreOffers) {
         cluster.allStoreOffers.map { it.category.trim() }.filter { it.isNotBlank() }.distinct()
     }
     var selectedCategory by remember(cluster.storeKey) { mutableStateOf<String?>(null) }
-
     val visibleOffers = remember(cluster.allStoreOffers, selectedCategory) {
         val filter = selectedCategory
-        if (filter == null) {
-            cluster.allStoreOffers
-        } else {
-            cluster.allStoreOffers.filter { it.category.equals(filter, ignoreCase = true) }
-        }
+        if (filter == null) cluster.allStoreOffers else cluster.allStoreOffers.filter { it.category.equals(filter, ignoreCase = true) }
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize().navigationBarsPadding(),
         containerColor = SensusBackground,
-        topBar = {
-            StoreCatalogTopBar(
-                storeName = cluster.storeName,
-                offersCount = visibleOffers.size,
-                onNavigateBack = onNavigateBack
-            )
-        }
+        topBar = { StoreCatalogTopBar(storeName = cluster.storeName, offersCount = visibleOffers.size, onNavigateBack = onNavigateBack) }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            StoreCatalogHeaderCard(
-                cluster = cluster,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-            )
+            StoreCatalogHeaderCard(cluster = cluster, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
             if (availableCategories.isNotEmpty()) {
-                StoreCatalogCategoryRow(
-                    categories = availableCategories,
-                    selectedCategory = selectedCategory,
-                    onSelectCategory = { selectedCategory = it }
-                )
+                StoreCatalogCategoryRow(categories = availableCategories, selectedCategory = selectedCategory, onSelectCategory = { selectedCategory = it })
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            StoreCatalogGridBody(offers = visibleOffers, onProductClick = onProductClick)
+            StoreCatalogGridBody(
+                offers = visibleOffers,
+                savedOfferIds = savedState.savedOfferIds,
+                onProductClick = onProductClick,
+                onSaveClick = { savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(it)) }
+            )
         }
     }
 }
 
 @Composable
-private fun StoreCatalogGridBody(offers: List<ProductOffer>, onProductClick: (ProductOffer) -> Unit) {
+private fun StoreCatalogGridBody(
+    offers: List<ProductOffer>,
+    savedOfferIds: Set<String>,
+    onProductClick: (ProductOffer) -> Unit,
+    onSaveClick: (ProductOffer) -> Unit
+) {
     if (offers.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize().background(SensusBackground),
@@ -106,7 +110,12 @@ private fun StoreCatalogGridBody(offers: List<ProductOffer>, onProductClick: (Pr
             modifier = Modifier.fillMaxSize()
         ) {
             items(offers, key = { it.id }) { offer ->
-                StoreCatalogProductCard(offer = offer, onClick = { onProductClick(offer) })
+                StoreCatalogProductCard(
+                    offer = offer,
+                    onClick = { onProductClick(offer) },
+                    isSaved = offer.id in savedOfferIds,
+                    onSaveClick = { onSaveClick(offer) }
+                )
             }
         }
     }

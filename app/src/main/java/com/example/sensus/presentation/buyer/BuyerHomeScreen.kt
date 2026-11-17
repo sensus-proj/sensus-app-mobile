@@ -23,15 +23,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -51,11 +52,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.sensus.R
 import com.example.sensus.domain.model.GuestRadiusPolicy
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
@@ -117,7 +120,8 @@ private data class HomeContentData(
     val searchState: HomeSearchProps,
     val filteredOffers: List<ProductOffer>,
     val cart: StoreCart,
-    val showRadiusSheet: Boolean
+    val showRadiusSheet: Boolean,
+    val savedOfferIds: Set<String> = emptySet()
 )
 
 @ComposeUiModel
@@ -126,7 +130,8 @@ private data class HomeHostActions(
     val onSearchChange: (String) -> Unit,
     val onCategoryToggle: (StoreCategory) -> Unit,
     val onToggleRadiusSheet: (Boolean) -> Unit,
-    val onRadiusSelected: (Float) -> Unit
+    val onRadiusSelected: (Float) -> Unit,
+    val onToggleSaveOffer: (ProductOffer) -> Unit = {}
 )
 
 @Composable
@@ -136,10 +141,12 @@ fun BuyerHomeScreen(
     callbacks: BuyerHomeCallbacks,
     modifier: Modifier = Modifier
 ) {
+    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val merchantId = callbacks.merchantId
     val context = LocalContext.current
     val homeState by homeViewModel.viewState.collectAsState()
     val cartState by cartViewModel.viewState.collectAsState()
+    val savedState by savedViewModel.viewState.collectAsState()
     val effectiveIsGuest = callbacks.isGuest || homeState.isGuest
     val effectiveRadiusKm = GuestRadiusPolicy.clampRadius(homeState.selectedRadiusKm, effectiveIsGuest)
 
@@ -153,9 +160,8 @@ fun BuyerHomeScreen(
             if (effect is BuyerHomeViewEffect.RequireAuthForRadius) callbacks.onRequireAuth()
         }
     }
-    LaunchedEffect(homeState.userLocation) {
-        locationLabel = OsmMapUtils.resolveLocationLabel(context, homeState.userLocation)
-    }
+    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
+    LaunchedEffect(homeState.userLocation) { locationLabel = OsmMapUtils.resolveLocationLabel(context, homeState.userLocation) }
 
     val filteredOffers = remember(searchQuery, selectedCategory, homeState.userLocation, homeState.offers, effectiveRadiusKm, merchantId) {
         filterHomeOffers(homeState.userLocation, homeState.offers, effectiveRadiusKm, searchQuery, selectedCategory)
@@ -168,7 +174,8 @@ fun BuyerHomeScreen(
                 searchState = HomeSearchProps(searchQuery, effectiveIsGuest, effectiveRadiusKm, locationLabel, selectedCategory),
                 filteredOffers = filteredOffers,
                 cart = cartState.storeCart,
-                showRadiusSheet = showRadiusSheet
+                showRadiusSheet = showRadiusSheet,
+                savedOfferIds = savedState.savedOfferIds
             ),
             callbacks = callbacks,
             actions = HomeHostActions(
@@ -176,7 +183,8 @@ fun BuyerHomeScreen(
                 onSearchChange = { searchQuery = it },
                 onCategoryToggle = { clicked -> selectedCategory = if (selectedCategory == clicked) StoreCategory.ALL else clicked },
                 onToggleRadiusSheet = { showRadiusSheet = it },
-                onRadiusSelected = { km -> homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km)) }
+                onRadiusSelected = { km -> homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km)) },
+                onToggleSaveOffer = { offer -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(offer)) }
             ),
             modifier = Modifier
         )
@@ -237,7 +245,12 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
             )
         }
         items(data.filteredOffers, key = { it.id }) { offer ->
-            ProductOfferCard(offer = offer, onClick = { callbacks.onProductClick(offer) })
+            ProductOfferCard(
+                offer = offer,
+                onClick = { callbacks.onProductClick(offer) },
+                isSaved = offer.id in data.savedOfferIds,
+                onSaveClick = { actions.onToggleSaveOffer(offer) }
+            )
         }
     }
 }
@@ -396,7 +409,7 @@ private fun FloatingHomeCartPill(totalItems: Int, totalDiscountPrice: Double, on
 }
 
 @Composable
-fun ProductOfferCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ProductOfferCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifier = Modifier, isSaved: Boolean = false, onSaveClick: (() -> Unit)? = null) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -404,7 +417,7 @@ fun ProductOfferCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifie
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            ProductOfferCardBadgesRow(offer = offer)
+            ProductOfferCardBadgesRow(offer = offer, isSaved = isSaved, onSaveClick = onSaveClick)
             Spacer(modifier = Modifier.height(10.dp))
             Text(text = offer.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
@@ -420,7 +433,7 @@ fun ProductOfferCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifie
 }
 
 @Composable
-private fun ProductOfferCardBadgesRow(offer: ProductOffer) {
+private fun ProductOfferCardBadgesRow(offer: ProductOffer, isSaved: Boolean = false, onSaveClick: (() -> Unit)? = null) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Surface(color = SensusDiscountTag, shape = RoundedCornerShape(6.dp)) {
@@ -451,7 +464,16 @@ private fun ProductOfferCardBadgesRow(offer: ProductOffer) {
                 )
             }
         }
-        Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = "Guardar", tint = SensusTextMuted, modifier = Modifier.size(20.dp))
+        val pinIcon = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin
+        val pinTint = if (isSaved) SensusPurple else SensusTextMuted
+        val pinDesc = if (isSaved) stringResource(R.string.saved_interests_pin_saved) else stringResource(R.string.saved_interests_pin_add)
+        if (onSaveClick != null) {
+            IconButton(onClick = onSaveClick, modifier = Modifier.size(28.dp)) {
+                Icon(imageVector = pinIcon, contentDescription = pinDesc, tint = pinTint, modifier = Modifier.size(20.dp))
+            }
+        } else {
+            Icon(imageVector = pinIcon, contentDescription = pinDesc, tint = pinTint, modifier = Modifier.size(20.dp))
+        }
     }
 }
 

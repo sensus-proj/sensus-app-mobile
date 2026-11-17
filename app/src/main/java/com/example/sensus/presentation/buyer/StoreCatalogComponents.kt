@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,7 +25,9 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -169,7 +172,13 @@ internal fun StoreCatalogCategoryRow(categories: List<String>, selectedCategory:
 }
 
 @Composable
-internal fun StoreCatalogProductCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun StoreCatalogProductCard(
+    offer: ProductOffer,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isSaved: Boolean = false,
+    onSaveClick: (() -> Unit)? = null
+) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -180,7 +189,7 @@ internal fun StoreCatalogProductCard(offer: ProductOffer, onClick: () -> Unit, m
             .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            CatalogProductBoundedImage(offer = offer)
+            CatalogProductBoundedImage(offer = offer, isSaved = isSaved, onSaveClick = onSaveClick)
             Text(
                 text = offer.category,
                 fontSize = 10.sp,
@@ -217,7 +226,7 @@ internal fun StoreCatalogProductCard(offer: ProductOffer, onClick: () -> Unit, m
 }
 
 @Composable
-private fun CatalogProductBoundedImage(offer: ProductOffer) {
+private fun CatalogProductBoundedImage(offer: ProductOffer, isSaved: Boolean = false, onSaveClick: (() -> Unit)? = null) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -254,6 +263,31 @@ private fun CatalogProductBoundedImage(offer: ProductOffer) {
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+        if (onSaveClick != null) {
+            CatalogPinBadge(
+                isSaved = isSaved,
+                onSaveClick = onSaveClick,
+                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CatalogPinBadge(isSaved: Boolean, onSaveClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = if (isSaved) SensusPurple else Color.White,
+        shape = CircleShape,
+        modifier = modifier.size(28.dp).clip(CircleShape).clickable(onClick = onSaveClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                contentDescription = if (isSaved) "Guardada" else "Me interesa",
+                tint = if (isSaved) Color.White else SensusPurple,
+                modifier = Modifier.size(16.dp)
             )
         }
     }
