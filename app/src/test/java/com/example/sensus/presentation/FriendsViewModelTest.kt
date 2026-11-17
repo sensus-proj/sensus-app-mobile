@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -43,6 +44,7 @@ import retrofit2.Response
 @OptIn(ExperimentalCoroutinesApi::class)
 class FriendsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
+    private lateinit var testScope: CoroutineScope
     private val sessionFlow = MutableStateFlow(
         SessionState(
             isSessionActive = true,
@@ -59,10 +61,12 @@ class FriendsViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
+        testScope = CoroutineScope(SupervisorJob() + dispatcher)
     }
 
     @After
     fun teardown() {
+        testScope.cancel()
         Dispatchers.resetMain()
     }
 
@@ -96,7 +100,7 @@ class FriendsViewModelTest {
             sessionRepository = sessionRepo,
             friendsApi = mockApi,
             ioDispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
+            scope = testScope
         )
         val vm = FriendsViewModel(repo, sessionRepo)
         dispatcher.scheduler.advanceUntilIdle()
@@ -139,7 +143,7 @@ class FriendsViewModelTest {
             sessionRepository = sessionRepo,
             friendsApi = null,
             ioDispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
+            scope = testScope
         )
         val vm = FriendsViewModel(repo, sessionRepo)
         dispatcher.scheduler.advanceUntilIdle()
@@ -187,7 +191,7 @@ class FriendsViewModelTest {
             sessionRepository = sessionRepo,
             friendsApi = mockApi,
             ioDispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
+            scope = testScope
         )
         val vm = FriendsViewModel(repo, sessionRepo)
         dispatcher.scheduler.advanceUntilIdle()

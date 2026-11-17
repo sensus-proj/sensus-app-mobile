@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -45,6 +46,7 @@ import retrofit2.Response
 @OptIn(ExperimentalCoroutinesApi::class)
 class FriendsRepositoryImplTest {
     private val dispatcher = StandardTestDispatcher()
+    private lateinit var testScope: CoroutineScope
     private val sessionFlow = MutableStateFlow(
         SessionState(
             isSessionActive = true,
@@ -71,11 +73,13 @@ class FriendsRepositoryImplTest {
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
+        testScope = CoroutineScope(SupervisorJob() + dispatcher)
         storedPrefs.clear()
     }
 
     @After
     fun teardown() {
+        testScope.cancel()
         Dispatchers.resetMain()
     }
 
@@ -137,7 +141,7 @@ class FriendsRepositoryImplTest {
             sessionRepository = sessionRepo,
             friendsApi = mockApi,
             ioDispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
+            scope = testScope
         )
         dispatcher.scheduler.advanceUntilIdle()
 
@@ -185,7 +189,7 @@ class FriendsRepositoryImplTest {
             sessionRepository = sessionRepo,
             friendsApi = mockApi,
             ioDispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
+            scope = testScope
         )
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals("https://cdn.sensus.com/c.jpg", repo.sentRequests.value.first().targetPhotoUrl)
@@ -232,7 +236,7 @@ class FriendsRepositoryImplTest {
             sessionRepository = sessionRepo,
             friendsApi = mockApi,
             ioDispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
+            scope = testScope
         )
         val thread = repo.getSharedOffersWithFriend("u-carlos")
         assertEquals(1, thread.size)
