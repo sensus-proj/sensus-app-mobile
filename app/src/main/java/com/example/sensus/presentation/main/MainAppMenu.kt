@@ -68,9 +68,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.R
+import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.buyer.CartBottomSheet
+import com.example.sensus.presentation.buyer.CommunityCallbacks
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.modals.ConfirmDeleteAccountDialog
 import com.example.sensus.presentation.modals.ConfirmLogoutDialog
@@ -138,18 +140,22 @@ enum class MerchantNavTab(val title: String, val icon: ImageVector) {
 @Stable
 internal class MainAppState {
     var communityMerchantId by mutableStateOf<String?>(null)
+    var openFriendsTabSignal by mutableIntStateOf(0)
+    var isCommunityFriendsSelected by mutableStateOf(false)
     var isMerchantMode by mutableStateOf(false)
     var buyerTabIndex by mutableIntStateOf(0)
     var merchantTabIndex by mutableIntStateOf(0)
     var isFamOpen by mutableStateOf(false)
     var selectedProductForDetail by mutableStateOf<ProductOffer?>(null)
     var selectedStoreCatalog by mutableStateOf<MapStoreCluster?>(null)
+    var selectedFriendForOffers by mutableStateOf<ConnectedFriend?>(null)
     var selectedOfferForEdit by mutableStateOf<ProductOffer?>(null)
     var activeApartadoOffer by mutableStateOf<ProductOffer?>(null)
     var activeClaimExpected by mutableStateOf(false)
     var showCartSheet by mutableStateOf(false)
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
+    var showSavedInterests by mutableStateOf(false)
     var showMerchantRegister by mutableStateOf(false)
     var isMerchantRegistered by mutableStateOf(false)
     var showConfirmLogout by mutableStateOf(false)
@@ -232,7 +238,9 @@ private fun dismissActiveDialog(state: MainAppState): Boolean = when {
     else -> false
 }
 
-private fun dismissActiveOverlay(state: MainAppState): Boolean = when {
+private fun dismissActiveOverlay(state: MainAppState): Boolean = dismissPrimaryOverlay(state) || dismissSecondaryOverlay(state)
+
+private fun dismissPrimaryOverlay(state: MainAppState): Boolean = when {
     state.showNotifications -> {
         state.showNotifications = false
         true
@@ -249,8 +257,20 @@ private fun dismissActiveOverlay(state: MainAppState): Boolean = when {
         state.selectedProductForDetail = null
         true
     }
+    else -> false
+}
+
+private fun dismissSecondaryOverlay(state: MainAppState): Boolean = when {
     state.selectedStoreCatalog != null -> {
         state.selectedStoreCatalog = null
+        true
+    }
+    state.selectedFriendForOffers != null -> {
+        state.selectedFriendForOffers = null
+        true
+    }
+    state.showSavedInterests -> {
+        state.showSavedInterests = false
         true
     }
     state.showMerchantRegister -> {
@@ -536,3 +556,17 @@ internal fun MainAppDialogs(state: MainAppState, isGuest: Boolean, onLogout: () 
         )
     }
 }
+
+internal fun buildCommunityCallbacks(state: MainAppState): CommunityCallbacks = CommunityCallbacks(
+    onRequireAuth = { state.showGuestPrompt = true },
+    onMerchantClick = { id ->
+        state.communityMerchantId = id
+        state.buyerTabIndex = 1
+    },
+    onFriendClick = { friend ->
+        state.isCommunityFriendsSelected = true
+        state.selectedFriendForOffers = friend
+    },
+    isFriendsSelected = state.isCommunityFriendsSelected,
+    onSelectFriendsTab = { state.isCommunityFriendsSelected = it }
+)

@@ -46,7 +46,13 @@ private val rootRoutes = setOf(
 )
 
 @Composable
-fun MainNavigation(initialDeepLinkResetToken: String? = null, onResetTokenConsumed: () -> Unit = {}, appViewModel: AppViewModel = hiltViewModel()) {
+fun MainNavigation(
+    initialDeepLinkResetToken: String? = null,
+    onResetTokenConsumed: () -> Unit = {},
+    initialDeepLinkInviteUrl: String? = null,
+    onInviteUrlConsumed: () -> Unit = {},
+    appViewModel: AppViewModel = hiltViewModel()
+) {
     val appState by appViewModel.viewState.collectAsState()
     var previousScreenBeforeTerms by rememberSaveable { mutableStateOf<AppScreen?>(null) }
     val backStack = rememberNavBackStack(NavigationKeys.savedStateConfig, SensusRoute.Splash)
@@ -55,6 +61,12 @@ fun MainNavigation(initialDeepLinkResetToken: String? = null, onResetTokenConsum
         if (!initialDeepLinkResetToken.isNullOrBlank()) {
             appViewModel.dispatchIntent(AppViewIntent.DeepLinkReceived(initialDeepLinkResetToken))
             onResetTokenConsumed()
+        }
+    }
+    LaunchedEffect(initialDeepLinkInviteUrl) {
+        if (!initialDeepLinkInviteUrl.isNullOrBlank()) {
+            appViewModel.dispatchIntent(AppViewIntent.FriendInviteDeepLinkReceived(initialDeepLinkInviteUrl))
+            onInviteUrlConsumed()
         }
     }
 

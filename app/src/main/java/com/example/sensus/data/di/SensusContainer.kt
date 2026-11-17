@@ -17,21 +17,25 @@ import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.repository.AiChatRepositoryImpl
+import com.example.sensus.data.repository.FriendsRepositoryImpl
 import com.example.sensus.data.repository.MapPreferencesRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
 import com.example.sensus.data.repository.RetrofitAuthRepository
 import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.data.repository.RetrofitProfileRepository
+import com.example.sensus.data.repository.SavedOffersRepositoryImpl
 import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.domain.media.ImageCompressor
 import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.AuthRepository
+import com.example.sensus.domain.repository.FriendsRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.ReverseGeocodingRepository
+import com.example.sensus.domain.repository.SavedOffersRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.usecase.ActivateMerchantUseCase
 import com.example.sensus.domain.usecase.DeleteAccountUseCase
@@ -159,6 +163,21 @@ class SensusContainer(
 
     val mapPreferencesRepository: MapPreferencesRepository by lazy {
         MapPreferencesRepositoryImpl(userPreferenceDao)
+    }
+
+    val savedOffersRepository: SavedOffersRepository by lazy {
+        SavedOffersRepositoryImpl(
+            userPreferenceDao = userPreferenceDao,
+            sessionRepository = sessionRepository
+        )
+    }
+
+    val friendsRepository: FriendsRepository by lazy {
+        FriendsRepositoryImpl(
+            userPreferenceDao = userPreferenceDao,
+            sessionRepository = sessionRepository,
+            friendsApi = networkClient.friendsApi
+        )
     }
 
     // Sprint 1 Use Cases

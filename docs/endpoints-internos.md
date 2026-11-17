@@ -68,11 +68,13 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/ai/messages` | `SendSensiMessageUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 10/min por usuario (20/día) | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
 | `GET /api/v1/ai/conversations/{id}` | `LoadAiConversationUseCase` -> `AiChatRepository` -> `AiChatApiService` | Bearer | 30/min por usuario | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
 | `DELETE /api/v1/ai/conversations/{id}` | `AiChatRepository` -> `AiChatApiService` | Bearer (no invitado) | 10/min por usuario | Especificado en backend (Spec 046, ADR 0012, 2026-11-15); despliegue pendiente (FT-24) |
-| `GET /api/v1/friends` | `GetFriendsUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 30/min por usuario | Borrador / pendiente backend (FT-25) |
-| `POST /api/v1/friends` | `ConnectFriendByQrUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 20/hora por usuario | Borrador / pendiente backend (FT-25) |
-| `PATCH /api/v1/friends/{id}` | `RespondFriendRequestUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 20/hora por usuario | Borrador / pendiente backend (FT-25) |
-| `DELETE /api/v1/friends/{id}` | `FriendsRepository` -> `FriendsApiService` | Bearer | 20/hora por usuario | Borrador / pendiente backend (FT-25) |
-| `POST /api/v1/offers/{id}/share` | `ShareOfferWithFriendUseCase` -> `FriendsRepository` -> `FriendsApiService` | Bearer | 30/hora por usuario | Borrador / pendiente backend (FT-25) |
+| `GET /api/v1/friends` | `FriendsRepository` -> `FriendsApiService` | Bearer (no invitado) | 30/min por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `POST /api/v1/friends/requests` | `FriendsRepository` -> `FriendsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `POST /api/v1/friends/requests/{requestId}/accept` | `FriendsRepository` -> `FriendsApiService` | Bearer (destinatario) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `POST /api/v1/friends/requests/{requestId}/reject` | `FriendsRepository` -> `FriendsApiService` | Bearer (participante) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `DELETE /api/v1/friends/{friendUserId}` | `FriendsRepository` -> `FriendsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `GET /api/v1/friends/{friendUserId}/shared-offers` | `FriendsRepository` -> `FriendsApiService` | Bearer (amigos aceptados) | 30/min por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `POST /api/v1/offers/{offerId}/share` | `FriendsRepository` -> `FriendsApiService` | Bearer (1..10 amigos) | 30/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
 | `GET /api/v1/merchants/{id}` | `GetMerchantPublicProfileUseCase` -> `ReviewsRepository` -> `ReviewsApiService` | Publico o Bearer | 60/min por IP | Borrador / pendiente backend (FT-26) |
 | `GET /api/v1/merchants/{id}/reviews` | `GetMerchantReviewsUseCase` -> `ReviewsRepository` -> `ReviewsApiService` | Publico o Bearer | 60/min por IP | Borrador / pendiente backend (FT-26) |
 | `POST /api/v1/reviews` | `SubmitReviewUseCase` -> `ReviewsRepository` -> `ReviewsApiService` | Bearer (reserva `REDEEMED`) | 10/hora por usuario | Borrador / pendiente backend (FT-26) |
