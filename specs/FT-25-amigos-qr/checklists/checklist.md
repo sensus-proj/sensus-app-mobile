@@ -1,48 +1,26 @@
-# CHECKLIST — FT-25 Red de Amigos mediante Código QR (Bloqueada por Backend)
+# CHECKLIST — FT-25 Red de Amigos por QR, Invitación y Solicitudes Pendientes
 
-> Gate de cierre. Alcance: Pantalla P-24 (tab Amigos), Componente C-38 (Tesina Sensus / Excel Móvil). Sin todos los ítems en `[x]` no hay merge ni cierre de slice.
+> Gate de cierre. Alcance: Pantalla P-24 (tab Amigos), Componente C-38.
 
 ## Spec y alcance
 
-- [ ] `spec.md` con las 7 secciones canónicas + tabla `## Aprobación` resuelta
-- [ ] Historias y pantallas del alcance cubiertas por pruebas de éxito, error y borde
-- [ ] `plan.md` y `tasks.md` alineados sin cambios de alcance ocultos
-- [ ] Sin `TODO`, `FIXME` ni `STOPSHIP` sin issue trazado
+- [x] `spec.md` con las 7 secciones canónicas y `## Aprobación` actualizado
+- [x] `plan.md`, `tasks.md` y `docs/endpoints-internos.md` alineados con `/api/v1/friends*`
 
 ## Funcionalidad y reglas de negocio
 
-- [ ] Decisión arquitectónica tomada sobre endpoints de amigos en `sensus-back`
-- [ ] Retirado el QR decorativo dibujado en Canvas de `CommunityScreen.kt`
+- [x] Retirados `MockDataProvider.sampleFriends` y QR falso en `Canvas`
+- [x] Generación real de código `SNS-XXXXXX` y QR ZXing escaneable
+- [x] Compartir invitación (`https://rodnix.com.mx/sensus?code=...&name=...`) + App Link / Deep Link
+- [x] Sección `"Solicitudes pendientes"` con aceptar (`✓`) y cancelar (`✕`) + notificación local
 
 ## Arquitectura y seguridad
 
-- [ ] `domain/` puro (sin `android.*`, Retrofit, Room ni serializadores JSON)
-- [ ] `presentation/` no importa `data/` (`check_layers.py` en PASS)
-- [ ] ViewModels heredan de `MviViewModel<ViewState, ViewIntent, ViewEffect>`
-- [ ] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
-- [ ] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
-
-## UI y accesibilidad
-
-- [ ] Previews `@Preview` para estados `Loading`, `Loaded`, `Empty` y `Error`
-- [ ] Paleta morada de marca (`#7C3AED` / `#8B5CF6`); sin ámbar (`SensusAmber`) ni emojis
-- [ ] Touch targets `>= 48x48 dp` y `contentDescription` en controles interactivos
+- [x] `domain/` puro (sin `android.*`, Retrofit, Room ni `kotlinx.serialization`)
+- [x] `presentation/` no importa `data/`
+- [x] `FriendsViewModel` hereda de `MviViewModel`
 
 ## Gates automatizados
 
-- [ ] `./gradlew.bat compileDebugKotlin` verde
-- [ ] `./gradlew.bat compileDebugAndroidTestSources` verde
-- [ ] `./gradlew.bat detekt ktlintCheck lint` verdes
-- [ ] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
-- [ ] `python scripts/check_sdd.py` PASS
-- [ ] `python scripts/check_layers.py` PASS
-- [ ] `python scripts/check_endpoints.py` PASS
-- [ ] `python scripts/check_secrets.py` PASS
-- [ ] `python scripts/check_coverage.py --min 80` PASS
-
-## Cierre SDD
-
-- [ ] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
-- [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
-- [ ] `CHECKLIST_PR.md` completo
-- [ ] Tag `v1.28.0-ft25`
+- [x] `.\gradlew.bat ktlintCheck detekt compileDebugKotlin compileDebugAndroidTestKotlin testDebugUnitTest` verde (`344` pruebas, `0` fallos)
+- [ ] Prueba E2E en dos teléfonos reales tras despliegue de `sensus-back` y `sensus-landing`

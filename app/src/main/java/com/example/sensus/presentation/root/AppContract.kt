@@ -23,11 +23,13 @@ data class AppViewState(
     val hasLocationPermission: Boolean = false,
     val hasCompletedSplash: Boolean = false,
     val isMerchantRegistered: Boolean = false,
-    val activeResetToken: String? = null
+    val activeResetToken: String? = null,
+    val friendInviteSignal: Int = 0
 ) : ViewState
 
 sealed interface AppViewIntent : ViewIntent {
     data class DeepLinkReceived(val token: String) : AppViewIntent
+    data class FriendInviteDeepLinkReceived(val inviteUrl: String) : AppViewIntent
     data object SplashFinished : AppViewIntent
     data class LocationPermissionSet(val granted: Boolean) : AppViewIntent
     data class TermsAccepted(val accepted: Boolean) : AppViewIntent

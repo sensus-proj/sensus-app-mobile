@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +48,7 @@ import coil.compose.AsyncImage
 import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
+import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
@@ -59,14 +63,18 @@ private const val STORE_CARD_ACTIVE_ALPHA = 0.14f
 private const val MATCHING_LIST_MAX_HEIGHT_DP = 172
 private const val OVERVIEW_CATEGORY_LIMIT = 3
 
+@ComposeUiModel
+internal data class SelectedStoreCardActions(
+    val onClose: () -> Unit,
+    val onRouteClick: (ProductOffer) -> Unit,
+    val onViewMoreClick: (MapStoreCluster) -> Unit,
+    val onOfferClick: (ProductOffer) -> Unit = {},
+    val savedOfferIds: Set<String> = emptySet(),
+    val onToggleSaveOffer: (ProductOffer) -> Unit = {}
+)
+
 @Composable
-internal fun SelectedStoreBottomCard(
-    cluster: MapStoreCluster,
-    onClose: () -> Unit,
-    onRouteClick: (ProductOffer) -> Unit,
-    onViewMoreClick: (MapStoreCluster) -> Unit,
-    modifier: Modifier = Modifier
-) {
+internal fun SelectedStoreBottomCard(cluster: MapStoreCluster, actions: SelectedStoreCardActions, modifier: Modifier = Modifier) {
     val isAllFilter = cluster.initialCategory == StoreCategory.ALL
     val routeTarget = cluster.featuredOffer ?: buildStoreRouteTarget(cluster)
     Card(
@@ -85,7 +93,7 @@ internal fun SelectedStoreBottomCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(Color(BORDER_LIGHT_HEX)))
-                IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
+                IconButton(onClick = actions.onClose, modifier = Modifier.size(24.dp)) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Cerrar", tint = SensusTextMuted, modifier = Modifier.size(18.dp))
                 }
             }
@@ -95,14 +103,19 @@ internal fun SelectedStoreBottomCard(
             if (isAllFilter) {
                 SelectedStoreCatalogOverview(cluster = cluster)
             } else {
-                SelectedStoreCategoryOffersList(offers = cluster.matchingOffers)
+                SelectedStoreCategoryOffersList(
+                    offers = cluster.matchingOffers,
+                    onOfferClick = actions.onOfferClick,
+                    savedOfferIds = actions.savedOfferIds,
+                    onToggleSaveOffer = actions.onToggleSaveOffer
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             SelectedStoreActionButtons(
                 cluster = cluster,
                 routeTarget = routeTarget,
-                onRouteClick = onRouteClick,
-                onViewMoreClick = onViewMoreClick
+                onRouteClick = actions.onRouteClick,
+                onViewMoreClick = actions.onViewMoreClick
             )
         }
     }
@@ -196,7 +209,12 @@ private fun SelectedStoreCatalogOverview(cluster: MapStoreCluster) {
 }
 
 @Composable
-private fun SelectedStoreCategoryOffersList(offers: List<ProductOffer>) {
+private fun SelectedStoreCategoryOffersList(
+    offers: List<ProductOffer>,
+    onOfferClick: (ProductOffer) -> Unit,
+    savedOfferIds: Set<String>,
+    onToggleSaveOffer: (ProductOffer) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -205,17 +223,25 @@ private fun SelectedStoreCategoryOffersList(offers: List<ProductOffer>) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         offers.forEach { offer ->
-            SelectedStoreProductPreview(offer = offer)
+            SelectedStoreProductPreview(
+                offer = offer,
+                isSaved = offer.id in savedOfferIds,
+                onClick = { onOfferClick(offer) },
+                onSaveClick = { onToggleSaveOffer(offer) }
+            )
         }
     }
 }
 
 @Composable
-private fun SelectedStoreProductPreview(offer: ProductOffer) {
+private fun SelectedStoreProductPreview(offer: ProductOffer, isSaved: Boolean, onClick: () -> Unit, onSaveClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = SensusBackground,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
@@ -250,6 +276,14 @@ private fun SelectedStoreProductPreview(offer: ProductOffer) {
                     Text(text = "-${offer.discountPercent}%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SensusSuccess)
                 }
                 Text(text = "Quedan ${offer.unitsLeft} pzs", fontSize = 11.sp, color = SensusTextMuted)
+            }
+            IconButton(onClick = onSaveClick, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                    contentDescription = if (isSaved) "Guardada" else "Me interesa",
+                    tint = if (isSaved) SensusPurple else SensusTextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
