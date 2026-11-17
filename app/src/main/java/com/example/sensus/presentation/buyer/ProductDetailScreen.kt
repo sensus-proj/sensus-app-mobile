@@ -1,6 +1,5 @@
 package com.example.sensus.presentation.buyer
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -43,10 +42,20 @@ fun ProductDetailScreen(
     viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
     val savedViewModel: SavedInterestsViewModel = hiltViewModel()
+    val friendsViewModel: FriendsViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
+    val friendsState by friendsViewModel.viewState.collectAsStateWithLifecycle()
+    var showShareSheet by remember(offer.id) { mutableStateOf(false) }
+
     LaunchedEffect(offer.id) { viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id)) }
     SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
+    ShareOfferEffectsHandler(
+        friendsViewModel = friendsViewModel,
+        onShared = { showShareSheet = false },
+        onRequireAuth = callbacks.onRequireAuth
+    )
+
     ProductDetailContent(
         offer = offer,
         state = state,
@@ -55,10 +64,48 @@ fun ProductDetailScreen(
             onIntent = viewModel::dispatchIntent,
             onAddToCart = { current, quantity -> cartViewModel.dispatchIntent(CartViewIntent.AddOffer(current, quantity)) },
             isSaved = offer.id in savedState.savedOfferIds,
-            onToggleSaved = { target -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(target)) }
+            onToggleSaved = { target -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(target)) },
+            onShareOffer = {
+                if (friendsState.isGuest) {
+                    callbacks.onRequireAuth()
+                } else {
+                    showShareSheet = true
+                }
+            }
         ),
         modifier = modifier
     )
+
+    if (showShareSheet) {
+        val offerToShare = state.details?.offer ?: offer
+        ShareOfferToFriendsDialog(
+            offer = offerToShare,
+            friends = friendsState.friends,
+            isSharing = friendsState.isSharingOffer,
+            actions = ShareOfferDialogActions(
+                onRefreshFriends = { friendsViewModel.dispatchIntent(FriendsViewIntent.Refresh) },
+                onDismiss = { showShareSheet = false },
+                onSendToFriends = { recipientIds ->
+                    friendsViewModel.dispatchIntent(FriendsViewIntent.ShareOffer(offerToShare.id, recipientIds))
+                }
+            )
+        )
+    }
+}
+
+@Composable
+private fun ShareOfferEffectsHandler(friendsViewModel: FriendsViewModel, onShared: () -> Unit, onRequireAuth: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(friendsViewModel) {
+        friendsViewModel.viewEffect.collect { effect ->
+            when (effect) {
+                is FriendsViewEffect.OfferShared -> onShared()
+                is FriendsViewEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                FriendsViewEffect.RequireAuth -> onRequireAuth()
+                FriendsViewEffect.OpenFriendsTab -> Unit
+            }
+        }
+    }
 }
 
 @Composable
@@ -113,13 +160,7 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
     ) {
         ProductDetailTopBar(
             onNavigateBack = callbacks.onNavigateBack,
-            onShareClick = {
-                val share = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, context.getString(R.string.detail_share_text, offer.name, offer.storeName))
-                }
-                context.startActivity(Intent.createChooser(share, context.getString(R.string.detail_share_title)))
-            },
+            onShareClick = actions.onShareOffer,
             onFavoriteClick = { actions.onToggleSaved(offer) },
             isSaved = actions.isSaved
         )
@@ -172,5 +213,6 @@ internal data class ProductDetailActions(
     val onIntent: (ProductDetailViewIntent) -> Unit,
     val onAddToCart: (ProductOffer, Int) -> Unit,
     val isSaved: Boolean = false,
-    val onToggleSaved: (ProductOffer) -> Unit = {}
+    val onToggleSaved: (ProductOffer) -> Unit = {},
+    val onShareOffer: () -> Unit = {}
 )

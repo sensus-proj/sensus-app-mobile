@@ -8,7 +8,8 @@ data class FriendItemDto(
     val inviteCode: String = "",
     val displayName: String = "",
     val addedVia: String = "QR",
-    val connectedAtUtc: String = ""
+    val connectedAtUtc: String = "",
+    val photoUrl: String? = null
 )
 
 @Serializable
@@ -17,7 +18,8 @@ data class PendingFriendRequestDto(
     val senderInviteCode: String = "",
     val senderName: String = "",
     val addedVia: String = "QR",
-    val createdAtUtc: String = ""
+    val createdAtUtc: String = "",
+    val senderPhotoUrl: String? = null
 )
 
 @Serializable
@@ -26,7 +28,8 @@ data class SentFriendRequestDto(
     val targetInviteCode: String = "",
     val targetName: String = "",
     val addedVia: String = "QR",
-    val createdAtUtc: String = ""
+    val createdAtUtc: String = "",
+    val targetPhotoUrl: String? = null
 )
 
 @Serializable
@@ -48,4 +51,38 @@ data class SendFriendRequestResponseDto(
     val outcome: String = "",
     val friend: FriendItemDto? = null,
     val pendingRequest: SentFriendRequestDto? = null
+)
+
+@Serializable
+data class ShareOfferRequestBody(
+    val recipientUserIds: List<String>
+)
+
+@Serializable
+data class SharedOfferItemDto(
+    val id: String = "",
+    val offerId: String = "",
+    val senderUserId: String = "",
+    val recipientUserId: String = "",
+    val offerTitle: String = "",
+    val storeName: String = "",
+    val merchantId: String? = null,
+    val category: String? = null,
+    val originalPrice: Double = 0.0,
+    val discountedPrice: Double = 0.0,
+    val discountPercentage: Int = 0,
+    val imageUrl: String? = null,
+    val sharedAtUtc: String = ""
+)
+
+@Serializable
+data class ShareOfferResultDto(
+    val sharedCount: Int = 0,
+    val items: List<SharedOfferItemDto> = emptyList()
+)
+
+@Serializable
+data class FriendSharedOffersThreadDto(
+    val friend: FriendItemDto = FriendItemDto(),
+    val offers: List<SharedOfferItemDto> = emptyList()
 )

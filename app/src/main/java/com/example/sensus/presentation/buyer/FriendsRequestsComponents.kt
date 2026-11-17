@@ -1,5 +1,10 @@
 package com.example.sensus.presentation.buyer
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,6 +26,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -36,10 +43,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.sensus.domain.model.PendingFriendRequest
 import com.example.sensus.domain.model.SentFriendRequest
 import com.example.sensus.theme.SensusPurple
@@ -50,8 +60,39 @@ import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 
 private const val BADGE_ALPHA = 0.14f
+private const val AVATAR_BG_ALPHA = 0.12f
+private const val AVATAR_ICON_RATIO = 0.55f
 private const val REQUEST_CARD_COLOR = 0xFFF9F7FD
 private val RequestCardBg = Color(REQUEST_CARD_COLOR)
+
+@Composable
+internal fun FriendAvatar(name: String, photoUrl: String?, size: Dp = 42.dp) {
+    val cleanUrl = photoUrl?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
+        if (raw.startsWith("http://", ignoreCase = true)) "https://${raw.drop("http://".length)}" else raw
+    }
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(SensusPurple.copy(alpha = AVATAR_BG_ALPHA)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Person,
+            contentDescription = name,
+            tint = SensusPurple,
+            modifier = Modifier.size(size * AVATAR_ICON_RATIO)
+        )
+        if (cleanUrl != null) {
+            AsyncImage(
+                model = cleanUrl,
+                contentDescription = "Foto de perfil de $name",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(CircleShape)
+            )
+        }
+    }
+}
 
 @Composable
 internal fun PendingRequestsSectionCard(pendingRequests: List<PendingFriendRequest>, onAccept: (String) -> Unit, onReject: (String) -> Unit) {
@@ -163,6 +204,8 @@ private fun PendingRequestItemRow(request: PendingFriendRequest, onAccept: () ->
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            FriendAvatar(name = request.senderName, photoUrl = request.senderPhotoUrl, size = 38.dp)
+            Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = request.senderName,
@@ -225,4 +268,24 @@ internal fun SentRequestsSummaryCard(sentRequests: List<SentFriendRequest>) {
             }
         }
     }
+}
+
+internal fun copyInviteToClipboard(context: Context, code: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Código Sensus", code)
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(context, "Código $code copiado al portapapeles", Toast.LENGTH_SHORT).show()
+}
+
+internal fun shareInviteLink(context: Context, code: String, inviteUrl: String) {
+    val shareMessage =
+        "Te invito a unirte a Sensus para ahorrar en ofertas locales cerca de ti. " +
+            "Abre este enlace para descargar la app o agregarnos como amigos: $inviteUrl " +
+            "(Código: $code)"
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        putExtra(Intent.EXTRA_TEXT, shareMessage)
+        type = "text/plain"
+    }
+    context.startActivity(Intent.createChooser(sendIntent, "Invitar a un vecino a Sensus"))
+    copyInviteToClipboard(context, code)
 }

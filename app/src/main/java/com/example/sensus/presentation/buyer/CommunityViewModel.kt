@@ -17,7 +17,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class CommunityViewModel @Inject constructor(
@@ -117,15 +116,13 @@ class CommunityViewModel @Inject constructor(
             return
         }
         updateState { copy(showComposer = true, publishError = null) }
-        viewModelScope.launch {
-            val merchants = withContext(Dispatchers.IO) {
-                val current = location ?: return@withContext emptyList()
-                com.example.sensus.domain.model.PublishingMerchantPolicy.nearby(
-                    offersRepository.getOffers(),
-                    current,
-                    COMMUNITY_RADIUS_METERS
-                )
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = location ?: return@launch
+            val merchants = com.example.sensus.domain.model.PublishingMerchantPolicy.nearby(
+                offersRepository.getOffers(),
+                current,
+                COMMUNITY_RADIUS_METERS
+            )
             updateState { copy(nearbyMerchants = merchants) }
         }
     }

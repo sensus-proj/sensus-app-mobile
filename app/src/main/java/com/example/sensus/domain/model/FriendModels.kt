@@ -13,12 +13,15 @@ private const val BYTE_MASK = 0xFF
 private const val RADIX_HEX = 16
 private const val HEX_PAD_LEN = 2
 
+const val MAX_OFFER_SHARE_FRIENDS = 10
+
 data class ConnectedFriend(
     val inviteCode: String,
     val displayName: String,
     val addedAtEpochMs: Long,
     val addedVia: String,
-    val userId: String = ""
+    val userId: String = "",
+    val photoUrl: String? = null
 )
 
 data class PendingFriendRequest(
@@ -26,7 +29,8 @@ data class PendingFriendRequest(
     val senderInviteCode: String,
     val senderName: String,
     val addedVia: String,
-    val createdAtEpochMs: Long
+    val createdAtEpochMs: Long,
+    val senderPhotoUrl: String? = null
 )
 
 data class SentFriendRequest(
@@ -34,8 +38,51 @@ data class SentFriendRequest(
     val targetInviteCode: String,
     val targetName: String,
     val addedVia: String,
-    val createdAtEpochMs: Long
+    val createdAtEpochMs: Long,
+    val targetPhotoUrl: String? = null
 )
+
+data class SharedOfferMessage(
+    val id: String,
+    val offerId: String,
+    val senderUserId: String,
+    val recipientUserId: String,
+    val offerTitle: String,
+    val storeName: String,
+    val merchantId: String?,
+    val category: String?,
+    val originalPrice: Double,
+    val discountedPrice: Double,
+    val discountPercentage: Int,
+    val imageUrl: String?,
+    val sharedAtEpochMs: Long
+) {
+    fun toProductOffer(): ProductOffer = ProductOffer(
+        id = offerId,
+        name = offerTitle,
+        storeName = storeName,
+        category = category ?: "Oferta",
+        originalPrice = originalPrice,
+        discountPrice = discountedPrice,
+        discountPercent = discountPercentage,
+        unitsLeft = 1,
+        distanceMeters = 0,
+        imageUrl = imageUrl,
+        merchantId = merchantId
+    )
+}
+
+sealed interface ShareOfferOutcome {
+    data class Shared(val count: Int) : ShareOfferOutcome
+    data object GuestNotAllowed : ShareOfferOutcome
+    data class ValidationError(val message: String) : ShareOfferOutcome
+    data class NetworkFailure(val message: String) : ShareOfferOutcome
+}
+
+enum class FriendNoticeType {
+    INCOMING_REQUEST,
+    ACCEPTED_FRIEND
+}
 
 data class ParsedFriendInvite(
     val inviteCode: String,

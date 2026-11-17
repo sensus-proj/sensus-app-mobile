@@ -14,16 +14,36 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.sensus.MainActivity
 import com.example.sensus.R
+import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.PendingFriendRequest
 
 private const val CHANNEL_ID = "sensus_friend_requests"
 private const val CHANNEL_NAME = "Solicitudes de amistad"
 private const val FRIEND_REQUEST_BASE_ID = 25000
+private const val FRIEND_ACCEPTED_BASE_ID = 26000
 
 object FriendRequestNotifier {
     const val OPEN_REQUESTS_URI = "sensus://amigos/solicitudes"
 
     fun showPendingRequestNotification(context: Context, request: PendingFriendRequest) {
+        postNotification(
+            context = context,
+            notificationId = FRIEND_REQUEST_BASE_ID + request.requestId.hashCode(),
+            title = "Nueva solicitud de amistad",
+            body = "${request.senderName} quiere agregarte en Sensus. Toca para aceptar o rechazar."
+        )
+    }
+
+    fun showFriendAcceptedNotification(context: Context, friend: ConnectedFriend) {
+        postNotification(
+            context = context,
+            notificationId = FRIEND_ACCEPTED_BASE_ID + friend.inviteCode.hashCode(),
+            title = "Solicitud aceptada",
+            body = "${friend.displayName} ya está en tus amigos de Sensus."
+        )
+    }
+
+    private fun postNotification(context: Context, notificationId: Int, title: String, body: String) {
         if (!hasNotificationPermission(context)) return
         ensureChannel(context)
 
@@ -32,22 +52,23 @@ object FriendRequestNotifier {
             data = Uri.parse(OPEN_REQUESTS_URI)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        val pendingIntent = PendingIntent.getActivity(context, FRIEND_REQUEST_BASE_ID, tapIntent, flags)
+        val flags = PendingIntent.getActivity(
+            context,
+            notificationId,
+            tapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Nueva solicitud de amistad")
-            .setContentText("${request.senderName} quiere agregarte en Sensus. Toca para aceptar o rechazar.")
+            .setContentTitle(title)
+            .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(flags)
             .build()
 
-        NotificationManagerCompat.from(context).notify(
-            FRIEND_REQUEST_BASE_ID + request.requestId.hashCode(),
-            notification
-        )
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 
     private fun hasNotificationPermission(context: Context): Boolean {
@@ -61,7 +82,7 @@ object FriendRequestNotifier {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Avisos cuando otro vecino te envía una solicitud de amistad en Sensus."
+            description = "Avisos cuando otro vecino te envía o acepta una solicitud de amistad en Sensus."
         }
         manager.createNotificationChannel(channel)
     }
