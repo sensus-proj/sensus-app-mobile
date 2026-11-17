@@ -73,7 +73,8 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/friends/requests/{requestId}/accept` | `FriendsRepository` -> `FriendsApiService` | Bearer (destinatario) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
 | `POST /api/v1/friends/requests/{requestId}/reject` | `FriendsRepository` -> `FriendsApiService` | Bearer (participante) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
 | `DELETE /api/v1/friends/{friendUserId}` | `FriendsRepository` -> `FriendsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
-| `POST /api/v1/offers/{id}/share` | `FriendsRepository` -> `FriendsApiService` | Bearer | 30/hora por usuario | Diferido (fuera de alcance actual FT-25) |
+| `GET /api/v1/friends/{friendUserId}/shared-offers` | `FriendsRepository` -> `FriendsApiService` | Bearer (amigos aceptados) | 30/min por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
+| `POST /api/v1/offers/{offerId}/share` | `FriendsRepository` -> `FriendsApiService` | Bearer (1..10 amigos) | 30/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
 | `GET /api/v1/merchants/{id}` | `GetMerchantPublicProfileUseCase` -> `ReviewsRepository` -> `ReviewsApiService` | Publico o Bearer | 60/min por IP | Borrador / pendiente backend (FT-26) |
 | `GET /api/v1/merchants/{id}/reviews` | `GetMerchantReviewsUseCase` -> `ReviewsRepository` -> `ReviewsApiService` | Publico o Bearer | 60/min por IP | Borrador / pendiente backend (FT-26) |
 | `POST /api/v1/reviews` | `SubmitReviewUseCase` -> `ReviewsRepository` -> `ReviewsApiService` | Bearer (reserva `REDEEMED`) | 10/hora por usuario | Borrador / pendiente backend (FT-26) |

@@ -35,6 +35,8 @@ import com.example.sensus.presentation.buyer.ClaimOfferScreen
 import com.example.sensus.presentation.buyer.ClaimsScreenActions
 import com.example.sensus.presentation.buyer.CommunityScreen
 import com.example.sensus.presentation.buyer.FriendDeepLinkHandler
+import com.example.sensus.presentation.buyer.FriendSharedOffersActions
+import com.example.sensus.presentation.buyer.FriendSharedOffersScreen
 import com.example.sensus.presentation.buyer.NotificationsScreen
 import com.example.sensus.presentation.buyer.ProductDetailCallbacks
 import com.example.sensus.presentation.buyer.ProductDetailScreen
@@ -124,6 +126,22 @@ private fun renderSecondaryOverlay(state: MainAppState, isGuest: Boolean): Boole
     when {
         state.selectedProductForDetail != null -> RenderProductDetailOverlay(state, isGuest)
         state.selectedStoreCatalog != null -> RenderStoreCatalogOverlay(state)
+        state.selectedFriendForOffers != null -> {
+            val friend = state.selectedFriendForOffers
+            if (friend != null) {
+                FriendSharedOffersScreen(
+                    friend = friend,
+                    actions = FriendSharedOffersActions(
+                        onNavigateBack = { state.selectedFriendForOffers = null },
+                        onOfferClick = { state.selectedProductForDetail = it },
+                        onExploreOffers = {
+                            state.selectedFriendForOffers = null
+                            state.buyerTabIndex = 1
+                        }
+                    )
+                )
+            }
+        }
         state.showSavedInterests -> RenderSavedInterestsOverlay(state)
         state.selectedOfferForEdit != null -> RenderMerchantEditOfferOverlay(state)
         state.showMerchantRegister -> RenderMerchantRegisterOverlay(state)
@@ -289,8 +307,12 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
     }
 }
 
-private fun sensiOfferActions(state: MainAppState, isGuest: Boolean, onApartarPackage: () -> Unit) = SensiOfferActions(
-    onApartarPackage = onApartarPackage,
+private fun sensiOfferActions(state: MainAppState, isGuest: Boolean, context: android.content.Context) = SensiOfferActions(
+    onApartarPackage = {
+        runWhenAuthenticated(state, isGuest) {
+            Toast.makeText(context, context.getString(R.string.detail_feature_unavailable), Toast.LENGTH_SHORT).show()
+        }
+    },
     onDetail = { state.selectedProductForDetail = it },
     onApartar = { openPublishedClaim(state, isGuest, it) },
     onRoute = { state.activeRouteOffer = it }
@@ -300,11 +322,6 @@ private fun sensiOfferActions(state: MainAppState, isGuest: Boolean, onApartarPa
 private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToTerms: () -> Unit) {
     val openCartGuarded = { runWhenAuthenticated(state, isGuest) { state.showCartSheet = true } }
     val context = LocalContext.current
-    val openApartadoGuarded = {
-        runWhenAuthenticated(state, isGuest) {
-            Toast.makeText(context, context.getString(R.string.detail_feature_unavailable), Toast.LENGTH_SHORT).show()
-        }
-    }
     when (state.buyerTabIndex) {
         0 -> BuyerMapScreen(
             callbacks = BuyerMapCallbacks(
@@ -330,23 +347,19 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
             )
         )
         TAB_SENSI -> SensiChatScreen(
-            actions = sensiOfferActions(state, isGuest, openApartadoGuarded),
+            actions = sensiOfferActions(state, isGuest, context),
             onRequireAuth = { state.showGuestPrompt = true }
         )
         TAB_COMMUNITY -> CommunityScreen(
-            onRequireAuth = { state.showGuestPrompt = true },
-            onMerchantClick = { id ->
-                state.communityMerchantId = id
-                state.buyerTabIndex = 1
-            },
+            callbacks = buildCommunityCallbacks(state),
             openFriendsSignal = state.openFriendsTabSignal
         )
         TAB_PROFILE -> BuyerProfileScreen(
             callbacks = BuyerProfileCallbacks(
                 isMerchantMode = state.isMerchantMode,
                 hasActiveMerchant = state.isMerchantRegistered,
-                onMerchantStatusSynced = { active -> if (active) state.isMerchantRegistered = true },
-                onToggleMerchantMode = { enableMerchant -> toggleMerchantMode(state, isGuest, enableMerchant) },
+                onMerchantStatusSynced = { if (it) state.isMerchantRegistered = true },
+                onToggleMerchantMode = { toggleMerchantMode(state, isGuest, it) },
                 onLogoutClick = { state.showConfirmLogout = true },
                 onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
                 onTermsClick = onNavigateToTerms,

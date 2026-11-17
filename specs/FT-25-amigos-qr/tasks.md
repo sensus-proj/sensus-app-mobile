@@ -8,4 +8,5 @@
 - [x] T25.4 Configurar App Links (`AndroidManifest.xml`), deep links en `MainActivity`/`AppViewModel` y hoja de compartir hacia `https://rodnix.com.mx/sensus?code=...` — verif: `.\gradlew.bat ktlintCheck detekt`
 - [x] T25.5 Integrar `FriendsApiService`, `FriendsRepositoryImpl`, `FriendsLocalStore`, `FriendsViewModel`, `PendingRequestsSectionCard` (paloma y tache) y `FriendRequestNotifier` — verif: `.\gradlew.bat testDebugUnitTest`
 - [x] T25.6 Añadir pruebas unitarias en `FriendsRepositoryImplTest` y `FriendsViewModelTest` y alinear `spec.md`/`endpoints-internos.md` — verif: `python scripts/check_sdd.py` y `python scripts/check_endpoints.py`
-- [ ] T25.7 Verificar flujo E2E en dispositivos físicos tras despliegue de `sensus-back` (AWS) y `sensus-landing` (Neubox) — verif: prueba manual en dispositivo
+- [x] T25.7 Añadir fotos de perfil (`FriendAvatar`), sondeo rápido al remitente (`3 s`), aviso de aceptación, selector multi-amigo en producto (máx. 10) y hilo `FriendSharedOffersScreen` — verif: `.\gradlew.bat testDebugUnitTest`
+- [ ] T25.8 Verificar flujo E2E en dispositivos físicos tras despliegue de `sensus-back` (AWS) y `sensus-landing` (Neubox) — verif: prueba manual en dispositivo

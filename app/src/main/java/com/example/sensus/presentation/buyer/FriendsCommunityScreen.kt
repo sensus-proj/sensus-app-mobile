@@ -1,10 +1,6 @@
 package com.example.sensus.presentation.buyer
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
@@ -12,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,10 +30,10 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.GroupAdd
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -101,7 +97,8 @@ private const val TINT_ALPHA = 0.12f
 private const val SOFT_ALPHA = 0.1f
 private const val SHARE_BUTTON_WEIGHT = 1.3f
 private const val BOTTOM_NAV_CLEARANCE_DP = 96
-private const val FRIEND_POLL_INTERVAL_MS = 15_000L
+private const val FRIEND_POLL_INTERVAL_MS = 10_000L
+private const val FAST_POLL_INTERVAL_MS = 3_000L
 
 @ComposeUiModel
 private data class FriendRequestsSectionState(
@@ -118,7 +115,9 @@ private data class FriendsScreenCallbacks(
     val onShowQr: () -> Unit,
     val onOpenScanner: () -> Unit,
     val onShowAddFriend: () -> Unit,
-    val onRemoveFriend: (String) -> Unit
+    val onRemoveFriend: (String) -> Unit,
+    val onRefresh: () -> Unit = {},
+    val onFriendClick: (ConnectedFriend) -> Unit = {}
 )
 
 @ComposeUiModel
@@ -127,6 +126,8 @@ private data class FriendRowItem(
     val name: String,
     val subtitle: String,
     val meta: String,
+    val photoUrl: String? = null,
+    val friendModel: ConnectedFriend? = null,
     val removableCode: String? = null
 )
 
@@ -152,7 +153,6 @@ private data class FriendsDialogActions(
 
 @Composable
 internal fun FriendDeepLinkHandler(isGuest: Boolean, onRequireAuth: () -> Unit, onFriendLinked: () -> Unit) {
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val friendsViewModel: FriendsViewModel = hiltViewModel()
     val friendsState by friendsViewModel.viewState.collectAsStateWithLifecycle()
@@ -160,63 +160,69 @@ internal fun FriendDeepLinkHandler(isGuest: Boolean, onRequireAuth: () -> Unit, 
     LaunchedEffect(friendsState.pendingInviteTrigger, isGuest) {
         friendsViewModel.dispatchIntent(FriendsViewIntent.ConsumePendingDeepLink)
     }
-
     LaunchedEffect(isGuest) {
         while (!isGuest) {
             friendsViewModel.dispatchIntent(FriendsViewIntent.Refresh)
-            delay(FRIEND_POLL_INTERVAL_MS)
+            delay(if (friendsState.sentRequests.isNotEmpty()) FAST_POLL_INTERVAL_MS else FRIEND_POLL_INTERVAL_MS)
         }
     }
-
     DisposableEffect(lifecycleOwner, isGuest) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && !isGuest) {
-                friendsViewModel.dispatchIntent(FriendsViewIntent.Refresh)
-            }
+            if (event == Lifecycle.Event.ON_RESUME && !isGuest) friendsViewModel.dispatchIntent(FriendsViewIntent.Refresh)
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    FriendDeepLinkEffects(
+        friendsState = friendsState,
+        friendsViewModel = friendsViewModel,
+        onRequireAuth = onRequireAuth,
+        onFriendLinked = onFriendLinked
+    )
+}
 
+@Composable
+private fun FriendDeepLinkEffects(friendsState: FriendsViewState, friendsViewModel: FriendsViewModel, onRequireAuth: () -> Unit, onFriendLinked: () -> Unit) {
+    val context = LocalContext.current
     LaunchedEffect(friendsState.newlyArrivedRequest) {
         val incoming = friendsState.newlyArrivedRequest ?: return@LaunchedEffect
         FriendRequestNotifier.showPendingRequestNotification(context, incoming)
         friendsViewModel.dispatchIntent(FriendsViewIntent.NotificationShown)
     }
-
+    LaunchedEffect(friendsState.newlyAcceptedFriend) {
+        val accepted = friendsState.newlyAcceptedFriend ?: return@LaunchedEffect
+        FriendRequestNotifier.showFriendAcceptedNotification(context, accepted)
+        Toast.makeText(context, "${accepted.displayName} aceptó tu solicitud de amistad", Toast.LENGTH_SHORT).show()
+        friendsViewModel.dispatchIntent(FriendsViewIntent.AcceptedNotificationShown)
+    }
     LaunchedEffect(friendsViewModel) {
         friendsViewModel.viewEffect.collect { effect ->
-            when (effect) {
-                is FriendsViewEffect.ShowMessage -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                    if (effect.openFriendsTab) onFriendLinked()
-                }
-                FriendsViewEffect.OpenFriendsTab -> onFriendLinked()
-                FriendsViewEffect.RequireAuth -> onRequireAuth()
+            if (effect is FriendsViewEffect.ShowMessage) {
+                Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                if (effect.openFriendsTab) onFriendLinked()
+            } else if (effect == FriendsViewEffect.OpenFriendsTab) {
+                onFriendLinked()
+            } else if (effect == FriendsViewEffect.RequireAuth) {
+                onRequireAuth()
             }
         }
     }
 }
 
 @Composable
-fun FriendsCommunityTab(onRequireAuth: () -> Unit, modifier: Modifier = Modifier, viewModel: FriendsViewModel = hiltViewModel()) {
+fun FriendsCommunityTab(
+    onRequireAuth: () -> Unit,
+    modifier: Modifier = Modifier,
+    onFriendClick: (ConnectedFriend) -> Unit = {},
+    viewModel: FriendsViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     var showQrDialog by remember { mutableStateOf(false) }
     var showAddFriendDialog by remember { mutableStateOf(false) }
     var showScannerDialog by remember { mutableStateOf(false) }
 
-    RequestFriendNotificationPermission(isGuest = state.isGuest) { viewModel.dispatchIntent(FriendsViewIntent.Refresh) }
-    LaunchedEffect(viewModel) {
-        viewModel.viewEffect.collect { effect ->
-            when (effect) {
-                is FriendsViewEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                FriendsViewEffect.OpenFriendsTab -> Unit
-                FriendsViewEffect.RequireAuth -> onRequireAuth()
-            }
-        }
-    }
-
+    FriendsTabEffects(viewModel = viewModel, isGuest = state.isGuest, onRequireAuth = onRequireAuth)
     val inviteCode = state.myInviteCode.ifBlank { DEFAULT_PREVIEW_CODE }
     val inviteUrl = state.myInviteUrl.ifBlank { FriendInviteCodec.buildInviteUrl(inviteCode, null) }
     val items = remember(state.friends) { state.friends.map { it.toRowItem() } }
@@ -236,11 +242,12 @@ fun FriendsCommunityTab(onRequireAuth: () -> Unit, modifier: Modifier = Modifier
             onShowQr = { showQrDialog = true },
             onOpenScanner = { showScannerDialog = true },
             onShowAddFriend = { showAddFriendDialog = true },
-            onRemoveFriend = { code -> viewModel.dispatchIntent(FriendsViewIntent.RemoveFriend(code)) }
+            onRemoveFriend = { code -> viewModel.dispatchIntent(FriendsViewIntent.RemoveFriend(code)) },
+            onRefresh = { viewModel.dispatchIntent(FriendsViewIntent.Refresh) },
+            onFriendClick = onFriendClick
         ),
         modifier = modifier
     )
-
     FriendsOverlayDialogs(
         dialogState = FriendsDialogState(inviteCode, inviteUrl, showQrDialog, showAddFriendDialog, showScannerDialog),
         actions = FriendsDialogActions(
@@ -256,6 +263,27 @@ fun FriendsCommunityTab(onRequireAuth: () -> Unit, modifier: Modifier = Modifier
             onShareCode = { shareInviteLink(context, inviteCode, inviteUrl) }
         )
     )
+}
+
+@Composable
+private fun FriendsTabEffects(viewModel: FriendsViewModel, isGuest: Boolean, onRequireAuth: () -> Unit) {
+    val context = LocalContext.current
+    RequestFriendNotificationPermission(isGuest = isGuest) { viewModel.dispatchIntent(FriendsViewIntent.Refresh) }
+    LaunchedEffect(isGuest) {
+        while (!isGuest) {
+            delay(FAST_POLL_INTERVAL_MS)
+            viewModel.dispatchIntent(FriendsViewIntent.Refresh)
+        }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect ->
+            when (effect) {
+                is FriendsViewEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                FriendsViewEffect.RequireAuth -> onRequireAuth()
+                is FriendsViewEffect.OfferShared, FriendsViewEffect.OpenFriendsTab -> Unit
+            }
+        }
+    }
 }
 
 @Composable
@@ -373,26 +401,6 @@ private fun FriendsOverlayDialogs(dialogState: FriendsDialogState, actions: Frie
     }
 }
 
-private fun copyInviteToClipboard(context: Context, code: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("Código Sensus", code)
-    clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "Código $code copiado al portapapeles", Toast.LENGTH_SHORT).show()
-}
-
-private fun shareInviteLink(context: Context, code: String, inviteUrl: String) {
-    val shareMessage =
-        "Te invito a unirte a Sensus para ahorrar en ofertas locales cerca de ti. " +
-            "Abre este enlace para descargar la app o agregarnos como amigos: $inviteUrl " +
-            "(Código: $code)"
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        putExtra(Intent.EXTRA_TEXT, shareMessage)
-        type = "text/plain"
-    }
-    context.startActivity(Intent.createChooser(sendIntent, "Invitar a un vecino a Sensus"))
-    copyInviteToClipboard(context, code)
-}
-
 @Composable
 private fun FriendsCommunityBody(
     friends: List<FriendRowItem>,
@@ -405,10 +413,10 @@ private fun FriendsCommunityBody(
         modifier = modifier
             .fillMaxSize()
             .background(SensusBackground),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = BOTTOM_NAV_CLEARANCE_DP.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = BOTTOM_NAV_CLEARANCE_DP.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item { CommunityHeader() }
+        item { CommunityHeader(onRefresh = callbacks.onRefresh) }
         item { CommunityInviteCard(inviteCode = inviteCode, callbacks = callbacks) }
         item {
             PendingRequestsSectionCard(
@@ -423,8 +431,10 @@ private fun FriendsCommunityBody(
             item { EmptyFriendsCard(onOpenScanner = callbacks.onOpenScanner) }
         } else {
             items(friends, key = { it.id }) { friend ->
+                val targetFriend = friend.friendModel?.takeIf { it.userId.isNotBlank() }
                 FriendShareCard(
                     friend = friend,
+                    onClick = targetFriend?.let { model -> { callbacks.onFriendClick(model) } },
                     onRemove = friend.removableCode?.let { code -> { callbacks.onRemoveFriend(code) } }
                 )
             }
@@ -433,20 +443,29 @@ private fun FriendsCommunityBody(
 }
 
 @Composable
-private fun CommunityHeader() {
-    Column(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(SensusPurple.copy(alpha = TINT_ALPHA)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(20.dp))
+private fun CommunityHeader(onRefresh: () -> Unit = {}) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(SensusPurple.copy(alpha = TINT_ALPHA)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(text = "Amigos y QR", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             }
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(text = "Amigos y QR", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            IconButton(onClick = onRefresh) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Actualizar amigos", tint = SensusPurple)
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -620,26 +639,19 @@ private fun EmptyFriendsCard(onOpenScanner: () -> Unit) {
 }
 
 @Composable
-private fun FriendShareCard(friend: FriendRowItem, onRemove: (() -> Unit)? = null) {
+private fun FriendShareCard(friend: FriendRowItem, onClick: (() -> Unit)? = null, onRemove: (() -> Unit)? = null) {
+    val cardModifier = if (onClick != null) Modifier.fillMaxWidth().clickable(onClick = onClick) else Modifier.fillMaxWidth()
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = cardModifier
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(SensusPurple.copy(alpha = SOFT_ALPHA)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(22.dp))
-            }
+            FriendAvatar(name = friend.name, photoUrl = friend.photoUrl, size = 42.dp)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -651,7 +663,7 @@ private fun FriendShareCard(friend: FriendRowItem, onRemove: (() -> Unit)? = nul
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = friend.subtitle,
+                    text = if (onClick != null) "Toca para ver ofertas compartidas" else friend.subtitle,
                     fontSize = 12.sp,
                     color = SensusTextSecondary,
                     maxLines = 1,
@@ -753,6 +765,8 @@ private fun ConnectedFriend.toRowItem(): FriendRowItem {
         name = displayName,
         subtitle = "Código: $inviteCode • Vía $addedVia",
         meta = dateLabel,
+        photoUrl = photoUrl,
+        friendModel = this,
         removableCode = inviteCode
     )
 }

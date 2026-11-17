@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.sensus.R
 import com.example.sensus.common.AppError
+import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
@@ -65,37 +66,55 @@ internal data class CommunitySaveActions(
     val onToggleSavePost: (FeedPost) -> Unit = {}
 )
 
+@ComposeUiModel
+data class CommunityCallbacks(
+    val onRequireAuth: () -> Unit = {},
+    val onMerchantClick: (String) -> Unit = {},
+    val onFriendClick: (ConnectedFriend) -> Unit = {},
+    val isFriendsSelected: Boolean = false,
+    val onSelectFriendsTab: (Boolean) -> Unit = {}
+)
+
 @Composable
 fun CommunityScreen(
     viewModel: CommunityViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
-    onRequireAuth: () -> Unit = {},
-    onMerchantClick: (String) -> Unit = {},
+    callbacks: CommunityCallbacks = CommunityCallbacks(),
     openFriendsSignal: Int = 0
 ) {
     val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) {
-        viewModel.viewEffect.collect { if (it == CommunityViewEffect.RequireAuth) onRequireAuth() }
+        viewModel.viewEffect.collect { if (it == CommunityViewEffect.RequireAuth) callbacks.onRequireAuth() }
     }
-    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = onRequireAuth)
-    var showFriends by rememberSaveable { mutableStateOf(false) }
+    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
+    var localShowFriends by rememberSaveable { mutableStateOf(callbacks.isFriendsSelected) }
+    LaunchedEffect(callbacks.isFriendsSelected) { localShowFriends = callbacks.isFriendsSelected }
     LaunchedEffect(openFriendsSignal) {
-        if (openFriendsSignal > 0) showFriends = true
+        if (openFriendsSignal > 0) {
+            localShowFriends = true
+            callbacks.onSelectFriendsTab(true)
+        }
     }
     Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         Row(modifier = Modifier.statusBarsPadding()) {
-            TextButton(onClick = { showFriends = false }) { Text(stringResource(R.string.community_tab)) }
-            TextButton(onClick = { showFriends = true }) { Text(stringResource(R.string.community_friends_tab)) }
+            TextButton(onClick = {
+                localShowFriends = false
+                callbacks.onSelectFriendsTab(false)
+            }) { Text(stringResource(R.string.community_tab)) }
+            TextButton(onClick = {
+                localShowFriends = true
+                callbacks.onSelectFriendsTab(true)
+            }) { Text(stringResource(R.string.community_friends_tab)) }
         }
-        if (showFriends) {
-            FriendsCommunityTab(onRequireAuth = onRequireAuth, modifier = Modifier.weight(1f))
+        if (localShowFriends) {
+            FriendsCommunityTab(onRequireAuth = callbacks.onRequireAuth, onFriendClick = callbacks.onFriendClick, modifier = Modifier.weight(1f))
         } else {
             CommunityFeedContent(
                 state = state,
                 onIntent = viewModel::dispatchIntent,
-                onMerchantClick = onMerchantClick,
+                onMerchantClick = callbacks.onMerchantClick,
                 saveActions = CommunitySaveActions(
                     savedPostIds = savedState.savedPostIds,
                     onToggleSavePost = { savedViewModel.dispatchIntent(SavedInterestsViewIntent.TogglePost(it)) }

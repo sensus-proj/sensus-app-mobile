@@ -14,9 +14,11 @@ La pantalla `Amigos y QR` (`P-24`) anteriormente mostraba una matriz QR decorati
 - Código personal determinístico `SNS-XXXXXX` (`FriendInviteCodec`) y QR escaneable real generado con ZXing (`CommunityQrDialog.kt`).
 - Escáner real con cámara `Camera2` + selector desde galería + captura manual de código/enlace (`QrScannerDialog.kt`, `FriendsCommunityScreen.kt`).
 - Compartir invitación por hoja nativa Android (`ACTION_SEND`) apuntando a `https://rodnix.com.mx/sensus?code=...&name=...` con App Links (`assetlinks.json`, `autoVerify="true"`), redirección `intent://` desde `sensus-landing` y esquema `sensus://invitacion`.
-- Sección pulsable `"Solicitudes pendientes"` con contador y acciones de aceptar (`✓`) o rechazar (`✕`), resumen de `"Solicitudes enviadas"` y notificaciones locales en barra de estado (`FriendRequestNotifier`) al llegar nuevas solicitudes durante la sincronización.
+- Sección pulsable `"Solicitudes pendientes"` con contador y acciones de aceptar (`✓`) o rechazar (`✕`), resumen de `"Solicitudes enviadas"`, sondeo rápido (`3 s`) cuando existen solicitudes enviadas o está abierta la pantalla de amigos, y notificaciones locales en barra de estado (`FriendRequestNotifier`) tanto al llegar solicitudes entrantes como cuando un amigo acepta una solicitud enviada.
+- Carga de foto de perfil real (`photoUrl` / `FriendAvatar`) en tarjetas de amigos, solicitudes pendientes y encabezado del hilo de ofertas compartidas.
+- Compartición interna de ofertas desde el detalle de producto (`ShareOfferToFriendsDialog`, seleccionando de 1 a 10 amigos conectados mediante `POST /api/v1/offers/{offerId}/share`) y pantalla dedicada de ofertas compartidas por amigo (`FriendSharedOffersScreen`, vía `GET /api/v1/friends/{friendUserId}/shared-offers`, sin mensajes de texto libre).
 
-**Fuera de alcance:** búsqueda global por nombre o teléfono; envío directo de ofertas individuales entre amigos (`POST /api/v1/offers/{id}/share`, diferido a iteración posterior).
+**Fuera de alcance:** búsqueda global por nombre o teléfono; chat de texto libre entre usuarios.
 
 ## 2. Requisitos funcionales
 
@@ -28,6 +30,7 @@ La pantalla `Amigos y QR` (`P-24`) anteriormente mostraba una matriz QR decorati
 | RF-25-04 | Enviar solicitudes vía `POST /api/v1/friends/requests`, consultar estado en `GET /api/v1/friends` y reflejar amigos conectados, pendientes recibidas y pendientes enviadas con respaldo local cifrado en Room (`UserPreferenceDao`). |
 | RF-25-05 | Mostrar una sección interactiva `"Solicitudes pendientes"` donde el destinatario pulsa para ver quién envió cada invitación y decide aceptar (`POST /api/v1/friends/requests/{requestId}/accept`) o cancelar (`POST /api/v1/friends/requests/{requestId}/reject`), además de eliminar amigos con `DELETE /api/v1/friends/{friendUserId}` y emitir notificación local en Android al detectar nuevas solicitudes entrantes. |
 | RF-25-06 | Retirar `MockDataProvider.sampleFriends` de `StoreRepositoryImpl` y mostrar estado vacío real cuando no existan conexiones. |
+| RF-25-07 | Mostrar foto real de perfil (`photoUrl`) en amigos conectados y solicitudes, acelerar la sincronización para el remitente cuando tenga solicitudes enviadas (`3 s` + aviso local al aceptarse) y permitir compartir ofertas de producto dentro de Sensus hasta a 10 amigos (`ShareOfferToFriendsDialog` -> `FriendSharedOffersScreen`). |
 
 ## 3. Requisitos no funcionales
 
@@ -42,12 +45,12 @@ domain/
   model/FriendModels.kt                 # ConnectedFriend, PendingFriendRequest, SentFriendRequest, AddFriendResult, FriendInviteCodec
   repository/FriendsRepository.kt
 data/
-  remote/api/FriendsApiService.kt       # /api/v1/friends, /requests, /accept, /reject, /{friendUserId}
+  remote/api/FriendsApiService.kt       # /api/v1/friends*, /api/v1/friends/{friendUserId}/shared-offers, /api/v1/offers/{offerId}/share
   remote/dto/FriendsDtos.kt
   repository/FriendsLocalStore.kt       # Caché cifrada Room + registro de notificaciones vistas
   repository/FriendsRepositoryImpl.kt
 presentation/
-  buyer/FriendsContract.kt, FriendsViewModel.kt, FriendsCommunityScreen.kt, FriendsRequestsComponents.kt, CommunityQrDialog.kt
+  buyer/FriendsContract.kt, FriendsViewModel.kt, FriendsCommunityScreen.kt, FriendsRequestsComponents.kt, CommunityQrDialog.kt, FriendSharedOffersScreen.kt, ShareOfferToFriendsSheet.kt
   common/QrScannerDialog.kt, FriendRequestNotifier.kt
 ```
 

@@ -1,9 +1,12 @@
 package com.example.sensus.data.remote.api
 
 import com.example.sensus.data.remote.dto.FriendItemDto
+import com.example.sensus.data.remote.dto.FriendSharedOffersThreadDto
 import com.example.sensus.data.remote.dto.FriendsOverviewDto
 import com.example.sensus.data.remote.dto.SendFriendRequestBody
 import com.example.sensus.data.remote.dto.SendFriendRequestResponseDto
+import com.example.sensus.data.remote.dto.ShareOfferRequestBody
+import com.example.sensus.data.remote.dto.ShareOfferResultDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -26,4 +29,10 @@ interface FriendsApiService {
 
     @DELETE("api/v1/friends/{friendUserId}")
     suspend fun removeFriend(@Path("friendUserId") friendUserId: String): Response<Unit>
+
+    @GET("api/v1/friends/{friendUserId}/shared-offers")
+    suspend fun getFriendSharedOffers(@Path("friendUserId") friendUserId: String): Response<FriendSharedOffersThreadDto>
+
+    @POST("api/v1/offers/{offerId}/share")
+    suspend fun shareOfferWithFriends(@Path("offerId") offerId: String, @Body body: ShareOfferRequestBody): Response<ShareOfferResultDto>
 }

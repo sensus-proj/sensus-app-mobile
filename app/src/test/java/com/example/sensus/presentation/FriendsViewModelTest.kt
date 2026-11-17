@@ -3,13 +3,18 @@ package com.example.sensus.presentation
 import app.cash.turbine.test
 import com.example.sensus.data.remote.api.FriendsApiService
 import com.example.sensus.data.remote.dto.FriendItemDto
+import com.example.sensus.data.remote.dto.FriendSharedOffersThreadDto
 import com.example.sensus.data.remote.dto.FriendsOverviewDto
 import com.example.sensus.data.remote.dto.PendingFriendRequestDto
 import com.example.sensus.data.remote.dto.SendFriendRequestBody
 import com.example.sensus.data.remote.dto.SendFriendRequestResponseDto
 import com.example.sensus.data.remote.dto.SentFriendRequestDto
+import com.example.sensus.data.remote.dto.ShareOfferRequestBody
+import com.example.sensus.data.remote.dto.ShareOfferResultDto
+import com.example.sensus.data.remote.dto.SharedOfferItemDto
 import com.example.sensus.data.repository.FriendsRepositoryImpl
 import com.example.sensus.domain.model.FriendInviteCodec
+import com.example.sensus.domain.model.MAX_OFFER_SHARE_FRIENDS
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.presentation.buyer.FriendsViewEffect
@@ -143,6 +148,67 @@ class FriendsViewModelTest {
             vm.dispatchIntent(FriendsViewIntent.AddFromInput("SNS-123456", "QR"))
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(FriendsViewEffect.RequireAuth, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun loadSharedOffersAndShareOfferUpToTenEmitExpectedStateAndEffect() = runTest(dispatcher) {
+        val mockApi = mockk<FriendsApiService>()
+        val friendDto = FriendItemDto("u-karla", "SNS-112233", "Karla", "QR", "2026-11-16T12:00:00Z", "https://cdn.sensus.com/k.jpg")
+        coEvery { mockApi.getFriendsOverview() } returns Response.success(
+            FriendsOverviewDto(myInviteCode = "SNS-SELF01", friends = listOf(friendDto))
+        )
+        coEvery { mockApi.getFriendSharedOffers("u-karla") } returns Response.success(
+            FriendSharedOffersThreadDto(
+                friend = friendDto,
+                offers = listOf(
+                    SharedOfferItemDto(
+                        id = "sh-10",
+                        offerId = "offer-10",
+                        senderUserId = "u-karla",
+                        recipientUserId = "u-self",
+                        offerTitle = "Café latte",
+                        storeName = "Cafetería Sur",
+                        originalPrice = 55.0,
+                        discountedPrice = 30.0,
+                        discountPercentage = 45,
+                        sharedAtUtc = "2026-11-16T12:05:00Z"
+                    )
+                )
+            )
+        )
+        coEvery { mockApi.shareOfferWithFriends("offer-10", any<ShareOfferRequestBody>()) } returns Response.success(
+            ShareOfferResultDto(sharedCount = 1)
+        )
+
+        val repo = FriendsRepositoryImpl(
+            userPreferenceDao = null,
+            sessionRepository = sessionRepo,
+            friendsApi = mockApi,
+            ioDispatcher = dispatcher,
+            scope = CoroutineScope(SupervisorJob() + dispatcher)
+        )
+        val vm = FriendsViewModel(repo, sessionRepo)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        vm.dispatchIntent(FriendsViewIntent.LoadSharedOffers("u-karla"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, vm.viewState.value.sharedOffers.size)
+        assertEquals("Café latte", vm.viewState.value.sharedOffers.first().offerTitle)
+
+        vm.viewEffect.test {
+            val excessiveRecipients = (1..(MAX_OFFER_SHARE_FRIENDS + 1)).map { "u-$it" }
+            vm.dispatchIntent(FriendsViewIntent.ShareOffer("offer-10", excessiveRecipients))
+            dispatcher.scheduler.advanceUntilIdle()
+            assertTrue(awaitItem() is FriendsViewEffect.ShowMessage)
+
+            vm.dispatchIntent(FriendsViewIntent.ShareOffer("offer-10", listOf("u-karla")))
+            dispatcher.scheduler.advanceUntilIdle()
+            val sharedEffect = awaitItem() as FriendsViewEffect.OfferShared
+            assertEquals(1, sharedEffect.count)
+            val sharedMsg = awaitItem() as FriendsViewEffect.ShowMessage
+            assertTrue(sharedMsg.message.contains("1 amigo"))
             cancelAndIgnoreRemainingEvents()
         }
     }

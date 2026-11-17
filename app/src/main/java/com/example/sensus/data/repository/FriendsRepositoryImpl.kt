@@ -8,8 +8,11 @@ import com.example.sensus.data.remote.dto.SendFriendRequestResponseDto
 import com.example.sensus.domain.model.AddFriendResult
 import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.FriendInviteCodec
+import com.example.sensus.domain.model.FriendNoticeType
 import com.example.sensus.domain.model.PendingFriendRequest
 import com.example.sensus.domain.model.SentFriendRequest
+import com.example.sensus.domain.model.ShareOfferOutcome
+import com.example.sensus.domain.model.SharedOfferMessage
 import com.example.sensus.domain.repository.FriendsRepository
 import com.example.sensus.domain.repository.SessionRepository
 import java.io.IOException
@@ -49,6 +52,9 @@ class FriendsRepositoryImpl(
 
     private val _newlyArrivedRequest = MutableStateFlow<PendingFriendRequest?>(null)
     override val newlyArrivedRequest: StateFlow<PendingFriendRequest?> = _newlyArrivedRequest.asStateFlow()
+
+    private val _newlyAcceptedFriend = MutableStateFlow<ConnectedFriend?>(null)
+    override val newlyAcceptedFriend: StateFlow<ConnectedFriend?> = _newlyAcceptedFriend.asStateFlow()
 
     private val _myInviteCode = MutableStateFlow(FriendInviteCodec.generateInviteCode(null, null))
     override val myInviteCode: StateFlow<String> = _myInviteCode.asStateFlow()
@@ -96,7 +102,7 @@ class FriendsRepositoryImpl(
         var synced = false
         if (canSync) {
             synced = try {
-                val response = api!!.getFriendsOverview()
+                val response = api.getFriendsOverview()
                 val body = if (response.isSuccessful) response.body() else null
                 if (body != null) {
                     applySyncedOverview(body)
@@ -120,7 +126,9 @@ class FriendsRepositoryImpl(
             isGuest -> AddFriendResult.GuestNotAllowed
             parsed == null -> AddFriendResult.InvalidCode
             parsed.inviteCode.equals(_myInviteCode.value, ignoreCase = true) -> AddFriendResult.SelfInviteNotAllowed
-            friendsApi != null -> sendRequestToBackend(parsed.inviteCode, parsed.displayName, addedVia)
+            friendsApi != null -> executeSendFriendRequest(friendsApi, parsed.inviteCode, addedVia) {
+                mapSuccessSend(it, parsed.displayName, parsed.inviteCode)
+            }
             else -> insertLocalFallback(parsed.inviteCode, parsed.displayName, addedVia)
         }
     }
@@ -172,7 +180,7 @@ class FriendsRepositoryImpl(
         val target = _friends.value.firstOrNull { it.inviteCode.equals(inviteCode, ignoreCase = true) }
         if (friendsApi != null && !target?.userId.isNullOrBlank()) {
             try {
-                friendsApi.removeFriend(target!!.userId)
+                friendsApi.removeFriend(target.userId)
             } catch (_: IOException) {
                 // Mantiene consistente el estado local ante pérdida temporal de red.
             } catch (_: HttpException) {
@@ -182,6 +190,20 @@ class FriendsRepositoryImpl(
         val updated = _friends.value.filterNot { it.inviteCode.equals(inviteCode, ignoreCase = true) }
         synchronized(lock) { _friends.value = updated }
         localStore.saveFriends(resolveCurrentFriendsScope(sessionRepository), updated)
+    }
+
+    override suspend fun getSharedOffersWithFriend(friendUserId: String): List<SharedOfferMessage> {
+        val isGuest = sessionRepository?.sessionState?.value?.isGuest == true
+        return if (isGuest) emptyList() else fetchSharedOffersThreadRemote(friendsApi, friendUserId)
+    }
+
+    override suspend fun shareOfferWithFriends(offerId: String, recipientUserIds: List<String>): ShareOfferOutcome {
+        val isGuest = sessionRepository?.sessionState?.value?.isGuest == true
+        return if (isGuest) {
+            ShareOfferOutcome.GuestNotAllowed
+        } else {
+            executeShareOfferRemote(friendsApi, offerId, recipientUserIds)
+        }
     }
 
     override suspend fun queuePendingInvite(rawInput: String) {
@@ -210,11 +232,15 @@ class FriendsRepositoryImpl(
         return outcome
     }
 
-    override fun markIncomingNotificationHandled() {
-        _newlyArrivedRequest.value = null
+    override fun markNoticeHandled(noticeType: FriendNoticeType) {
+        when (noticeType) {
+            FriendNoticeType.INCOMING_REQUEST -> _newlyArrivedRequest.value = null
+            FriendNoticeType.ACCEPTED_FRIEND -> _newlyAcceptedFriend.value = null
+        }
     }
 
     private suspend fun applySyncedOverview(body: FriendsOverviewDto) {
+        val previousSent = _sentRequests.value
         val syncedFriends = body.friends.map { it.toDomain() }
         val syncedPending = body.pendingReceived.map { it.toDomain() }
         val syncedSent = body.pendingSent.map { it.toDomain() }
@@ -223,27 +249,12 @@ class FriendsRepositoryImpl(
             _pendingRequests.value = syncedPending
             _sentRequests.value = syncedSent
         }
+        val acceptedNow = detectNewlyAcceptedFriend(previousSent, syncedFriends)
+        if (acceptedNow != null) _newlyAcceptedFriend.value = acceptedNow
         val scopeKey = resolveCurrentFriendsScope(sessionRepository)
         localStore.saveFriends(scopeKey, syncedFriends)
         val unseen = localStore.filterUnseenAndMarkNotified(scopeKey, syncedPending)
         if (unseen != null) _newlyArrivedRequest.value = unseen
-    }
-
-    private suspend fun sendRequestToBackend(code: String, fallbackName: String?, addedVia: String): AddFriendResult {
-        val api = friendsApi ?: return AddFriendResult.NetworkFailure("Servicio no disponible.")
-        return try {
-            val response = api.sendFriendRequest(SendFriendRequestBody(inviteCode = code, addedVia = addedVia))
-            when {
-                response.isSuccessful -> mapSuccessSend(response.body(), fallbackName, code)
-                response.code() == HTTP_NOT_FOUND ->
-                    AddFriendResult.NetworkFailure("No encontramos un usuario activo con ese código.")
-                else -> AddFriendResult.NetworkFailure("No se pudo enviar la solicitud (${response.code()}).")
-            }
-        } catch (_: IOException) {
-            AddFriendResult.NetworkFailure("Sin conexión con el servidor. Intenta nuevamente.")
-        } catch (_: HttpException) {
-            AddFriendResult.NetworkFailure("Error al enviar la solicitud de amistad.")
-        }
     }
 
     private suspend fun mapSuccessSend(body: SendFriendRequestResponseDto?, fallbackName: String?, code: String): AddFriendResult = when (body?.outcome) {
@@ -286,6 +297,28 @@ class FriendsRepositoryImpl(
         val updated = listOf(friend) + _friends.value.filterNot { it.inviteCode.equals(friend.inviteCode, true) }
         synchronized(lock) { _friends.value = updated }
         localStore.saveFriends(resolveCurrentFriendsScope(sessionRepository), updated)
+    }
+}
+
+private suspend fun executeSendFriendRequest(
+    api: FriendsApiService?,
+    code: String,
+    addedVia: String,
+    onSuccess: suspend (SendFriendRequestResponseDto?) -> AddFriendResult
+): AddFriendResult {
+    val service = api ?: return AddFriendResult.NetworkFailure("Servicio no disponible.")
+    return try {
+        val response = service.sendFriendRequest(SendFriendRequestBody(inviteCode = code, addedVia = addedVia))
+        when {
+            response.isSuccessful -> onSuccess(response.body())
+            response.code() == HTTP_NOT_FOUND ->
+                AddFriendResult.NetworkFailure("No encontramos un usuario activo con ese código.")
+            else -> AddFriendResult.NetworkFailure("No se pudo enviar la solicitud (${response.code()}).")
+        }
+    } catch (_: IOException) {
+        AddFriendResult.NetworkFailure("Sin conexión con el servidor. Intenta nuevamente.")
+    } catch (_: HttpException) {
+        AddFriendResult.NetworkFailure("Error al enviar la solicitud de amistad.")
     }
 }
 
