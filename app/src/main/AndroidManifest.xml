@@ -5,8 +5,13 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:name=".SensusApp"
@@ -58,6 +63,44 @@
                     android:scheme="http"
                     android:host="rodnix.com.mx"
                     android:pathPrefix="/sensus/reset" />
+            </intent-filter>
+
+            <!-- FT-25 Deep Link: sensus://invitacion?code=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="sensus"
+                    android:host="invitacion" />
+            </intent-filter>
+
+            <!-- FT-25 App Link: https://rodnix.com.mx/sensus?code=... -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="rodnix.com.mx"
+                    android:path="/sensus" />
+                <data
+                    android:scheme="https"
+                    android:host="rodnix.com.mx"
+                    android:path="/sensus/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="http"
+                    android:host="rodnix.com.mx"
+                    android:path="/sensus" />
+                <data
+                    android:scheme="http"
+                    android:host="rodnix.com.mx"
+                    android:path="/sensus/" />
             </intent-filter>
         </activity>
     </application>

@@ -22,18 +22,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,6 +72,7 @@ import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
 import java.util.Locale
 
 private const val NOTICE_BG_ALPHA = 0.15f
@@ -85,11 +87,12 @@ data class ProductDetailCallbacks(
     val onApartarClick: (ProductOffer) -> Unit = {},
     val onApartarDirect: (ProductOffer, Int) -> Unit = { off, _ -> onApartarClick(off) },
     val onNavigateToRoute: ((ProductOffer) -> Unit)? = null,
-    val onViewActiveClaim: (ProductOffer) -> Unit = onApartarClick
+    val onViewActiveClaim: (ProductOffer) -> Unit = onApartarClick,
+    val onRequireAuth: () -> Unit = {}
 )
 
 @Composable
-internal fun ProductDetailTopBar(onNavigateBack: () -> Unit, onShareClick: () -> Unit, onFavoriteClick: () -> Unit) {
+internal fun ProductDetailTopBar(onNavigateBack: () -> Unit, onShareClick: () -> Unit, onFavoriteClick: () -> Unit, isSaved: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,7 +103,59 @@ internal fun ProductDetailTopBar(onNavigateBack: () -> Unit, onShareClick: () ->
         CircleWhiteIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", onNavigateBack)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CircleWhiteIconButton(Icons.Default.Share, "Compartir", onShareClick)
-            CircleWhiteIconButton(Icons.Default.BookmarkBorder, "Favorito", onFavoriteClick)
+            CirclePinIconButton(isSaved = isSaved, onClick = onFavoriteClick)
+        }
+    }
+}
+
+@Composable
+private fun CirclePinIconButton(isSaved: Boolean, onClick: () -> Unit) {
+    val containerColor = if (isSaved) SensusPurple else Color.White
+    val iconTint = if (isSaved) Color.White else SensusPurple
+    val iconVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin
+    val desc = if (isSaved) {
+        stringResource(R.string.saved_interests_pin_saved)
+    } else {
+        stringResource(R.string.saved_interests_pin_add)
+    }
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(containerColor)
+    ) {
+        Icon(imageVector = iconVector, contentDescription = desc, tint = iconTint)
+    }
+}
+
+@Composable
+internal fun ProductSaveInterestPill(isSaved: Boolean, onClick: () -> Unit) {
+    val containerColor = if (isSaved) SensusPurple else SensusVioletBg
+    val contentColor = if (isSaved) Color.White else SensusPurple
+    val iconVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin
+    val label = if (isSaved) {
+        stringResource(R.string.saved_interests_pin_saved)
+    } else {
+        stringResource(R.string.saved_interests_pin_add)
+    }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = containerColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(imageVector = iconVector, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contentColor)
         }
     }
 }

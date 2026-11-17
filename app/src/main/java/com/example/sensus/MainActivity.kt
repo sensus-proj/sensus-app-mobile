@@ -13,6 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.sensus.domain.model.FriendInviteCodec
+import com.example.sensus.presentation.common.FriendRequestNotifier
 import com.example.sensus.theme.SensusTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -20,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private var deepLinkResetToken by mutableStateOf<String?>(null)
+    private var deepLinkInviteUrl by mutableStateOf<String?>(null)
 
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +31,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         deepLinkResetToken = parseResetToken(intent)
+        deepLinkInviteUrl = parseFriendInviteUrl(intent)
 
         setContent {
             SensusTheme {
@@ -37,7 +41,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     MainNavigation(
                         initialDeepLinkResetToken = deepLinkResetToken,
-                        onResetTokenConsumed = { deepLinkResetToken = null }
+                        onResetTokenConsumed = { deepLinkResetToken = null },
+                        initialDeepLinkInviteUrl = deepLinkInviteUrl,
+                        onInviteUrlConsumed = { deepLinkInviteUrl = null }
                     )
                 }
             }
@@ -51,6 +57,10 @@ class MainActivity : ComponentActivity() {
         if (!token.isNullOrBlank()) {
             deepLinkResetToken = token
         }
+        val inviteUrl = parseFriendInviteUrl(intent)
+        if (!inviteUrl.isNullOrBlank()) {
+            deepLinkInviteUrl = inviteUrl
+        }
     }
 
     companion object {
@@ -59,6 +69,12 @@ class MainActivity : ComponentActivity() {
             val isReset = (data.scheme.equals("sensus", ignoreCase = true) && data.host.equals("reset", ignoreCase = true)) ||
                 (data.host?.equals("rodnix.com.mx", ignoreCase = true) == true && (data.path?.startsWith("/sensus/reset") == true))
             return if (isReset) data.getQueryParameter("token") else null
+        }
+
+        fun parseFriendInviteUrl(intent: Intent?): String? {
+            val raw = intent?.dataString ?: return null
+            if (raw.startsWith(FriendRequestNotifier.OPEN_REQUESTS_URI)) return raw
+            return raw.takeIf { FriendInviteCodec.parseInvite(it) != null }
         }
     }
 }

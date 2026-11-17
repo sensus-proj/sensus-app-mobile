@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.root
 
 import androidx.lifecycle.viewModelScope
+import com.example.sensus.domain.repository.FriendsRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
 class AppViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val logoutUseCase: LogoutUseCase,
-    private val getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase
+    private val getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase,
+    private val friendsRepository: FriendsRepository? = null
 ) : MviViewModel<AppViewState, AppViewIntent, AppViewEffect>(AppViewState()) {
 
     init {
@@ -33,6 +35,7 @@ class AppViewModel @Inject constructor(
             is AppViewIntent.DeepLinkReceived -> {
                 updateState { copy(activeResetToken = intent.token, currentScreen = AppScreen.FORGOT_PASSWORD) }
             }
+            is AppViewIntent.FriendInviteDeepLinkReceived -> handleFriendInviteDeepLink(intent.inviteUrl)
             is AppViewIntent.SplashFinished -> handleSplashFinished()
             is AppViewIntent.LocationPermissionSet -> handleLocationPermissionSet(intent.granted)
             is AppViewIntent.TermsAccepted -> handleTermsAccepted(intent.accepted)
@@ -68,6 +71,23 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             logoutUseCase()
             updateState { copy(currentScreen = AppScreen.LOGIN) }
+        }
+    }
+
+    private fun handleFriendInviteDeepLink(inviteUrl: String) {
+        viewModelScope.launch {
+            friendsRepository?.queuePendingInvite(inviteUrl)
+            val session = sessionRepository.sessionState.value
+            updateState {
+                copy(
+                    friendInviteSignal = friendInviteSignal + 1,
+                    currentScreen = if (session.isSessionActive && !session.isGuest && session.hasAcceptedTerms) {
+                        AppScreen.MAIN
+                    } else {
+                        currentScreen
+                    }
+                )
+            }
         }
     }
 }

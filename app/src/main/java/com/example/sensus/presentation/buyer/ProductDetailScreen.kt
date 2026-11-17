@@ -42,15 +42,20 @@ fun ProductDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
+    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
+    val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
     LaunchedEffect(offer.id) { viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id)) }
+    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     ProductDetailContent(
         offer = offer,
         state = state,
         actions = ProductDetailActions(
-            callbacks,
-            viewModel::dispatchIntent,
-            { current, quantity -> cartViewModel.dispatchIntent(CartViewIntent.AddOffer(current, quantity)) }
+            navigation = callbacks,
+            onIntent = viewModel::dispatchIntent,
+            onAddToCart = { current, quantity -> cartViewModel.dispatchIntent(CartViewIntent.AddOffer(current, quantity)) },
+            isSaved = offer.id in savedState.savedOfferIds,
+            onToggleSaved = { target -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(target)) }
         ),
         modifier = modifier
     )
@@ -115,7 +120,8 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
                 }
                 context.startActivity(Intent.createChooser(share, context.getString(R.string.detail_share_title)))
             },
-            onFavoriteClick = { Toast.makeText(context, context.getString(R.string.detail_feature_unavailable), Toast.LENGTH_SHORT).show() }
+            onFavoriteClick = { actions.onToggleSaved(offer) },
+            isSaved = actions.isSaved
         )
         ProductDetailStatus(state) { actions.onIntent(ProductDetailViewIntent.Load(offer.id)) }
         if (showAddedNotice) {
@@ -124,6 +130,8 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
         ProductVisualHeroCard(offer = offer)
         Spacer(modifier = Modifier.height(16.dp))
         ProductTitleAndDatesSection(offer = offer)
+        Spacer(modifier = Modifier.height(12.dp))
+        ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
         Spacer(modifier = Modifier.height(16.dp))
         QuantitySelectorCard(
             quantity = quantity,
@@ -162,5 +170,7 @@ internal fun ProductDetailStatus(state: ProductDetailViewState, onRetry: () -> U
 internal data class ProductDetailActions(
     val navigation: ProductDetailCallbacks,
     val onIntent: (ProductDetailViewIntent) -> Unit,
-    val onAddToCart: (ProductOffer, Int) -> Unit
+    val onAddToCart: (ProductOffer, Int) -> Unit,
+    val isSaved: Boolean = false,
+    val onToggleSaved: (ProductOffer) -> Unit = {}
 )

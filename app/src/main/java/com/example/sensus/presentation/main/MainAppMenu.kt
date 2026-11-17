@@ -138,6 +138,7 @@ enum class MerchantNavTab(val title: String, val icon: ImageVector) {
 @Stable
 internal class MainAppState {
     var communityMerchantId by mutableStateOf<String?>(null)
+    var openFriendsTabSignal by mutableIntStateOf(0)
     var isMerchantMode by mutableStateOf(false)
     var buyerTabIndex by mutableIntStateOf(0)
     var merchantTabIndex by mutableIntStateOf(0)
@@ -150,6 +151,7 @@ internal class MainAppState {
     var showCartSheet by mutableStateOf(false)
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
+    var showSavedInterests by mutableStateOf(false)
     var showMerchantRegister by mutableStateOf(false)
     var isMerchantRegistered by mutableStateOf(false)
     var showConfirmLogout by mutableStateOf(false)
@@ -251,6 +253,10 @@ private fun dismissActiveOverlay(state: MainAppState): Boolean = when {
     }
     state.selectedStoreCatalog != null -> {
         state.selectedStoreCatalog = null
+        true
+    }
+    state.showSavedInterests -> {
+        state.showSavedInterests = false
         true
     }
     state.showMerchantRegister -> {

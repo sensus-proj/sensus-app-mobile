@@ -14,5 +14,5 @@ import com.example.sensus.domain.repository.StoreRepository
 class StoreRepositoryImpl : StoreRepository {
     override fun getSampleStore(): MerchantStore = MockDataProvider.sampleStore
     override fun getSampleNotifications(): List<NotificationItem> = MockDataProvider.sampleNotifications
-    override fun getSampleFriends(): List<FriendShare> = MockDataProvider.sampleFriends
+    override fun getSampleFriends(): List<FriendShare> = emptyList()
 }

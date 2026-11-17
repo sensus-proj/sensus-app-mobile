@@ -44,7 +44,7 @@ specs/FT-XX-<slug>/
 | `FT-22-ux-transversal-offline` | UX / Offline (Ola 4) | SE-042..SE-044; P-05, P-06 | FT-11 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-23-soporte-legal-faq` | Soporte / Legal (Ola 4) | SE-042..SE-044; P-35 | FT-10 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-24-sensi-ia` | Negocio (Ola 5) | P-25, C-39, Tesina | FT-12 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
-| `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
+| `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | En revision | `FriendModels.kt`, `FriendsApiService.kt`, `FriendsRepositoryImpl.kt`, `FriendsCommunityScreen.kt`, `QrScannerDialog.kt`, `FriendRequestNotifier.kt`, Spec `050` backend (pendiente despliegue AWS y landing) |
 | `FT-26-resenas-comercio` | Negocio (Ola 5) | P-15, C-28..C-31 | FT-14 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |

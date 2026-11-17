@@ -1,65 +1,75 @@
-# SPEC — FT-25 Red de Amigos por QR y Ofertas Compartidas [BORRADOR]
+# SPEC — FT-25 Red de Amigos por QR, Invitación y Solicitudes Pendientes
 
 > Rector: `.specify/memory/constitution.md` §2, §4, §6 y §11. Plantilla: `.specify/templates/spec-template.md`.
 > Drive: **Sensus_Movil_Componentes_y_CRUD.xlsx** (hoja *Amigos*, Pantalla **P-24**, Componente **C-38**); **Tesina Sensus §1, §2.4**.
-> Backend ref: **Sin spec aún en `sensus-back` (bloqueada hasta abrir spec equivalente en backend, decisión D-6)**.
+> Backend ref: Spec `050-amigos-y-solicitudes` en `sensus-back`.
 
 ## 1. Contexto y objetivo
 
-La Tesina y el Excel del Drive detallan una red privada de amigos vinculados únicamente mediante código QR (preservando la privacidad al no haber búsqueda abierta de personas ni compartir por WhatsApp) para intercambiar ofertas dentro de Sensus. Hoy `CommunityScreen` mezcla una matriz QR visual generada localmente (`StylizedQrCanvas`) y lista simulada de `MockDataProvider.sampleFriends`.
+La pantalla `Amigos y QR` (`P-24`) anteriormente mostraba una matriz QR decorativa dibujada aleatoriamente con `Random` y la lista falsa `MockDataProvider.sampleFriends`. Además, se requiere que los vecinos puedan compartir su enlace de invitación por aplicaciones de mensajería y que quien recibe un escaneo o invitación reciba aviso y decida aceptar (`✓`) o cancelar (`✕`) la solicitud pendiente.
 
-**Objetivo:** implementar la vinculación segura de amigos por código QR real (`GET /api/v1/friends`, `POST /api/v1/friends`, `PATCH /api/v1/friends/{id}`, `DELETE /api/v1/friends/{id}`) y el intercambio directo de ofertas entre amigos aceptados (`POST /api/v1/offers/{id}/share`), retirando `MockDataProvider.sampleFriends`.
+**Objetivo:** implementar la red real de amigos por código QR escaneable, enlace compartido (`https://rodnix.com.mx/sensus?code=...&name=...` con App Link / fallback a Play Store) y flujo completo de solicitudes pendientes sincronizadas con `sensus-back` (`GET /api/v1/friends`, `POST /api/v1/friends/requests`, `POST /api/v1/friends/requests/{requestId}/accept`, `POST /api/v1/friends/requests/{requestId}/reject`, `DELETE /api/v1/friends/{friendUserId}`), retirando todos los amigos simulados.
 
-**Alcance:** código QR personal de usuario escaneable (ZXing + CameraX/ML Kit reutilizados de `FT-13`/`FT-14`), gestión de solicitudes/amistades, lista de amigos cercanos sin revelar coordenadas exactas y botón `'Compartir con amigo'` en `ProductDetailScreen`.
-**Fuera de alcance:** búsqueda abierta de usuarios por nombre/teléfono global; compartir enlaces por WhatsApp.
+**Alcance:**
+- Código personal determinístico `SNS-XXXXXX` (`FriendInviteCodec`) y QR escaneable real generado con ZXing (`CommunityQrDialog.kt`).
+- Escáner real con cámara `Camera2` + selector desde galería + captura manual de código/enlace (`QrScannerDialog.kt`, `FriendsCommunityScreen.kt`).
+- Compartir invitación por hoja nativa Android (`ACTION_SEND`) apuntando a `https://rodnix.com.mx/sensus?code=...&name=...` con App Links (`assetlinks.json`, `autoVerify="true"`), redirección `intent://` desde `sensus-landing` y esquema `sensus://invitacion`.
+- Sección pulsable `"Solicitudes pendientes"` con contador y acciones de aceptar (`✓`) o rechazar (`✕`), resumen de `"Solicitudes enviadas"` y notificaciones locales en barra de estado (`FriendRequestNotifier`) al llegar nuevas solicitudes durante la sincronización.
+
+**Fuera de alcance:** búsqueda global por nombre o teléfono; envío directo de ofertas individuales entre amigos (`POST /api/v1/offers/{id}/share`, diferido a iteración posterior).
 
 ## 2. Requisitos funcionales
 
 | ID | Requisito |
 |---|---|
-| RF-25-01 | Generar el QR personal del usuario autenticado con su código opaco de invitación (sin exponer correo ni teléfono ni coordenadas exactas). |
-| RF-25-02 | Escanear el QR de otro usuario (reutilizando `QrCameraPreview` de `FT-14`) para enviar solicitud/vinculación vía `POST /api/v1/friends`, impidiendo agregarse a sí mismo. |
-| RF-25-03 | Listar amigos aceptados y ofertas compartidas desde `GET /api/v1/friends`, aceptar solicitudes con `PATCH /api/v1/friends/{id}` y eliminar amistad con `DELETE /api/v1/friends/{id}`. |
-| RF-25-04 | Desde `ProductDetailScreen`, permitir compartir una oferta con un amigo aceptado mediante `POST /api/v1/offers/{id}/share` (bloqueado en modo invitado). |
-| RF-25-05 | Retirar `MockDataProvider.sampleFriends` de `StoreRepositoryImpl` y `CommunityViewModel`. |
+| RF-25-01 | Generar el código determinístico `SNS-XXXXXX` del usuario autenticado (`FriendInviteCodec`) y mostrar un bitmap QR real escaneable con ZXing (`QRCodeWriter`). |
+| RF-25-02 | Escanear QR de otros vecinos mediante cámara (`Camera2` + ZXing `QRCodeReader`), imagen de galería o captura manual, impidiendo auto-invitación y uso en modo invitado. |
+| RF-25-03 | Compartir la invitación mediante `Intent.ACTION_SEND` con la URL `https://rodnix.com.mx/sensus?code=...&name=...` para abrir la app directamente si está instalada o mostrar la landing/Play Store si no lo está. |
+| RF-25-04 | Enviar solicitudes vía `POST /api/v1/friends/requests`, consultar estado en `GET /api/v1/friends` y reflejar amigos conectados, pendientes recibidas y pendientes enviadas con respaldo local cifrado en Room (`UserPreferenceDao`). |
+| RF-25-05 | Mostrar una sección interactiva `"Solicitudes pendientes"` donde el destinatario pulsa para ver quién envió cada invitación y decide aceptar (`POST /api/v1/friends/requests/{requestId}/accept`) o cancelar (`POST /api/v1/friends/requests/{requestId}/reject`), además de eliminar amigos con `DELETE /api/v1/friends/{friendUserId}` y emitir notificación local en Android al detectar nuevas solicitudes entrantes. |
+| RF-25-06 | Retirar `MockDataProvider.sampleFriends` de `StoreRepositoryImpl` y mostrar estado vacío real cuando no existan conexiones. |
 
 ## 3. Requisitos no funcionales
 
-- **Privacidad desde el diseño:** nunca mostrar ubicación exacta en el mapa de un amigo; únicamente distancia aproximada/rango y estado en línea si el usuario lo consiente.
-- **Seguridad:** token/código de invitación QR rotativo o de uso controlado validado por el servidor.
+- **Privacidad y seguridad:** no exponer correo electrónico, credenciales ni coordenadas exactas en invitaciones ni en tarjetas de amigos; caché local cifrada en SQLCipher y endpoints protegidos con Bearer JWT.
+- **Compatibilidad UI:** mantener firma compatible de `FriendsCommunityScreen(friendsList)` para pruebas existentes sin incluir textos literales prohibidos en la interfaz.
+- **Calidad:** `ktlintCheck`, `detekt`, `check_layers.py` y pruebas unitarias sin hallazgos.
 
 ## 4. Arquitectura y contratos internos
 
 ```text
 domain/
-  model/FriendModels.kt         # FriendConnection, FriendStatus, SharedOfferItem
+  model/FriendModels.kt                 # ConnectedFriend, PendingFriendRequest, SentFriendRequest, AddFriendResult, FriendInviteCodec
   repository/FriendsRepository.kt
-  usecase/GetFriendsUseCase.kt, ConnectFriendByQrUseCase.kt, RespondFriendRequestUseCase.kt, ShareOfferWithFriendUseCase.kt
 data/
-  remote/api/FriendsApiService.kt # GET/POST/PATCH/DELETE /api/v1/friends, POST /api/v1/offers/{id}/share
+  remote/api/FriendsApiService.kt       # /api/v1/friends, /requests, /accept, /reject, /{friendUserId}
+  remote/dto/FriendsDtos.kt
+  repository/FriendsLocalStore.kt       # Caché cifrada Room + registro de notificaciones vistas
   repository/FriendsRepositoryImpl.kt
-presentation/buyer/
-  FriendsViewModel.kt, FriendsContract.kt, FriendsSection.kt
+presentation/
+  buyer/FriendsContract.kt, FriendsViewModel.kt, FriendsCommunityScreen.kt, FriendsRequestsComponents.kt, CommunityQrDialog.kt
+  common/QrScannerDialog.kt, FriendRequestNotifier.kt
 ```
 
 ## 5. Criterios de aceptacion
 
-- **Given** un usuario escanea el QR de su vecino **When** confirma **Then** envía `POST /api/v1/friends` y registra la conexión sin revelar domicilio ni correo.
-- **Given** un amigo compartió una oferta **When** el destinatario abre `P-24` **Then** ve la tarjeta con la oferta y puede abrir su detalle.
-- **Given** un usuario escanea su propio QR **When** intenta agregarse **Then** el caso de uso bloquea la acción con mensaje claro.
+- **Given** un usuario autenticado abre `Amigos y QR` **When** abre su QR o comparte su enlace **Then** genera su código real `SNS-XXXXXX` y enlace `https://rodnix.com.mx/sensus?code=...`.
+- **Given** un usuario escanea el QR de otro usuario **When** envía la solicitud **Then** el solicitante ve la solicitud en `"Solicitudes enviadas"` y el destinatario recibe notificación y puede pulsar `"Solicitudes pendientes"` para aceptar (`✓`) o cancelar (`✕`).
+- **Given** el destinatario acepta con la paloma (`✓`) **When** sincronizan ambos dispositivos **Then** ambos usuarios aparecen en `"Mis vecinos conectados"`.
+- **Given** el usuario escanea su propio QR o está en modo invitado **When** intenta agregar **Then** la acción se bloquea con retroalimentación clara.
 
 ## 6. Plan de pruebas
 
-- **Unitarias:** `ConnectFriendByQrUseCaseTest` (bloqueo de auto-agregado, validación QR), `ShareOfferWithFriendUseCaseTest`.
-- **Integración (`MockWebServer`):** CRUD `/api/v1/friends` y `/offers/{id}/share`.
-- **UI (Compose Test Rule):** diálogo QR personal escaneable y lista de ofertas compartidas por amigos.
+- **Unitarias:** `FriendsRepositoryImplTest` (codificación/parseo URL web y `sensus://`, sincronización, notificación única por `requestId`, envío, aceptación y rechazo) y `FriendsViewModelTest` (flujo completo MVI y bloqueo de invitado).
+- **Análisis estático y compilación:** `ktlintCheck`, `detekt`, `compileDebugKotlin`, `compileDebugAndroidTestKotlin`.
 
 ## 7. Riesgos, limites y deuda
 
-- **BLOQUEANTE:** estos endpoints aún **no existen** en `sensus-back`. Permanece como `Borrador` hasta abrir la spec equivalente en backend (decisión D-6).
+- **Despliegue externo:** requiere desplegar `sensus-back` (Spec `050`) en AWS y `sensus-landing` (`inviteHandler.js`) en Neubox para operación de extremo a extremo entre dispositivos físicos.
+- **Push en segundo plano:** la app móvil no contiene aún `app/google-services.json` y `FcmPushDispatcher.cs` en backend opera simulado, por lo que las notificaciones usan sincronización automática al abrir/reanudar la app y sondeo periódico en primer plano (`15 s`) con `NotificationManagerCompat`.
 
 ## Aprobación
 
 | Estado | Revisor | Fecha | Evidencia |
 |---|---|---|---|
-| Borrador | — | — | Bloqueada por falta de spec/contrato en backend (D-6) |
+| En revision | Pendiente revisión de PR | 2026-11-16 | Implementación alineada con `sensus-back` Spec `050` y `sensus-landing`; pruebas locales en verde |

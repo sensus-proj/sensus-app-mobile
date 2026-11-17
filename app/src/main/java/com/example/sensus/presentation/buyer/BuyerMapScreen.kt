@@ -93,7 +93,8 @@ private data class BuyerMapHostInput(
     val storeClusters: List<MapStoreCluster>,
     val effectiveIsGuest: Boolean,
     val effectiveRadiusKm: Float,
-    val hasRuntimePermission: Boolean
+    val hasRuntimePermission: Boolean,
+    val savedOfferIds: Set<String> = emptySet()
 )
 
 @Composable
@@ -103,10 +104,12 @@ fun BuyerMapScreen(
     callbacks: BuyerMapCallbacks,
     modifier: Modifier = Modifier
 ) {
+    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapState by mapViewModel.viewState.collectAsState()
     val cartState by cartViewModel.viewState.collectAsState()
+    val savedState by savedViewModel.viewState.collectAsState()
     val uiHolder = remember { BuyerMapUiStateHolder() }
 
     val effectiveIsGuest = callbacks.isGuest || mapState.isGuest
@@ -127,21 +130,10 @@ fun BuyerMapScreen(
         onRequireAuth = callbacks.onRequireAuth,
         onRequestPermission = { permissionLauncher.launch(locationPermissionsArray()) }
     )
+    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     OsmMapUtils.BindMapLifecycle(uiHolder.mapViewRef, lifecycleOwner)
 
-    val storeClusters = remember(
-        mapState.userLocation,
-        mapState.offers,
-        mapState.nearbyMerchants,
-        uiHolder.searchQuery,
-        uiHolder.selectedCategory,
-        effectiveRadiusKm
-    ) {
-        buildMapStoreClusters(mapState, uiHolder, effectiveRadiusKm)
-    }
-    LaunchedEffect(storeClusters) {
-        uiHolder.selectedStore?.storeKey?.let { key -> uiHolder.selectedStore = storeClusters.find { it.storeKey == key } }
-    }
+    val storeClusters = rememberMapStoreClusters(mapState, uiHolder, effectiveRadiusKm)
 
     BuyerMapScreenScaffold(
         hostInput = BuyerMapHostInput(
@@ -150,16 +142,36 @@ fun BuyerMapScreen(
             storeClusters = storeClusters,
             effectiveIsGuest = effectiveIsGuest,
             effectiveRadiusKm = effectiveRadiusKm,
-            hasRuntimePermission = hasRuntimePermission
+            hasRuntimePermission = hasRuntimePermission,
+            savedOfferIds = savedState.savedOfferIds
         ),
         deps = BuyerMapScaffoldDeps(
             mapViewModel = mapViewModel,
             uiHolder = uiHolder,
             callbacks = callbacks,
-            onRequestPermission = { permissionLauncher.launch(locationPermissionsArray()) }
+            onRequestPermission = { permissionLauncher.launch(locationPermissionsArray()) },
+            onToggleSaveOffer = { offer -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(offer)) }
         ),
         modifier = modifier
     )
+}
+
+@Composable
+private fun rememberMapStoreClusters(mapState: BuyerMapViewState, uiHolder: BuyerMapUiStateHolder, effectiveRadiusKm: Float): List<MapStoreCluster> {
+    val storeClusters = remember(
+        mapState.userLocation,
+        mapState.offers,
+        mapState.nearbyMerchants,
+        uiHolder.searchQuery,
+        uiHolder.selectedCategory,
+        effectiveRadiusKm
+    ) { buildMapStoreClusters(mapState, uiHolder, effectiveRadiusKm) }
+    LaunchedEffect(storeClusters) {
+        uiHolder.selectedStore?.storeKey?.let { key ->
+            uiHolder.selectedStore = storeClusters.find { it.storeKey == key }
+        }
+    }
+    return storeClusters
 }
 
 @ComposeUiModel
@@ -167,7 +179,8 @@ private data class BuyerMapScaffoldDeps(
     val mapViewModel: BuyerMapViewModel,
     val uiHolder: BuyerMapUiStateHolder,
     val callbacks: BuyerMapCallbacks,
-    val onRequestPermission: () -> Unit
+    val onRequestPermission: () -> Unit,
+    val onToggleSaveOffer: (ProductOffer) -> Unit = {}
 )
 
 @Composable
@@ -215,7 +228,8 @@ private fun BuyerMapScreenScaffold(hostInput: BuyerMapHostInput, deps: BuyerMapS
                 onRadiusSelected = { km ->
                     deps.mapViewModel.dispatchIntent(BuyerMapViewIntent.RadiusSelected(km))
                     applyShortRadiusFocusZoom(km, mapState.userLocation, uiHolder)
-                }
+                },
+                onToggleSaveOffer = deps.onToggleSaveOffer
             )
         )
     }
@@ -264,7 +278,8 @@ private fun BuyerMapTopOverlaySection(
 private data class MapBottomOverlayActions(
     val onRequestPermission: () -> Unit,
     val onRefreshLocation: () -> Unit,
-    val onRadiusSelected: (Float) -> Unit
+    val onRadiusSelected: (Float) -> Unit,
+    val onToggleSaveOffer: (ProductOffer) -> Unit = {}
 )
 
 @Composable
@@ -315,7 +330,9 @@ private fun BuyerMapBottomOverlaySection(
         BuyerSelectedBottomCard(
             selectedStore = uiHolder.selectedStore,
             onClearStore = { uiHolder.selectedStore = null },
-            callbacks = callbacks
+            callbacks = callbacks,
+            savedOfferIds = hostInput.savedOfferIds,
+            onToggleSaveOffer = actions.onToggleSaveOffer
         )
 
         if (uiHolder.showRadiusSheet) {
@@ -334,14 +351,21 @@ private fun BuyerMapBottomOverlaySection(
 private fun androidx.compose.foundation.layout.BoxScope.BuyerSelectedBottomCard(
     selectedStore: MapStoreCluster?,
     onClearStore: () -> Unit,
-    callbacks: BuyerMapCallbacks
+    callbacks: BuyerMapCallbacks,
+    savedOfferIds: Set<String>,
+    onToggleSaveOffer: (ProductOffer) -> Unit
 ) {
     selectedStore?.let { cluster ->
         SelectedStoreBottomCard(
             cluster = cluster,
-            onClose = onClearStore,
-            onRouteClick = callbacks.onRouteClick,
-            onViewMoreClick = callbacks.onOpenStoreCatalog,
+            actions = SelectedStoreCardActions(
+                onClose = onClearStore,
+                onRouteClick = callbacks.onRouteClick,
+                onViewMoreClick = callbacks.onOpenStoreCatalog,
+                onOfferClick = callbacks.onProductClick,
+                savedOfferIds = savedOfferIds,
+                onToggleSaveOffer = onToggleSaveOffer
+            ),
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
