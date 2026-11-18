@@ -23,7 +23,10 @@ import com.example.sensus.data.remote.dto.ResetPasswordRequest
 import com.example.sensus.data.remote.dto.UpdateMerchantProfileRequest
 import com.example.sensus.data.remote.dto.UpdateProfileRequest
 import com.example.sensus.domain.model.HorarioDia
+import com.example.sensus.domain.model.MerchantActivationInput
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.MerchantProfileUpdateInput
 import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.AuthRepository
@@ -132,8 +135,12 @@ class RetrofitAuthRepository(
         val hasMerchantRole = domainUser.roles.any {
             it.equals("Comerciante", ignoreCase = true) || it.equals("Merchant", ignoreCase = true)
         }
-        val preservedStoreName = if (hasMerchantRole) securePreferences.storedMerchantStatus.storeName else null
-        securePreferences.storedMerchantStatus = StoredMerchantStatus(isRegistered = hasMerchantRole, storeName = preservedStoreName)
+        val existing = securePreferences.storedMerchantStatus
+        securePreferences.storedMerchantStatus = if (hasMerchantRole) {
+            existing.copy(isRegistered = true)
+        } else {
+            StoredMerchantStatus()
+        }
         onSessionUpdated?.invoke()
         return Result.Success(domainUser)
     }
@@ -345,13 +352,25 @@ class RetrofitMerchantRepository(
         codigoPostal: String,
         latitud: Double?,
         longitud: Double?
-    ): Result<MerchantProfile> = safeNetworkCall("Error al activar comercio.") {
-        val request = ActivateMerchantRequest(
+    ): Result<MerchantProfile> = activateMerchant(
+        MerchantActivationInput(
             nombreComercial = nombreComercial,
             direccion = direccion,
             codigoPostal = codigoPostal,
-            latitud = latitud,
-            longitud = longitud
+            coordinates = latitud?.let { lat ->
+                longitud?.let { lng -> MerchantCoordinates(lat, lng) }
+            }
+        )
+    )
+
+    override suspend fun activateMerchant(input: MerchantActivationInput): Result<MerchantProfile> = safeNetworkCall("Error al activar comercio.") {
+        val request = ActivateMerchantRequest(
+            nombreComercial = input.nombreComercial,
+            direccion = input.direccion,
+            codigoPostal = input.codigoPostal,
+            latitud = input.coordinates?.latitude,
+            longitud = input.coordinates?.longitude,
+            fotoFachadaUrl = input.fotoFachadaUrl
         )
         val primary = merchantApi.activateMerchant(request)
         val primaryBody = primary.body()
@@ -400,22 +419,34 @@ class RetrofitMerchantRepository(
         direccion: String,
         codigoPostal: String,
         horarios: List<HorarioDia>,
-        coordinates: com.example.sensus.domain.model.MerchantCoordinates?
-    ): Result<MerchantProfile> = safeNetworkCall("Error al actualizar comercio.") {
-        val request = UpdateMerchantProfileRequest(
+        coordinates: MerchantCoordinates?
+    ): Result<MerchantProfile> = updateMerchantProfile(
+        MerchantProfileUpdateInput(
             nombreComercial = nombreComercial,
             direccion = direccion,
             codigoPostal = codigoPostal,
-            horarios = horarios.map { it.toDto() },
-            latitud = coordinates?.latitude,
-            longitud = coordinates?.longitude
+            horarios = horarios,
+            coordinates = coordinates
+        )
+    )
+
+    override suspend fun updateMerchantProfile(input: MerchantProfileUpdateInput): Result<MerchantProfile> = safeNetworkCall("Error al actualizar comercio.") {
+        val request = UpdateMerchantProfileRequest(
+            nombreComercial = input.nombreComercial,
+            direccion = input.direccion,
+            codigoPostal = input.codigoPostal,
+            horarios = input.horarios.map { it.toDto() },
+            latitud = input.coordinates?.latitude,
+            longitud = input.coordinates?.longitude,
+            fotoFachadaUrl = input.fotoFachadaUrl,
+            activo = input.activo
         )
         val response = merchantApi.updateMerchantProfile(request)
         val body = response.body()
         if (response.isSuccessful && body != null) {
-            Result.Success(persistAndMapMerchant(body.toDomain(fallbackHorarios = horarios)))
+            Result.Success(persistAndMapMerchant(body.toDomain(fallbackHorarios = input.horarios)))
         } else if (shouldTryLegacyFallback(response.code())) {
-            updateViaLegacyEndpoint(request, horarios, response)
+            updateViaLegacyEndpoint(request, input.horarios, response)
         } else {
             mapMerchantError(response, default404 = "Comercio no encontrado.")
         }
@@ -447,7 +478,7 @@ class RetrofitMerchantRepository(
             }
             val body = resolved.body()
             when {
-                resolved.isSuccessful && body != null -> Result.Success(body.map { it.toDomain() })
+                resolved.isSuccessful && body != null -> Result.Success(body.map { it.toDomain() }.filter { it.activo })
                 resolved.code() == HTTP_NOT_FOUND -> Result.Success(emptyList())
                 else -> mapMerchantError(resolved, default404 = "Comercios no disponibles.")
             }
@@ -463,11 +494,14 @@ class RetrofitMerchantRepository(
     }
 
     private fun persistAndMapMerchant(domain: MerchantProfile): MerchantProfile {
+        val existingPhoto = securePreferences?.storedMerchantStatus?.photoUrl?.takeIf { it.isNotBlank() }
         securePreferences?.storedMerchantStatus = StoredMerchantStatus(
             isRegistered = true,
             storeName = domain.nombreComercial,
             address = domain.direccion,
-            postalCode = domain.codigoPostal
+            postalCode = domain.codigoPostal,
+            photoUrl = domain.fotoFachadaUrl?.takeIf { it.isNotBlank() } ?: existingPhoto,
+            isStoreOpen = domain.activo
         )
         onSessionUpdated?.invoke()
         return domain
@@ -482,26 +516,28 @@ class RetrofitMerchantRepository(
                 usuarioId = "local_user",
                 nombreComercial = cachedName,
                 direccion = cached.address.orEmpty(),
-                codigoPostal = cached.postalCode.orEmpty()
+                codigoPostal = cached.postalCode.orEmpty(),
+                fotoFachadaUrl = cached.photoUrl,
+                activo = cached.isStoreOpen
             )
         )
     }
+}
 
-    private fun shouldTryLegacyFallback(code: Int): Boolean = code == HTTP_NOT_FOUND || code == HTTP_METHOD_NOT_ALLOWED
+private fun shouldTryLegacyFallback(code: Int): Boolean = code == HTTP_NOT_FOUND || code == HTTP_METHOD_NOT_ALLOWED
 
-    private fun <T> mapMerchantError(response: Response<T>, default404: String): Result<Nothing> {
-        val errorMsg = parseBackendErrorMessage(response.errorBody()?.string())
-        val mapped = when (response.code()) {
-            HTTP_UNPROCESSABLE -> AppError.Unprocessable(errorMsg ?: "No fue posible geocodificar la dirección.")
-            HTTP_FORBIDDEN -> AppError.Forbidden(errorMsg ?: "Solo comerciantes pueden gestionar datos de local.")
-            HTTP_CONFLICT -> AppError.Validation(errorMsg ?: "Ya cuentas con un comercio activo registrado.")
-            else -> mapCommonHttpStatus(
-                code = response.code(),
-                message = errorMsg,
-                default401 = "Sesión requerida.",
-                default404 = default404
-            )
-        }
-        return Result.Failure(mapped)
+private fun <T> mapMerchantError(response: Response<T>, default404: String): Result<Nothing> {
+    val errorMsg = parseBackendErrorMessage(response.errorBody()?.string())
+    val mapped = when (response.code()) {
+        HTTP_UNPROCESSABLE -> AppError.Unprocessable(errorMsg ?: "No fue posible geocodificar la dirección.")
+        HTTP_FORBIDDEN -> AppError.Forbidden(errorMsg ?: "Solo comerciantes pueden gestionar datos de local.")
+        HTTP_CONFLICT -> AppError.Validation(errorMsg ?: "Ya cuentas con un comercio activo registrado.")
+        else -> mapCommonHttpStatus(
+            code = response.code(),
+            message = errorMsg,
+            default401 = "Sesión requerida.",
+            default404 = default404
+        )
     }
+    return Result.Failure(mapped)
 }

@@ -3,23 +3,36 @@ package com.example.sensus.presentation
 import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.media.ImageCompressor
 import com.example.sensus.domain.model.CreateOfferInput
+import com.example.sensus.domain.model.MerchantActivationInput
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.MerchantProfileUpdateInput
 import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.ResolvedAddress
 import com.example.sensus.domain.model.StoreCategory
+import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.OffersRepository
+import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
+import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.ActivateMerchantUseCase
 import com.example.sensus.domain.usecase.CreateOfferUseCase
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
+import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.domain.usecase.ResolveAddressFromCoordinatesUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
+import com.example.sensus.domain.usecase.UpdateProfileUseCase
+import com.example.sensus.presentation.buyer.BuyerProfileViewEffect
+import com.example.sensus.presentation.buyer.BuyerProfileViewIntent
+import com.example.sensus.presentation.buyer.BuyerProfileViewModel
 import com.example.sensus.presentation.merchant.MerchantDashboardViewIntent
 import com.example.sensus.presentation.merchant.MerchantDashboardViewModel
 import com.example.sensus.presentation.merchant.MerchantNewOfferViewIntent
@@ -85,21 +98,22 @@ class MerchantViewModelsTest {
         val useCase = mockk<CreateOfferUseCase>()
         val input = CreateOfferInput(
             "Oferta",
-            "",
+            "Pan dulce fresco",
             StoreCategory.FOOD,
             10.0,
             5.0,
             3,
             Long.MAX_VALUE
         )
+        val imageBytes = byteArrayOf(1, 2, 3)
         val offer = ProductOffer("1", "Oferta", "Mi Tienda", "Comida", 10.0, 5.0, 50, 3, 0)
-        coEvery { useCase(input, null) } returns Result.Success(offer)
+        coEvery { useCase(input, imageBytes) } returns Result.Success(offer)
         val vm = MerchantNewOfferViewModel(useCase)
 
-        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input))
+        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input, imageBytes))
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 1) { useCase(input, null) }
+        coVerify(exactly = 1) { useCase(input, imageBytes) }
         assertFalse(vm.viewState.value.isPublishing)
     }
 
@@ -235,17 +249,10 @@ class MerchantViewModelsTest {
         coEvery { resolveUseCase(19.435, -99.141) } returns Result.Success(
             ResolvedAddress("Av. Juárez 45", "06010", 19.435, -99.141)
         )
-        val createdProfile = MerchantProfile(
-            id = "m1",
-            usuarioId = "u1",
-            nombreComercial = "Panadería Sol",
-            direccion = "Av. Juárez 45",
-            codigoPostal = "06010",
-            latitud = 19.435,
-            longitud = -99.141
-        )
+        val createdProfile = MerchantProfile("m1", "u1", "Panadería Sol", "Av. Juárez 45", "06010", latitud = 19.435, longitud = -99.141)
+        val coords = MerchantCoordinates(19.435, -99.141)
         coEvery {
-            activateUseCase("Panadería Sol", "Av. Juárez 45", "06010", 19.435, -99.141)
+            activateUseCase(MerchantActivationInput("Panadería Sol", "Av. Juárez 45", "06010", coords))
         } returns Result.Success(createdProfile)
 
         val vm = MerchantRegisterViewModel(sessionRepo, activateUseCase, getLocationUseCase, resolveUseCase)
@@ -254,13 +261,7 @@ class MerchantViewModelsTest {
             vm.dispatchIntent(MerchantRegisterViewIntent.ConfirmMapLocation(19.435, -99.141))
             awaitItem() // ApplyResolvedAddress
 
-            vm.dispatchIntent(
-                MerchantRegisterViewIntent.ActivateMerchant(
-                    storeName = "Panadería Sol",
-                    address = "Av. Juárez 45",
-                    postalCode = "06010"
-                )
-            )
+            vm.dispatchIntent(MerchantRegisterViewIntent.ActivateMerchant("Panadería Sol", "Av. Juárez 45", "06010"))
             val successEffect = awaitItem()
             assertTrue(successEffect is MerchantRegisterViewEffect.ActivationSuccess)
             assertEquals("Panadería Sol", (successEffect as MerchantRegisterViewEffect.ActivationSuccess).storeName)
@@ -270,16 +271,10 @@ class MerchantViewModelsTest {
         coVerify(exactly = 1) { sessionRepo.syncSession() }
 
         coEvery {
-            activateUseCase("Tienda Error", "Calle X 123", "06600", 19.435, -99.141)
+            activateUseCase(MerchantActivationInput("Tienda Error", "Calle X 123", "06600", coords))
         } returns Result.Failure(AppError.Validation("Ya cuentas con un comercio."))
 
-        vm.dispatchIntent(
-            MerchantRegisterViewIntent.ActivateMerchant(
-                storeName = "Tienda Error",
-                address = "Calle X 123",
-                postalCode = "06600"
-            )
-        )
+        vm.dispatchIntent(MerchantRegisterViewIntent.ActivateMerchant("Tienda Error", "Calle X 123", "06600"))
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("Ya cuentas con un comercio.", vm.viewState.value.errorMessage)
 
@@ -323,5 +318,146 @@ class MerchantViewModelsTest {
 
         assertTrue(vm.viewState.value.activeStoreOffers.isEmpty())
         assertEquals(1, vm.viewState.value.filteredOffers.size)
+    }
+
+    @Test
+    fun merchantRegister_uploadsFacadePhoto_beforeActivatingMerchant() = runTest {
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val activateUseCase = mockk<ActivateMerchantUseCase>()
+        val getLocationUseCase = mockk<GetUserLocationUseCase>(relaxed = true)
+        val resolveUseCase = mockk<ResolveAddressFromCoordinatesUseCase>(relaxed = true)
+        val mediaRepo = mockk<MediaRepository>()
+        val compressor = mockk<ImageCompressor>()
+
+        coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(7, 8)
+        coEvery { mediaRepo.uploadAndModerate(any(), any()) } returns Result.Success(
+            UploadedMedia("media-facade", "https://cdn.sensus.com/fachada.jpg")
+        )
+        coEvery {
+            activateUseCase(
+                MerchantActivationInput(
+                    nombreComercial = "Tienda Foto",
+                    direccion = "Av. Juárez 45",
+                    codigoPostal = "42800",
+                    fotoFachadaUrl = "https://cdn.sensus.com/fachada.jpg"
+                )
+            )
+        } returns Result.Success(
+            MerchantProfile("m2", "u2", "Tienda Foto", "Av. Juárez 45", "42800", fotoFachadaUrl = "https://cdn.sensus.com/fachada.jpg")
+        )
+
+        val vm = MerchantRegisterViewModel(sessionRepo, activateUseCase, getLocationUseCase, resolveUseCase, mediaRepo, compressor)
+        vm.dispatchIntent(
+            MerchantRegisterViewIntent.ActivateMerchant(
+                storeName = "Tienda Foto",
+                address = "Av. Juárez 45",
+                postalCode = "42800",
+                facadePhotoBytes = byteArrayOf(1, 2, 3)
+            )
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            activateUseCase(
+                MerchantActivationInput(
+                    nombreComercial = "Tienda Foto",
+                    direccion = "Av. Juárez 45",
+                    codigoPostal = "42800",
+                    fotoFachadaUrl = "https://cdn.sensus.com/fachada.jpg"
+                )
+            )
+        }
+    }
+
+    @Test
+    fun merchantProfile_updateFacadePhoto_uploadsAndUpdatesStorePhotoUrl() = runTest {
+        val storeRepo = mockk<StoreRepository>(relaxed = true)
+        val updateUseCase = mockk<UpdateMerchantProfileUseCase>()
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>()
+        val mediaRepo = mockk<MediaRepository>()
+        val compressor = mockk<ImageCompressor>()
+
+        coEvery { storeRepo.getSampleStore() } returns MerchantStore(name = "Mi Tienda", address = "Av. Principal 10", postalCode = "42800")
+        coEvery { getMyMerchantUseCase() } returns Result.Failure(AppError.Network("offline"))
+        coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(9, 10)
+        coEvery { mediaRepo.uploadAndModerate(any(), any()) } returns Result.Success(
+            UploadedMedia("media-up", "https://cdn.sensus.com/nueva-fachada.jpg")
+        )
+        coEvery {
+            updateUseCase(
+                MerchantProfileUpdateInput(
+                    nombreComercial = "Mi Tienda",
+                    direccion = "Av. Principal 10",
+                    codigoPostal = "42800",
+                    horarios = emptyList(),
+                    coordinates = null,
+                    fotoFachadaUrl = "https://cdn.sensus.com/nueva-fachada.jpg"
+                )
+            )
+        } returns Result.Success(
+            MerchantProfile("m1", "u1", "Mi Tienda", "Av. Principal 10", "42800", fotoFachadaUrl = "https://cdn.sensus.com/nueva-fachada.jpg")
+        )
+
+        val vm = MerchantProfileViewModel(storeRepo, updateUseCase, getMyMerchantUseCase, mediaRepo, compressor)
+        vm.dispatchIntent(MerchantProfileViewIntent.UpdateFacadePhoto(byteArrayOf(4, 5, 6)))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("https://cdn.sensus.com/nueva-fachada.jpg", vm.viewState.value.store.photoUrl)
+        assertFalse(vm.viewState.value.isUpdatingPhoto)
+    }
+
+    @Test
+    fun merchantProfile_toggleStoreOpen_persistsAndRevertsOnFailure() = runTest {
+        val storeRepo = mockk<StoreRepository>(relaxed = true)
+        val updateUseCase = mockk<UpdateMerchantProfileUseCase>()
+        val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>()
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        every { sessionRepo.sessionState } returns kotlinx.coroutines.flow.MutableStateFlow(
+            com.example.sensus.domain.repository.SessionState(isMerchantRegistered = true, isStoreOpen = true)
+        )
+        val profile = MerchantProfile("m1", "u1", "Mi Tienda", "Av. Principal 10", "42800", 20.05, -99.34, activo = false)
+        coEvery { storeRepo.getSampleStore() } returns MerchantStore(name = "Mi Tienda", address = "Av. Principal 10", postalCode = "42800")
+        coEvery { getMyMerchantUseCase() } returns Result.Success(profile.copy(activo = true))
+        coEvery { updateUseCase(any()) } returns Result.Success(profile)
+
+        val vm = MerchantProfileViewModel(storeRepo, updateUseCase, getMyMerchantUseCase, null, null, sessionRepo)
+        vm.dispatchIntent(MerchantProfileViewIntent.ToggleStoreOpen(false))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(vm.viewState.value.store.isOpen)
+        coVerify(exactly = 1) { sessionRepo.setStoreOpen(false) }
+
+        coEvery { updateUseCase(any()) } returns Result.Failure(AppError.Network("Sin red"))
+        vm.dispatchIntent(MerchantProfileViewIntent.ToggleStoreOpen(true))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(vm.viewState.value.store.isOpen)
+        assertEquals("Sin red", vm.viewState.value.errorMessage)
+    }
+
+    @Test
+    fun buyerProfile_reopenStore_activatesStoreAndEmitsEffect() = runTest {
+        val profileRepo = mockk<ProfileRepository>(relaxed = true)
+        val updateProfileUseCase = mockk<UpdateProfileUseCase>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        val logoutUseCase = mockk<LogoutUseCase>(relaxed = true)
+        val getMyMerchant = mockk<GetMyMerchantUseCase>()
+        val updateMerchant = mockk<UpdateMerchantProfileUseCase>()
+        every { sessionRepo.sessionState } returns kotlinx.coroutines.flow.MutableStateFlow(
+            SessionState(isSessionActive = true, isMerchantRegistered = true, merchantStoreName = "Mi Tienda", isStoreOpen = false)
+        )
+        val closed = MerchantProfile("m1", "u1", "Mi Tienda", "Av. Principal 10", "42800", 20.05, -99.34, activo = false)
+        coEvery { getMyMerchant() } returns Result.Success(closed)
+        coEvery { updateMerchant(any()) } returns Result.Success(closed.copy(activo = true))
+
+        val vm = BuyerProfileViewModel(profileRepo, updateProfileUseCase, sessionRepo, logoutUseCase, getMyMerchant, updateMerchant)
+        vm.viewEffect.test {
+            vm.dispatchIntent(BuyerProfileViewIntent.ReopenStore)
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(BuyerProfileViewEffect.StoreReopened, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertTrue(vm.viewState.value.isStoreOpen)
+        coVerify(exactly = 1) { sessionRepo.setStoreOpen(true) }
     }
 }

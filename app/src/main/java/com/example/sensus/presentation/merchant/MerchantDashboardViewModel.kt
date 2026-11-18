@@ -119,7 +119,9 @@ class MerchantDashboardViewModel @Inject constructor(
                     address = profile.direccion.ifBlank { store.address },
                     postalCode = profile.codigoPostal.ifBlank { store.postalCode },
                     latitude = profile.latitud,
-                    longitude = profile.longitud
+                    longitude = profile.longitud,
+                    isOpen = profile.activo,
+                    photoUrl = profile.fotoFachadaUrl ?: store.photoUrl
                 )
             )
         }

@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -85,6 +86,12 @@ fun FriendSharedOffersScreen(
     viewModel: FriendsViewModel = hiltViewModel()
 ) {
     val state by viewModel.viewState.collectAsStateWithLifecycle()
+    val isCurrentFriendLoaded = state.activeThreadFriendUserId == friend.userId
+    val threadOffers = if (isCurrentFriendLoaded) state.sharedOffers else emptyList()
+
+    DisposableEffect(friend.userId) {
+        onDispose { viewModel.dispatchIntent(FriendsViewIntent.ClearSharedOffers) }
+    }
 
     LaunchedEffect(friend.userId) {
         while (true) {
@@ -105,36 +112,53 @@ fun FriendSharedOffersScreen(
                 }
             }
         )
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when {
-                state.isLoadingThread && state.sharedOffers.isEmpty() -> {
-                    CircularProgressIndicator(color = SensusPurple, modifier = Modifier.align(Alignment.Center))
-                }
-                state.sharedOffers.isEmpty() -> {
-                    EmptySharedOffersNotice(
-                        friendName = friend.displayName,
-                        onExploreOffers = actions.onExploreOffers,
-                        modifier = Modifier.align(Alignment.Center).padding(20.dp)
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(state.sharedOffers, key = { it.id }) { item ->
-                            SharedOfferBubble(
-                                item = item,
-                                friend = friend,
-                                onClick = { actions.onOfferClick(item.toProductOffer()) }
-                            )
-                        }
+        FriendSharedOffersThreadBody(
+            friend = friend,
+            isLoading = !isCurrentFriendLoaded || state.isLoadingThread,
+            threadOffers = threadOffers,
+            actions = actions,
+            modifier = Modifier.weight(1f).fillMaxWidth()
+        )
+        FriendThreadBottomHint()
+    }
+}
+
+@Composable
+private fun FriendSharedOffersThreadBody(
+    friend: ConnectedFriend,
+    isLoading: Boolean,
+    threadOffers: List<SharedOfferMessage>,
+    actions: FriendSharedOffersActions,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        when {
+            isLoading && threadOffers.isEmpty() -> {
+                CircularProgressIndicator(color = SensusPurple, modifier = Modifier.align(Alignment.Center))
+            }
+            threadOffers.isEmpty() -> {
+                EmptySharedOffersNotice(
+                    friendName = friend.displayName,
+                    onExploreOffers = actions.onExploreOffers,
+                    modifier = Modifier.align(Alignment.Center).padding(20.dp)
+                )
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(threadOffers, key = { it.id }) { item ->
+                        SharedOfferBubble(
+                            item = item,
+                            friend = friend,
+                            onClick = { actions.onOfferClick(item.toProductOffer()) }
+                        )
                     }
                 }
             }
         }
-        FriendThreadBottomHint()
     }
 }
 

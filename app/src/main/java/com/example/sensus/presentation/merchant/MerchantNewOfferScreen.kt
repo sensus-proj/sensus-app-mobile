@@ -39,13 +39,7 @@ import com.example.sensus.domain.model.OfferValidationError
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusRed
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
-private const val CAMERA_JPEG_QUALITY = 95
 
 @ComposeUiModel
 private data class NewOfferScreenState(
@@ -80,13 +74,14 @@ fun MerchantNewOfferScreen(
 
     LaunchedEffect(viewModel) { viewModel.viewEffect.collect { onOfferCreated() } }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        if (bitmap != null) {
-            uiState = uiState.copy(
-                selectedBitmap = bitmap, selectedImageUri = null, imageBytes = encodeCameraBitmap(bitmap),
-                isReadingImage = false, imageReadError = null
-            )
-            showPhotoPickerSheet = false
+    val launchCamera = rememberSafeMerchantCameraLauncher { bitmap ->
+        uiState = uiState.copy(
+            selectedBitmap = bitmap, selectedImageUri = null, imageBytes = encodeMerchantCameraBitmap(bitmap),
+            isReadingImage = false, imageReadError = null
+        )
+        showPhotoPickerSheet = false
+        if (vmState.fieldError?.field == OfferField.PHOTO) {
+            viewModel.dispatchIntent(MerchantNewOfferViewIntent.FieldEdited)
         }
     }
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -94,6 +89,9 @@ fun MerchantNewOfferScreen(
             uiState = uiState.copy(selectedImageUri = uri, selectedBitmap = null, imageBytes = null, isReadingImage = true, imageReadError = null)
             scope.launch { loadSelectedOfferImage(context, uri, { uiState }, { uiState = it }) }
             showPhotoPickerSheet = false
+            if (vmState.fieldError?.field == OfferField.PHOTO) {
+                viewModel.dispatchIntent(MerchantNewOfferViewIntent.FieldEdited)
+            }
         }
     }
 
@@ -118,7 +116,7 @@ fun MerchantNewOfferScreen(
         if (showPhotoPickerSheet) {
             PhotoPickerBottomSheet(
                 onDismiss = { showPhotoPickerSheet = false },
-                onCameraClick = { cameraLauncher.launch(null) },
+                onCameraClick = launchCamera,
                 onGalleryClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
             )
         }
@@ -141,9 +139,10 @@ private fun NewOfferScrollContent(uiState: NewOfferScreenState, vmState: Merchan
     ) {
         NewOfferHeader(onNavigateBack = actions.onNavigateBack)
         Spacer(modifier = Modifier.height(16.dp))
-        OfferPhotoCard(uiState.selectedBitmap, uiState.selectedImageUri, onClick = actions.onPhotoClick)
+        val offerErrors = vmState.fieldError.toNewOfferErrors()
+        OfferPhotoCard(uiState.selectedBitmap, uiState.selectedImageUri, error = offerErrors.photoError, onClick = actions.onPhotoClick)
         Spacer(modifier = Modifier.height(16.dp))
-        OfferFormCard(uiState.form, vmState.fieldError.toNewOfferErrors(), onFormChange = actions.onFormChange)
+        OfferFormCard(uiState.form, offerErrors, onFormChange = actions.onFormChange)
         vmState.errorMessage?.let { message ->
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = message, color = SensusRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -176,27 +175,12 @@ private fun OfferValidationError?.toNewOfferErrors(): NewOfferErrors {
         OfferField.PRICE -> NewOfferErrors(priceError = message)
         OfferField.STOCK -> NewOfferErrors(stockError = message)
         OfferField.EXPIRATION -> NewOfferErrors(expirationError = message)
-    }
-}
-
-private fun encodeCameraBitmap(bitmap: Bitmap): ByteArray = ByteArrayOutputStream().use { out ->
-    bitmap.compress(Bitmap.CompressFormat.JPEG, CAMERA_JPEG_QUALITY, out)
-    out.toByteArray()
-}
-
-/** Lee la imagen original; la compresion <= 4.5 MB ocurre en `ImageCompressor` (capa de datos). */
-private suspend fun readOfferImageBytes(context: Context, uri: Uri): ByteArray? = withContext(Dispatchers.IO) {
-    try {
-        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-    } catch (_: IOException) {
-        null
-    } catch (_: SecurityException) {
-        null
+        OfferField.PHOTO -> NewOfferErrors(photoError = message)
     }
 }
 
 private suspend fun loadSelectedOfferImage(context: Context, uri: Uri, state: () -> NewOfferScreenState, onUpdate: (NewOfferScreenState) -> Unit) {
-    val bytes = readOfferImageBytes(context, uri)
+    val bytes = readMerchantImageBytes(context, uri)
     val current = state()
     if (current.selectedImageUri == uri) {
         onUpdate(

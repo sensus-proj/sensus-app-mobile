@@ -2,12 +2,15 @@ package com.example.sensus.presentation.buyer
 
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.MerchantCoordinates
+import com.example.sensus.domain.model.MerchantProfileUpdateInput
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.LogoutUseCase
+import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,8 +23,17 @@ class BuyerProfileViewModel @Inject constructor(
     val updateProfileUseCase: UpdateProfileUseCase,
     private val sessionRepository: SessionRepository,
     private val logoutUseCase: LogoutUseCase,
-    private val getMyMerchantUseCase: GetMyMerchantUseCase
+    private val getMyMerchantUseCase: GetMyMerchantUseCase,
+    private val updateMerchantProfileUseCase: UpdateMerchantProfileUseCase? = null
 ) : MviViewModel<BuyerProfileViewState, BuyerProfileViewIntent, BuyerProfileViewEffect>(BuyerProfileViewState()) {
+
+    constructor(
+        profileRepository: ProfileRepository,
+        updateProfileUseCase: UpdateProfileUseCase,
+        sessionRepository: SessionRepository,
+        logoutUseCase: LogoutUseCase,
+        getMyMerchantUseCase: GetMyMerchantUseCase
+    ) : this(profileRepository, updateProfileUseCase, sessionRepository, logoutUseCase, getMyMerchantUseCase, null)
 
     private var lastLoadedSessionKey: String? = null
 
@@ -81,7 +93,8 @@ class BuyerProfileViewModel @Inject constructor(
                 isGuest = false,
                 profile = if (sameSession) (profile ?: cached) else (cached ?: profile),
                 hasActiveMerchant = session.isMerchantRegistered,
-                merchantStoreName = resolvedStoreName
+                merchantStoreName = resolvedStoreName,
+                isStoreOpen = session.isStoreOpen
             )
         }
         if (!sameSession) {
@@ -94,7 +107,50 @@ class BuyerProfileViewModel @Inject constructor(
         when (intent) {
             is BuyerProfileViewIntent.LoadProfile -> loadProfile()
             is BuyerProfileViewIntent.UpdateName -> updateName(intent.newName)
+            is BuyerProfileViewIntent.ReopenStore -> reopenStore()
             is BuyerProfileViewIntent.Logout -> performLogout()
+        }
+    }
+
+    private fun reopenStore() {
+        if (viewState.value.isReopeningStore) return
+        val updater = updateMerchantProfileUseCase ?: run {
+            emitEffect(BuyerProfileViewEffect.StoreReopened)
+            return
+        }
+        updateState { copy(isReopeningStore = true) }
+        viewModelScope.launch {
+            val loaded = (getMyMerchantUseCase() as? Result.Success)?.data
+            if (loaded == null) {
+                updateState { copy(isReopeningStore = false) }
+                emitEffect(BuyerProfileViewEffect.ShowMessage("No se pudo cargar tu tienda para reabrirla."))
+                return@launch
+            }
+            val input = MerchantProfileUpdateInput(
+                nombreComercial = loaded.nombreComercial,
+                direccion = loaded.direccion,
+                codigoPostal = loaded.codigoPostal,
+                horarios = loaded.horarios,
+                coordinates = MerchantCoordinates(loaded.latitud, loaded.longitud),
+                activo = true
+            )
+            when (val res = updater(input)) {
+                is Result.Success -> handleReopenSuccess(res.data.activo)
+                is Result.Failure -> {
+                    updateState { copy(isReopeningStore = false) }
+                    emitEffect(BuyerProfileViewEffect.ShowMessage(res.error.message))
+                }
+            }
+        }
+    }
+
+    private suspend fun handleReopenSuccess(actualActive: Boolean) {
+        sessionRepository.setStoreOpen(actualActive)
+        updateState { copy(isStoreOpen = actualActive, isReopeningStore = false) }
+        if (actualActive) {
+            emitEffect(BuyerProfileViewEffect.StoreReopened)
+        } else {
+            emitEffect(BuyerProfileViewEffect.ShowMessage("El servidor aún no guardó la reapertura de la tienda."))
         }
     }
 
@@ -150,10 +206,14 @@ class BuyerProfileViewModel @Inject constructor(
             when (val merchantRes = getMyMerchantUseCase()) {
                 is Result.Success -> {
                     val storeName = merchantRes.data.nombreComercial
-                    updateState { copy(hasActiveMerchant = true, merchantStoreName = storeName) }
+                    val isOpen = merchantRes.data.activo
+                    updateState { copy(hasActiveMerchant = true, merchantStoreName = storeName, isStoreOpen = isOpen) }
                     val session = sessionRepository.sessionState.value
                     if (!session.isMerchantRegistered || session.merchantStoreName != storeName) {
                         sessionRepository.setMerchantStatus(isRegistered = true, storeName = storeName)
+                    }
+                    if (session.isStoreOpen != isOpen) {
+                        sessionRepository.setStoreOpen(isOpen)
                     }
                 }
                 is Result.Failure -> Unit

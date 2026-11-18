@@ -30,13 +30,13 @@ sealed interface MerchantRegisterViewIntent : ViewIntent {
     data class MoveMapPin(val latitude: Double, val longitude: Double) : MerchantRegisterViewIntent
     data class ConfirmMapLocation(val latitude: Double, val longitude: Double) : MerchantRegisterViewIntent
     data object ClearError : MerchantRegisterViewIntent
-    data class ActivateMerchant(
+
+    /** Clase normal (no data class) para evitar incluir el ByteArray de la foto en equals/hashCode. */
+    class ActivateMerchant(
         val storeName: String,
-        val category: String = "",
         val address: String = "",
-        val schedule: String = "",
-        val phone: String = "",
-        val postalCode: String = ""
+        val postalCode: String = "",
+        val facadePhotoBytes: ByteArray? = null
     ) : MerchantRegisterViewIntent
 }
 

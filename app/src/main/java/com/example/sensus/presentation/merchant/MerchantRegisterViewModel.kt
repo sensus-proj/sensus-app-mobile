@@ -1,8 +1,14 @@
 package com.example.sensus.presentation.merchant
 
 import androidx.lifecycle.viewModelScope
+import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.media.ImageCompressor
+import com.example.sensus.domain.media.ImageUploadPolicy
+import com.example.sensus.domain.model.MerchantActivationInput
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.usecase.ActivateMerchantUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
@@ -21,10 +27,25 @@ class MerchantRegisterViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val activateMerchantUseCase: ActivateMerchantUseCase,
     private val getUserLocationUseCase: GetUserLocationUseCase,
-    private val resolveAddressFromCoordinatesUseCase: ResolveAddressFromCoordinatesUseCase
+    private val resolveAddressFromCoordinatesUseCase: ResolveAddressFromCoordinatesUseCase,
+    private val mediaRepository: MediaRepository?,
+    private val imageCompressor: ImageCompressor?
 ) : MviViewModel<MerchantRegisterViewState, MerchantRegisterViewIntent, MerchantRegisterViewEffect>(
     MerchantRegisterViewState()
 ) {
+    constructor(
+        sessionRepository: SessionRepository,
+        activateMerchantUseCase: ActivateMerchantUseCase,
+        getUserLocationUseCase: GetUserLocationUseCase,
+        resolveAddressFromCoordinatesUseCase: ResolveAddressFromCoordinatesUseCase
+    ) : this(
+        sessionRepository,
+        activateMerchantUseCase,
+        getUserLocationUseCase,
+        resolveAddressFromCoordinatesUseCase,
+        mediaRepository = null,
+        imageCompressor = null
+    )
 
     private var locationJob: Job? = null
     private var geocodeJob: Job? = null
@@ -237,12 +258,23 @@ class MerchantRegisterViewModel @Inject constructor(
         updateState { copy(isRegistering = true, errorMessage = null) }
 
         viewModelScope.launch {
+            val photoResult = uploadMerchantFacadePhotoIfProvided(intent.facadePhotoBytes, mediaRepository, imageCompressor)
+            if (photoResult is Result.Failure) {
+                updateState { copy(isRegistering = false, errorMessage = photoResult.error.message) }
+                return@launch
+            }
+            val fotoFachadaUrl = (photoResult as Result.Success).data
+            val coords = stateSnapshot.selectedLatitude?.let { lat ->
+                stateSnapshot.selectedLongitude?.let { lng -> MerchantCoordinates(lat, lng) }
+            }
             val result = activateMerchantUseCase(
-                nombreComercial = intent.storeName,
-                direccion = intent.address,
-                codigoPostal = intent.postalCode,
-                latitud = stateSnapshot.selectedLatitude,
-                longitud = stateSnapshot.selectedLongitude
+                MerchantActivationInput(
+                    nombreComercial = intent.storeName,
+                    direccion = intent.address,
+                    codigoPostal = intent.postalCode,
+                    coordinates = coords,
+                    fotoFachadaUrl = fotoFachadaUrl
+                )
             )
             when (result) {
                 is Result.Success -> {
@@ -258,6 +290,28 @@ class MerchantRegisterViewModel @Inject constructor(
                     copy(isRegistering = false, errorMessage = result.error.message)
                 }
             }
+        }
+    }
+}
+
+internal suspend fun uploadMerchantFacadePhotoIfProvided(
+    bytes: ByteArray?,
+    mediaRepository: MediaRepository?,
+    imageCompressor: ImageCompressor?
+): Result<String?> {
+    val repo = mediaRepository.takeIf { bytes != null && bytes.isNotEmpty() } ?: return Result.Success(null)
+    val rawBytes = bytes ?: return Result.Success(null)
+    val compressed = if (imageCompressor != null) {
+        imageCompressor.compressForUpload(rawBytes)
+    } else {
+        rawBytes
+    }
+    return if (compressed == null) {
+        Result.Failure(AppError.Validation(ImageUploadPolicy.TOO_LARGE_MESSAGE))
+    } else {
+        when (val upload = repo.uploadAndModerate(compressed, ImageUploadPolicy.JPEG_MIME_TYPE)) {
+            is Result.Success -> Result.Success(upload.data.url)
+            is Result.Failure -> upload
         }
     }
 }

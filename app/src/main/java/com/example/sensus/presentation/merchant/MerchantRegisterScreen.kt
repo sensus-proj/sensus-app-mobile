@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +68,7 @@ import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import kotlinx.coroutines.launch
 
 private const val HERO_ICON_BG_ALPHA = 0.20f
 private const val HERO_SUBTITLE_ALPHA = 0.85f
@@ -84,13 +87,22 @@ private data class MerchantRegisterForm(
 )
 
 @ComposeUiModel
+private data class MerchantRegisterUiBundle(
+    val state: MerchantRegisterViewState,
+    val form: MerchantRegisterForm,
+    val errors: MerchantRegisterErrors,
+    val facadePhoto: StoreFacadePhotoSelection
+)
+
+@ComposeUiModel
 private data class MerchantRegisterErrors(
     val businessNameError: String? = null,
     val addressError: String? = null,
-    val postalCodeError: String? = null
+    val postalCodeError: String? = null,
+    val facadePhotoError: String? = null
 ) {
     val hasErrors: Boolean
-        get() = businessNameError != null || addressError != null || postalCodeError != null
+        get() = businessNameError != null || addressError != null || postalCodeError != null || facadePhotoError != null
 }
 
 @ComposeUiModel
@@ -106,6 +118,7 @@ private data class MerchantFieldSpec(
 private data class MerchantRegisterUiActions(
     val onNavigateBack: () -> Unit,
     val onFormChange: (MerchantRegisterForm, MerchantRegisterErrors) -> Unit,
+    val onFacadePhotoClick: () -> Unit,
     val onUseLocationClick: () -> Unit,
     val onSubmitClick: () -> Unit
 )
@@ -121,6 +134,8 @@ fun MerchantRegisterScreen(
     val state by viewModel.viewState.collectAsState()
     val formState = remember { mutableStateOf(MerchantRegisterForm()) }
     val errorsState = remember { mutableStateOf(MerchantRegisterErrors()) }
+    val facadePhotoState = remember { mutableStateOf(StoreFacadePhotoSelection()) }
+    val showFacadePicker = remember { mutableStateOf(false) }
     val permissionLauncher = rememberLocationPickerPermissionLauncher(viewModel)
 
     BackHandler {
@@ -129,21 +144,14 @@ fun MerchantRegisterScreen(
     CollectMerchantRegisterEffects(viewModel, context, onApplyResolvedAddress = { addr, cp ->
         formState.value = formState.value.copy(address = addr.ifBlank { formState.value.address }, postalCode = cp.ifBlank { formState.value.postalCode })
         errorsState.value = errorsState.value.copy(
-            addressError = if (addr.isNotBlank()) null else errorsState.value.addressError,
-            postalCodeError = if (cp.isNotBlank()) null else errorsState.value.postalCodeError
+            addressError = addr.ifBlank { null }?.let { null } ?: errorsState.value.addressError,
+            postalCodeError = cp.ifBlank { null }?.let { null } ?: errorsState.value.postalCodeError
         )
     }, onRegisterSuccess = onRegisterSuccess)
-    SyncAutoDetectedAddressIfBlank(
-        state = state,
-        form = formState.value,
-        onAutoFill = { addr, cp ->
-            formState.value = formState.value.copy(address = addr, postalCode = cp)
-            errorsState.value = errorsState.value.copy(
-                addressError = if (addr.isNotBlank()) null else errorsState.value.addressError,
-                postalCodeError = if (cp.isNotBlank()) null else errorsState.value.postalCodeError
-            )
-        }
-    )
+    SyncAutoDetectedAddressIfBlank(state, formState.value) { addr, cp ->
+        formState.value = formState.value.copy(address = addr, postalCode = cp)
+        errorsState.value = errorsState.value.copy(addressError = null, postalCodeError = null)
+    }
 
     val actions = MerchantRegisterUiActions(
         onNavigateBack = onNavigateBack,
@@ -152,11 +160,56 @@ fun MerchantRegisterScreen(
             errorsState.value = cleared
             if (state.errorMessage != null) viewModel.dispatchIntent(MerchantRegisterViewIntent.ClearError)
         },
+        onFacadePhotoClick = { showFacadePicker.value = true },
         onUseLocationClick = { launchLocationPicker(context, viewModel, permissionLauncher::launch) },
-        onSubmitClick = { submitMerchantRegistration(formState.value, { errorsState.value = it }, viewModel) }
+        onSubmitClick = { submitMerchantRegistration(formState.value, facadePhotoState.value, { errorsState.value = it }, viewModel) }
     )
-    MerchantRegisterScaffoldContent(state = state, form = formState.value, errors = errorsState.value, actions = actions, modifier = modifier)
+    val (launchCamera, launchGallery) = rememberRegisterFacadeLaunchers(
+        onDismiss = { showFacadePicker.value = false },
+        onSelectionUpdated = { photo, err ->
+            facadePhotoState.value = photo
+            errorsState.value = errorsState.value.copy(facadePhotoError = err)
+        }
+    )
+    MerchantRegisterScaffoldContent(
+        bundle = MerchantRegisterUiBundle(state, formState.value, errorsState.value, facadePhotoState.value),
+        actions = actions,
+        modifier = modifier
+    )
     RenderLocationPickerIfOpen(state = state, viewModel = viewModel)
+    if (showFacadePicker.value) {
+        PhotoPickerBottomSheet(
+            title = "Foto de la fachada de tu comercio",
+            onDismiss = { showFacadePicker.value = false },
+            onCameraClick = launchCamera,
+            onGalleryClick = launchGallery
+        )
+    }
+}
+
+@Composable
+private fun rememberRegisterFacadeLaunchers(
+    onDismiss: () -> Unit,
+    onSelectionUpdated: (StoreFacadePhotoSelection, String?) -> Unit
+): Pair<() -> Unit, () -> Unit> {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val launchCamera = rememberSafeMerchantCameraLauncher { bitmap ->
+        onSelectionUpdated(StoreFacadePhotoSelection(bitmap = bitmap, bytes = encodeMerchantCameraBitmap(bitmap)), null)
+        onDismiss()
+    }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            onSelectionUpdated(StoreFacadePhotoSelection(uri = uri, isReading = true), null)
+            onDismiss()
+            scope.launch {
+                val bytes = readMerchantImageBytes(context, uri)
+                val err = if (bytes == null) "No se pudo leer la foto de fachada." else null
+                onSelectionUpdated(StoreFacadePhotoSelection(uri = uri, bytes = bytes, isReading = false), err)
+            }
+        }
+    }
+    return launchCamera to { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 }
 
 private fun launchLocationPicker(context: Context, viewModel: MerchantRegisterViewModel, launchPermission: (Array<String>) -> Unit) {
@@ -167,15 +220,21 @@ private fun launchLocationPicker(context: Context, viewModel: MerchantRegisterVi
     }
 }
 
-private fun submitMerchantRegistration(form: MerchantRegisterForm, onErrors: (MerchantRegisterErrors) -> Unit, viewModel: MerchantRegisterViewModel) {
-    val validation = validateMerchantForm(form)
+private fun submitMerchantRegistration(
+    form: MerchantRegisterForm,
+    facadePhoto: StoreFacadePhotoSelection,
+    onErrors: (MerchantRegisterErrors) -> Unit,
+    viewModel: MerchantRegisterViewModel
+) {
+    val validation = validateMerchantForm(form, facadePhoto)
     onErrors(validation)
-    if (!validation.hasErrors) {
+    if (!validation.hasErrors && !facadePhoto.isReading) {
         viewModel.dispatchIntent(
             MerchantRegisterViewIntent.ActivateMerchant(
                 storeName = form.businessName.trim(),
                 address = form.address.trim(),
-                postalCode = form.postalCode.trim()
+                postalCode = form.postalCode.trim(),
+                facadePhotoBytes = facadePhoto.bytes
             )
         )
     }
@@ -246,13 +305,7 @@ private fun hasAnyLocationPermission(context: Context): Boolean {
 }
 
 @Composable
-private fun MerchantRegisterScaffoldContent(
-    state: MerchantRegisterViewState,
-    form: MerchantRegisterForm,
-    errors: MerchantRegisterErrors,
-    actions: MerchantRegisterUiActions,
-    modifier: Modifier = Modifier
-) {
+private fun MerchantRegisterScaffoldContent(bundle: MerchantRegisterUiBundle, actions: MerchantRegisterUiActions, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -268,13 +321,13 @@ private fun MerchantRegisterScaffoldContent(
         MerchantBenefitsCard()
         Spacer(modifier = Modifier.height(20.dp))
         MerchantRegisterFormCard(
-            state = state,
-            form = form,
-            errors = errors,
-            onFormChange = actions.onFormChange,
-            onUseLocationClick = actions.onUseLocationClick
+            state = bundle.state,
+            form = bundle.form,
+            errors = bundle.errors,
+            facadePhoto = bundle.facadePhoto,
+            actions = actions
         )
-        state.errorMessage?.let { apiError ->
+        bundle.state.errorMessage?.let { apiError ->
             Spacer(modifier = Modifier.height(12.dp))
             Surface(shape = RoundedCornerShape(12.dp), color = SensusRedBg, modifier = Modifier.fillMaxWidth()) {
                 Text(
@@ -287,7 +340,7 @@ private fun MerchantRegisterScaffoldContent(
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
-        MerchantRegisterSubmitButton(isRegistering = state.isRegistering, onClick = actions.onSubmitClick)
+        MerchantRegisterSubmitButton(isRegistering = bundle.state.isRegistering, onClick = actions.onSubmitClick)
     }
 }
 
@@ -335,8 +388,8 @@ private fun MerchantRegisterFormCard(
     state: MerchantRegisterViewState,
     form: MerchantRegisterForm,
     errors: MerchantRegisterErrors,
-    onFormChange: (MerchantRegisterForm, MerchantRegisterErrors) -> Unit,
-    onUseLocationClick: () -> Unit
+    facadePhoto: StoreFacadePhotoSelection,
+    actions: MerchantRegisterUiActions
 ) {
     Card(
         shape = RoundedCornerShape(18.dp),
@@ -354,13 +407,13 @@ private fun MerchantRegisterFormCard(
                     errors.businessNameError,
                     KeyboardOptions(imeAction = ImeAction.Next)
                 ),
-                onValueChange = { onFormChange(form.copy(businessName = it), errors.copy(businessNameError = null)) }
+                onValueChange = { actions.onFormChange(form.copy(businessName = it), errors.copy(businessNameError = null)) }
             )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PeekingCatLocationButton(
                     isResolving = state.isResolvingLocation && !state.showMapPicker,
                     hasCoordinates = state.selectedLatitude != null && state.selectedLongitude != null,
-                    onClick = onUseLocationClick
+                    onClick = actions.onUseLocationClick
                 )
                 MerchantLabeledField(
                     spec = MerchantFieldSpec(
@@ -370,7 +423,7 @@ private fun MerchantRegisterFormCard(
                         errors.addressError,
                         KeyboardOptions(imeAction = ImeAction.Next)
                     ),
-                    onValueChange = { onFormChange(form.copy(address = it), errors.copy(addressError = null)) }
+                    onValueChange = { actions.onFormChange(form.copy(address = it), errors.copy(addressError = null)) }
                 )
             }
             MerchantLabeledField(
@@ -384,9 +437,14 @@ private fun MerchantRegisterFormCard(
                 onValueChange = { input ->
                     val filtered = input.filter { it.isLetterOrDigit() || it == '-' || it == ' ' }
                     if (filtered.length <= MAX_POSTAL_LENGTH) {
-                        onFormChange(form.copy(postalCode = filtered), errors.copy(postalCodeError = null))
+                        actions.onFormChange(form.copy(postalCode = filtered), errors.copy(postalCodeError = null))
                     }
                 }
+            )
+            StoreFacadePickerField(
+                selection = facadePhoto,
+                error = errors.facadePhotoError,
+                onClick = actions.onFacadePhotoClick
             )
         }
     }
@@ -432,24 +490,25 @@ private fun MerchantRegisterSubmitButton(isRegistering: Boolean, onClick: () -> 
     }
 }
 
-private fun validateMerchantForm(form: MerchantRegisterForm): MerchantRegisterErrors {
-    val cleanBusiness = form.businessName.trim()
-    val cleanAddress = form.address.trim()
-    val cleanPostal = form.postalCode.trim()
-    val businessErr = when {
-        cleanBusiness.length < MIN_BUSINESS_LENGTH -> "El nombre comercial debe tener al menos 2 caracteres"
-        cleanBusiness.length > MAX_BUSINESS_LENGTH -> "El nombre comercial no puede exceder 150 caracteres"
-        else -> null
+private fun validateMerchantForm(form: MerchantRegisterForm, facadePhoto: StoreFacadePhotoSelection): MerchantRegisterErrors = MerchantRegisterErrors(
+    businessNameError = validateBusinessName(form.businessName.trim()),
+    addressError = validateStoreAddress(form.address.trim()),
+    postalCodeError = if (POSTAL_CODE_REGEX.matches(form.postalCode.trim())) null else "Ingresa un código postal válido (4 a 10 caracteres)",
+    facadePhotoError = when {
+        facadePhoto.hasPhoto -> null
+        facadePhoto.isReading -> "Cargando la foto de fachada, espera un momento..."
+        else -> "Debes tomar o seleccionar una foto de la fachada de tu comercio"
     }
-    val addressErr = when {
-        cleanAddress.length < MIN_ADDRESS_LENGTH -> "La dirección debe contener al menos 5 caracteres"
-        cleanAddress.length > MAX_ADDRESS_LENGTH -> "La dirección no puede exceder 250 caracteres"
-        else -> null
-    }
-    val postalErr = if (cleanPostal.isBlank() || !POSTAL_CODE_REGEX.matches(cleanPostal)) {
-        "Ingresa un código postal válido (4 a 10 caracteres)"
-    } else {
-        null
-    }
-    return MerchantRegisterErrors(businessNameError = businessErr, addressError = addressErr, postalCodeError = postalErr)
+)
+
+private fun validateBusinessName(clean: String): String? = when {
+    clean.length < MIN_BUSINESS_LENGTH -> "El nombre comercial debe tener al menos 2 caracteres"
+    clean.length > MAX_BUSINESS_LENGTH -> "El nombre comercial no puede exceder 150 caracteres"
+    else -> null
+}
+
+private fun validateStoreAddress(clean: String): String? = when {
+    clean.length < MIN_ADDRESS_LENGTH -> "La dirección debe contener al menos 5 caracteres"
+    clean.length > MAX_ADDRESS_LENGTH -> "La dirección no puede exceder 250 caracteres"
+    else -> null
 }

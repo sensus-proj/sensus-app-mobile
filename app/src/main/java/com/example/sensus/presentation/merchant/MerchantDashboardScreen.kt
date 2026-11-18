@@ -325,7 +325,7 @@ private fun MerchantStoreBannerCard(store: MerchantStore, onSwitchToBuyer: () ->
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StoreOpenStatusBadge()
+                StoreOpenStatusBadge(isOpen = store.isOpen)
                 SwitchToBuyerButton(onClick = onSwitchToBuyer)
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -351,10 +351,10 @@ private fun MerchantStoreBannerCard(store: MerchantStore, onSwitchToBuyer: () ->
 }
 
 @Composable
-private fun StoreOpenStatusBadge() {
+private fun StoreOpenStatusBadge(isOpen: Boolean) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = SensusSuccess.copy(alpha = STATUS_BADGE_ALPHA)
+        color = (if (isOpen) SensusSuccess else SensusRed).copy(alpha = STATUS_BADGE_ALPHA)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -367,7 +367,12 @@ private fun StoreOpenStatusBadge() {
                     .background(Color.White)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Tienda Abierta", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(
+                text = if (isOpen) "Tienda Abierta" else "Tienda Cerrada",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
     }
 }

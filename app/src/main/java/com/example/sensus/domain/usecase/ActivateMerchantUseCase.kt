@@ -3,6 +3,8 @@ package com.example.sensus.domain.usecase
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.GeoCoordinatePolicy
+import com.example.sensus.domain.model.MerchantActivationInput
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.repository.MerchantRepository
 
@@ -35,6 +37,33 @@ class ActivateMerchantUseCase(private val merchantRepository: MerchantRepository
                 codigoPostal = trimmedPostalCode,
                 latitud = latitud,
                 longitud = longitud
+            )
+        }
+    }
+
+    suspend operator fun invoke(input: MerchantActivationInput): Result<MerchantProfile> {
+        val trimmedName = input.nombreComercial.trim()
+        val trimmedAddress = input.direccion.trim()
+        val trimmedPostalCode = input.codigoPostal.trim()
+        val coords = input.coordinates
+        val validationError = validateInputs(trimmedName, trimmedAddress, trimmedPostalCode, coords?.latitude, coords?.longitude)
+        return when {
+            validationError != null -> Result.Failure(AppError.Validation(validationError))
+            input.fotoFachadaUrl.isNullOrBlank() -> merchantRepository.activateMerchant(
+                trimmedName,
+                trimmedAddress,
+                trimmedPostalCode,
+                coords?.latitude,
+                coords?.longitude
+            )
+            else -> merchantRepository.activateMerchant(
+                input.copy(
+                    nombreComercial = trimmedName,
+                    direccion = trimmedAddress,
+                    codigoPostal = trimmedPostalCode,
+                    coordinates = coords?.let { MerchantCoordinates(it.latitude, it.longitude) },
+                    fotoFachadaUrl = input.fotoFachadaUrl.trim()
+                )
             )
         }
     }

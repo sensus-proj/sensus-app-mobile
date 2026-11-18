@@ -96,9 +96,10 @@ internal data class NewOfferErrors(
     val priceError: String? = null,
     val descriptionError: String? = null,
     val stockError: String? = null,
-    val expirationError: String? = null
+    val expirationError: String? = null,
+    val photoError: String? = null
 ) {
-    val hasErrors: Boolean get() = productNameError != null || priceError != null
+    val hasErrors: Boolean get() = productNameError != null || priceError != null || descriptionError != null || photoError != null
 }
 
 @ComposeUiModel
@@ -128,18 +129,23 @@ internal fun NewOfferHeader(onNavigateBack: () -> Unit) {
 }
 
 @Composable
-internal fun OfferPhotoCard(selectedBitmap: Bitmap?, selectedImageUri: Uri?, onClick: () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        if (selectedBitmap != null || selectedImageUri != null) {
-            SelectedOfferImageBox(selectedBitmap = selectedBitmap, selectedImageUri = selectedImageUri)
-        } else {
-            EmptyOfferPhotoPlaceholder()
+internal fun OfferPhotoCard(selectedBitmap: Bitmap?, selectedImageUri: Uri?, error: String? = null, onClick: () -> Unit) {
+    Column {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+        ) {
+            if (selectedBitmap != null || selectedImageUri != null) {
+                SelectedOfferImageBox(selectedBitmap = selectedBitmap, selectedImageUri = selectedImageUri)
+            } else {
+                EmptyOfferPhotoPlaceholder()
+            }
+        }
+        error?.let { msg ->
+            Text(text = msg, color = SensusRed, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp, top = 4.dp))
         }
     }
 }
@@ -218,7 +224,13 @@ internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFo
                 onValueChange = { onFormChange(form.copy(productName = it)) }
             )
             OfferTextField(
-                spec = OfferTextFieldSpec("Descripción del producto", form.description, "Detalla el estado, empaque o motivo...", maxLines = DESC_MAX_LINES),
+                spec = OfferTextFieldSpec(
+                    "Descripción del producto",
+                    form.description,
+                    "Detalla el estado, empaque o motivo...",
+                    error = errors.descriptionError,
+                    maxLines = DESC_MAX_LINES
+                ),
                 onValueChange = { onFormChange(form.copy(description = it)) }
             )
             OfferCategoryPicker(selected = form.selectedCategory, onSelect = { onFormChange(form.copy(selectedCategory = it)) })
@@ -404,10 +416,15 @@ internal fun PublishOfferButton(isLoading: Boolean, isEnabled: Boolean = true, o
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PhotoPickerBottomSheet(onDismiss: () -> Unit, onCameraClick: () -> Unit, onGalleryClick: () -> Unit) {
+internal fun PhotoPickerBottomSheet(
+    onDismiss: () -> Unit,
+    onCameraClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    title: String = "Seleccionar fotografía del producto"
+) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
-            Text(text = "Seleccionar fotografía del producto", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(16.dp))
             PickerOptionRow(Icons.Default.CameraAlt, "Tomar foto con la cámara", onCameraClick)
             PickerOptionRow(Icons.Default.PhotoLibrary, "Elegir de la galería", onGalleryClick)

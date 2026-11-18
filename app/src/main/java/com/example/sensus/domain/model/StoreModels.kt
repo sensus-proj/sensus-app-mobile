@@ -180,7 +180,8 @@ data class MerchantStore(
     val phone: String = "",
     val latitude: Double = DEFAULT_LAT,
     val longitude: Double = DEFAULT_LNG,
-    val postalCode: String = ""
+    val postalCode: String = "",
+    val photoUrl: String? = null
 )
 
 data class NotificationItem(

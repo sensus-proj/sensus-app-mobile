@@ -23,12 +23,13 @@ El formulario actual de activación de comercio (`MerchantRegisterScreen`) solic
 
 | ID | Requisito |
 |---|---|
-| RF-29-01 | `MerchantRegisterScreen` mantiene únicamente los tres campos del formulario (`nombreComercial`, `direccion`, `codigoPostal`) más un botón opcional adherido al apartado de dirección con el gato de la marca asomando la cabeza sobre un icono de ubicación (`SensusPurple` y blanco, sin amarillo/ámbar). |
+| RF-29-01 | `MerchantRegisterScreen` solicita nombre comercial, dirección, código postal, ubicación opcional interactiva (gato morado sobre pin) y foto obligatoria de la fachada del comercio (cámara con permiso runtime `CAMERA` o galería). |
 | RF-29-02 | Al pulsar la opción de ubicación automática, la app solicita permiso de ubicación en tiempo de ejecución si hace falta, obtiene la ubicación actual mediante `GetUserLocationUseCase` y abre `MerchantLocationPickerModal` con un mapa interactivo `osmdroid` donde el usuario puede mover o tocar el mapa para afinar las coordenadas si la detección GPS es imprecisa. |
 | RF-29-03 | Al confirmar en el mapa interactivo, `ResolveAddressFromCoordinatesUseCase` resuelve dirección y código postal y rellena automáticamente los campos del formulario conservando `latitud` y `longitud` opcionales seleccionadas (permitiendo edición manual posterior). |
 | RF-29-04 | `ActivateMerchantUseCase` valida nombre comercial (`2..150`), dirección (`5..250`), código postal y rango de coordenadas opcionales (`[-90, 90]` / `[-180, 180]`), enviando `POST /api/v1/merchants/activate`; ante respuesta `201` persiste el nuevo JWT, estado de comercio activo y nombre comercial en `SecurePreferences`. |
 | RF-29-05 | Si el permiso de ubicación es denegado o falla el geocoder, el usuario conserva la captura manual completa de dirección y código postal sin bloquear el registro ni lanzar fallos no controlados. |
 | RF-29-06 | En `BuyerProfileScreen`, cuando el usuario ya cuenta con comercio activo (persistido localmente o sincronizado vía `GET /api/v1/merchants/me`), la casilla de comerciante permanece activa mostrando el nombre del comercio y al pulsarla (o tocar el texto del comercio) navega directamente al flujo activo de comerciante sin reabrir `MerchantRegisterScreen`. |
+| RF-29-07 | En `MerchantProfileScreen`, al pulsar el ícono de la tienda se permite tomar o elegir nueva foto de fachada (`fotoFachadaUrl`), subiéndola vía `POST /api/v1/media/upload` y guardándola en `PUT /api/v1/merchants/profile`; la tarjeta `"Información del establecimiento"` omite el ícono de teléfono vacío. |
 
 ## 3. Requisitos no funcionales
 
@@ -72,6 +73,7 @@ presentation/
 - **Given** un usuario registrado abre `MerchantRegisterScreen` **When** pulsa el botón del gato con ubicación junto al campo dirección **Then** se solicita permiso de ubicación (si falta), se centra el mapa `osmdroid` en su posición actual y puede arrastrar o tocar el mapa para afinar el pin antes de confirmar.
 - **Given** el usuario confirma coordenadas precisas o edita manualmente dirección y código postal **When** pulsa activar comercio con datos válidos **Then** se ejecuta `POST /api/v1/merchants/activate`, se actualiza la sesión cifrada y entra al panel de comerciante.
 - **Given** el usuario ya activó su comercio **When** cierra y reabre la app y entra a Perfil **Then** la casilla de comerciante aparece activa con el nombre de su comercio y pulsar el texto del comercio lo lleva directo a la vista de comerciante sin pedir alta nueva.
+- **Given** el comerciante apaga el switch `Tienda Abierta` en `MerchantProfileScreen` **When** regresa al perfil de usuario normal o vuelve a abrir el perfil comercial **Then** el estado `Tienda Cerrada` (`activo = false`) persiste en backend y preferencias cifradas, y el comercio junto con sus ofertas dejan de mostrarse en el mapa hasta volver a encenderlo (`activo = true`).
 
 ## 6. Plan de pruebas
 

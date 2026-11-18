@@ -62,6 +62,7 @@ private const val BORDER_LIGHT_HEX = 0xFFE2E8F0
 private const val STORE_CARD_ACTIVE_ALPHA = 0.14f
 private const val MATCHING_LIST_MAX_HEIGHT_DP = 172
 private const val OVERVIEW_CATEGORY_LIMIT = 3
+private const val STORE_THUMB_DP = 46
 
 @ComposeUiModel
 internal data class SelectedStoreCardActions(
@@ -123,11 +124,11 @@ internal fun SelectedStoreBottomCard(cluster: MapStoreCluster, actions: Selected
 
 @Composable
 private fun SelectedStoreHeaderRow(cluster: MapStoreCluster) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Storefront, contentDescription = "Tienda", tint = SensusPurple, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            StoreAvatarThumbnail(photoUrl = cluster.merchantProfile?.fotoFachadaUrl, storeName = cluster.storeName)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = cluster.storeName,
                     fontSize = 16.sp,
@@ -136,16 +137,17 @@ private fun SelectedStoreHeaderRow(cluster: MapStoreCluster) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${cluster.formattedDistance} • ${cluster.address}",
+                    fontSize = 12.sp,
+                    color = SensusTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${cluster.formattedDistance} • ${cluster.address}",
-                fontSize = 12.sp,
-                color = SensusTextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
+        Spacer(modifier = Modifier.width(8.dp))
         val countBadge = if (cluster.allStoreOffers.isNotEmpty()) "${cluster.allStoreOffers.size} ofertas" else "Activo"
         Surface(color = SensusSuccess.copy(alpha = STORE_CARD_ACTIVE_ALPHA), shape = RoundedCornerShape(8.dp)) {
             Text(
@@ -155,6 +157,31 @@ private fun SelectedStoreHeaderRow(cluster: MapStoreCluster) {
                 color = SensusSuccess,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
+        }
+    }
+}
+
+@Composable
+internal fun StoreAvatarThumbnail(photoUrl: String?, storeName: String, sizeDp: Int = STORE_THUMB_DP) {
+    val cleanUrl = photoUrl?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
+        if (raw.startsWith("http://", ignoreCase = true)) "https://${raw.drop("http://".length)}" else raw
+    }
+    Box(
+        modifier = Modifier
+            .size(sizeDp.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(SensusVioletBg),
+        contentAlignment = Alignment.Center
+    ) {
+        if (cleanUrl != null) {
+            AsyncImage(
+                model = cleanUrl,
+                contentDescription = storeName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+            )
+        } else {
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = "Tienda", tint = SensusPurple, modifier = Modifier.size(22.dp))
         }
     }
 }
