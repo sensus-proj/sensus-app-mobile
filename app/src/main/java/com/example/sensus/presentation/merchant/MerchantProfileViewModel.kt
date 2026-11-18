@@ -2,8 +2,13 @@ package com.example.sensus.presentation.merchant
 
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.Result
+import com.example.sensus.domain.media.ImageCompressor
 import com.example.sensus.domain.model.HorarioDia
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.MerchantProfileUpdateInput
+import com.example.sensus.domain.repository.MediaRepository
+import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
@@ -12,11 +17,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.launch
 
+private const val POSTAL_CODE_LENGTH = 5
+
 @HiltViewModel
 class MerchantProfileViewModel @Inject constructor(
     private val storeRepository: StoreRepository,
     val updateMerchantProfileUseCase: UpdateMerchantProfileUseCase,
-    private val getMyMerchantUseCase: GetMyMerchantUseCase
+    private val getMyMerchantUseCase: GetMyMerchantUseCase,
+    private val mediaRepository: MediaRepository?,
+    private val imageCompressor: ImageCompressor?,
+    private val sessionRepository: SessionRepository? = null
 ) : MviViewModel<MerchantProfileViewState, MerchantProfileViewIntent, MerchantProfileViewEffect>(
     MerchantProfileViewState()
 ) {
@@ -26,12 +36,20 @@ class MerchantProfileViewModel @Inject constructor(
     constructor(
         storeRepository: StoreRepository,
         updateMerchantProfileUseCase: UpdateMerchantProfileUseCase
-    ) : this(storeRepository, updateMerchantProfileUseCase, GetMyMerchantUseCase(NoOpProfileMerchantRepository)) {
+    ) : this(storeRepository, updateMerchantProfileUseCase, GetMyMerchantUseCase(NoOpProfileMerchantRepository), null, null, null) {
         fetchRealMerchantEnabled = false
     }
 
+    constructor(
+        storeRepository: StoreRepository,
+        updateMerchantProfileUseCase: UpdateMerchantProfileUseCase,
+        getMyMerchantUseCase: GetMyMerchantUseCase
+    ) : this(storeRepository, updateMerchantProfileUseCase, getMyMerchantUseCase, null, null, null)
+
     init {
-        updateState { copy(store = storeRepository.getSampleStore()) }
+        val sampleStore = storeRepository.getSampleStore()
+        val cachedOpen = sessionRepository?.sessionState?.value?.isStoreOpen ?: sampleStore.isOpen
+        updateState { copy(store = sampleStore.copy(isOpen = cachedOpen)) }
         loadMerchantProfile()
     }
 
@@ -39,6 +57,106 @@ class MerchantProfileViewModel @Inject constructor(
         when (intent) {
             is MerchantProfileViewIntent.LoadMerchant -> loadMerchantProfile()
             is MerchantProfileViewIntent.UpdateStore -> updateState { copy(store = intent.store) }
+            is MerchantProfileViewIntent.UpdateFacadePhoto -> updateFacadePhoto(intent.imageBytes)
+            is MerchantProfileViewIntent.ToggleStoreOpen -> toggleStoreOpen(intent.isOpen)
+            is MerchantProfileViewIntent.ClearMessages -> updateState { copy(errorMessage = null, statusMessage = null) }
+        }
+    }
+
+    private fun toggleStoreOpen(isOpen: Boolean) {
+        if (viewState.value.isUpdatingStatus) return
+        val currentStore = viewState.value.store
+        updateState {
+            copy(
+                store = store.copy(isOpen = isOpen),
+                isUpdatingStatus = true,
+                errorMessage = null,
+                statusMessage = null
+            )
+        }
+        viewModelScope.launch {
+            val input = buildProfileUpdateInput(currentStore = currentStore, activo = isOpen)
+            when (val res = updateMerchantProfileUseCase(input)) {
+                is Result.Success -> applyToggledStoreOpen(res.data, isOpen)
+                is Result.Failure -> updateState {
+                    copy(
+                        isUpdatingStatus = false,
+                        store = store.copy(isOpen = !isOpen),
+                        errorMessage = res.error.message
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun buildProfileUpdateInput(
+        currentStore: com.example.sensus.domain.model.MerchantStore,
+        fotoFachadaUrl: String? = null,
+        activo: Boolean? = null
+    ): MerchantProfileUpdateInput {
+        val loaded = (getMyMerchantUseCase() as? Result.Success)?.data
+        val addr = (loaded?.direccion ?: currentStore.address).removePrefix("Dirección: ").trim().ifBlank { "Dirección local" }
+        val cp = (loaded?.codigoPostal ?: currentStore.postalCode).trim().takeIf { it.length == POSTAL_CODE_LENGTH } ?: "42800"
+        return MerchantProfileUpdateInput(
+            nombreComercial = loaded?.nombreComercial ?: currentStore.name.takeIf { it.isNotBlank() },
+            direccion = addr,
+            codigoPostal = cp,
+            horarios = loaded?.horarios ?: viewState.value.schedules,
+            coordinates = loaded?.let { MerchantCoordinates(it.latitud, it.longitud) },
+            fotoFachadaUrl = fotoFachadaUrl,
+            activo = activo
+        )
+    }
+
+    private suspend fun applyToggledStoreOpen(profile: MerchantProfile, requestedOpen: Boolean) {
+        val actualOpen = profile.activo
+        sessionRepository?.setStoreOpen(actualOpen)
+        val statusSaved = actualOpen == requestedOpen
+        val message = if (actualOpen) {
+            "Tienda abierta y visible en el mapa."
+        } else {
+            "Tienda cerrada. Ya no aparecerá en el mapa hasta volver a abrirla."
+        }
+        updateState {
+            copy(
+                isUpdatingStatus = false,
+                store = store.copy(isOpen = actualOpen),
+                statusMessage = if (statusSaved) message else null,
+                errorMessage = if (statusSaved) null else "El servidor aún no tiene desplegado el cambio de estado de tienda."
+            )
+        }
+    }
+
+    private fun updateFacadePhoto(bytes: ByteArray) {
+        if (viewState.value.isUpdatingPhoto) return
+        val currentStore = viewState.value.store
+        updateState { copy(isUpdatingPhoto = true, errorMessage = null, statusMessage = null) }
+        viewModelScope.launch {
+            val uploadResult = uploadMerchantFacadePhotoIfProvided(bytes, mediaRepository, imageCompressor)
+            if (uploadResult is Result.Failure) {
+                updateState { copy(isUpdatingPhoto = false, errorMessage = uploadResult.error.message) }
+                return@launch
+            }
+            val uploadedUrl = (uploadResult as Result.Success).data
+            if (uploadedUrl.isNullOrBlank()) {
+                updateState { copy(isUpdatingPhoto = false, errorMessage = "No se pudo subir la foto de fachada.") }
+                return@launch
+            }
+            val updateInput = buildProfileUpdateInput(currentStore = currentStore, fotoFachadaUrl = uploadedUrl)
+            when (val res = updateMerchantProfileUseCase(updateInput)) {
+                is Result.Success -> applyUpdatedFacadePhoto(res.data, uploadedUrl)
+                is Result.Failure -> updateState { copy(isUpdatingPhoto = false, errorMessage = res.error.message) }
+            }
+        }
+    }
+
+    private fun applyUpdatedFacadePhoto(profile: MerchantProfile, fallbackUrl: String) {
+        updateState {
+            copy(
+                isUpdatingPhoto = false,
+                store = store.copy(photoUrl = profile.fotoFachadaUrl ?: fallbackUrl),
+                statusMessage = "¡Foto de la fachada actualizada exitosamente!"
+            )
         }
     }
 
@@ -52,7 +170,8 @@ class MerchantProfileViewModel @Inject constructor(
         }
     }
 
-    private fun applyLoadedMerchant(profile: MerchantProfile) {
+    private suspend fun applyLoadedMerchant(profile: MerchantProfile) {
+        sessionRepository?.setStoreOpen(profile.activo)
         updateState {
             val formattedSchedule = formatSchedulesSummary(profile.horarios).ifBlank { store.schedule }
             copy(
@@ -62,7 +181,9 @@ class MerchantProfileViewModel @Inject constructor(
                     postalCode = profile.codigoPostal.ifBlank { store.postalCode },
                     latitude = profile.latitud,
                     longitude = profile.longitud,
-                    schedule = formattedSchedule
+                    schedule = formattedSchedule,
+                    isOpen = profile.activo,
+                    photoUrl = profile.fotoFachadaUrl ?: store.photoUrl
                 ),
                 schedules = profile.horarios
             )

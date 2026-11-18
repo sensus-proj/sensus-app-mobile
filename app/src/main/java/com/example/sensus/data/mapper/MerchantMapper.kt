@@ -25,7 +25,9 @@ object MerchantMapper {
             codigoPostal = codigoPostal,
             latitud = latitud,
             longitud = longitud,
-            horarios = mappedHorarios
+            horarios = mappedHorarios,
+            fotoFachadaUrl = fotoFachadaUrl,
+            activo = activo
         )
     }
 

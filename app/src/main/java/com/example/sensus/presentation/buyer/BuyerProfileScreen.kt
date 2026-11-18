@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +64,7 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSuccessBg
 import com.example.sensus.theme.SensusTextMuted
@@ -97,7 +99,9 @@ private data class BuyerProfileListUi(
     val isGuest: Boolean,
     val profileUpdatedNotice: Boolean,
     val hasActiveMerchant: Boolean,
-    val merchantStoreName: String?
+    val merchantStoreName: String?,
+    val isStoreOpen: Boolean = true,
+    val isReopeningStore: Boolean = false
 )
 
 @Composable
@@ -115,17 +119,22 @@ fun BuyerProfileScreen(viewModel: BuyerProfileViewModel = hiltViewModel(), callb
     var profileUpdatedNotice by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.dispatchIntent(BuyerProfileViewIntent.LoadProfile) }
-    LaunchedEffect(state.hasActiveMerchant) {
-        if (state.hasActiveMerchant) callbacks.onMerchantStatusSynced(true)
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect ->
+            when (effect) {
+                BuyerProfileViewEffect.StoreReopened -> callbacks.onToggleMerchantMode(true)
+                is BuyerProfileViewEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
-    LaunchedEffect(state.profile, isGuest, state.isLoading) {
-        summary = resolveProfileDisplay(state.profile, isGuest, state.isLoading)
-    }
+    LaunchedEffect(state.hasActiveMerchant) { if (state.hasActiveMerchant) callbacks.onMerchantStatusSynced(true) }
+    LaunchedEffect(state.profile, isGuest, state.isLoading) { summary = resolveProfileDisplay(state.profile, isGuest, state.isLoading) }
 
     BuyerProfileListContent(
-        ui = BuyerProfileListUi(summary, isGuest, profileUpdatedNotice, hasActiveMerchant, resolvedStoreName),
+        ui = BuyerProfileListUi(summary, isGuest, profileUpdatedNotice, hasActiveMerchant, resolvedStoreName, state.isStoreOpen, state.isReopeningStore),
         callbacks = callbacks,
         onOpenEditSheet = { showEditProfileSheet = true },
+        onReopenStore = { viewModel.dispatchIntent(BuyerProfileViewIntent.ReopenStore) },
         modifier = modifier
     )
 
@@ -151,7 +160,13 @@ fun BuyerProfileScreen(viewModel: BuyerProfileViewModel = hiltViewModel(), callb
 }
 
 @Composable
-private fun BuyerProfileListContent(ui: BuyerProfileListUi, callbacks: BuyerProfileCallbacks, onOpenEditSheet: () -> Unit, modifier: Modifier = Modifier) {
+private fun BuyerProfileListContent(
+    ui: BuyerProfileListUi,
+    callbacks: BuyerProfileCallbacks,
+    onOpenEditSheet: () -> Unit,
+    onReopenStore: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val isGuest = ui.isGuest
     LazyColumn(
         modifier = modifier
@@ -170,11 +185,9 @@ private fun BuyerProfileListContent(ui: BuyerProfileListUi, callbacks: BuyerProf
         }
         item {
             MerchantModeToggleCard(
-                isGuest = isGuest,
+                ui = ui,
                 isMerchantMode = callbacks.isMerchantMode,
-                hasActiveMerchant = ui.hasActiveMerchant,
-                merchantStoreName = ui.merchantStoreName,
-                onToggle = { enable -> if (isGuest) callbacks.onGuestActionRequired() else callbacks.onToggleMerchantMode(enable) }
+                onToggle = { enable -> handleMerchantCardToggle(ui, enable, callbacks, onReopenStore) }
             )
         }
         item {
@@ -192,6 +205,14 @@ private fun BuyerProfileListContent(ui: BuyerProfileListUi, callbacks: BuyerProf
                 onDeleteAccountClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onDeleteAccountClick() }
             )
         }
+    }
+}
+
+private fun handleMerchantCardToggle(ui: BuyerProfileListUi, enable: Boolean, callbacks: BuyerProfileCallbacks, onReopenStore: () -> Unit) {
+    when {
+        ui.isGuest -> callbacks.onGuestActionRequired()
+        enable && ui.hasActiveMerchant && !ui.isStoreOpen -> onReopenStore()
+        else -> callbacks.onToggleMerchantMode(enable)
     }
 }
 
@@ -265,14 +286,8 @@ private fun ProfileHeaderActionControl(isGuest: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MerchantModeToggleCard(
-    isGuest: Boolean,
-    isMerchantMode: Boolean,
-    hasActiveMerchant: Boolean,
-    merchantStoreName: String?,
-    onToggle: (Boolean) -> Unit
-) {
-    val isChecked = !isGuest && (isMerchantMode || hasActiveMerchant)
+private fun MerchantModeToggleCard(ui: BuyerProfileListUi, isMerchantMode: Boolean, onToggle: (Boolean) -> Unit) {
+    val isChecked = !ui.isGuest && (isMerchantMode || (ui.hasActiveMerchant && ui.isStoreOpen))
     val openStoreAction = { onToggle(true) }
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -288,15 +303,16 @@ private fun MerchantModeToggleCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             MerchantToggleLabelContent(
-                hasActiveMerchant = !isGuest && hasActiveMerchant,
-                merchantStoreName = merchantStoreName,
+                hasActiveMerchant = !ui.isGuest && ui.hasActiveMerchant,
+                merchantStoreName = ui.merchantStoreName,
+                isStoreOpen = ui.isStoreOpen,
                 onStoreTextClick = openStoreAction,
                 modifier = Modifier.weight(1f)
             )
             Switch(
                 checked = isChecked,
-                enabled = !isGuest,
-                onCheckedChange = { requested -> onToggle(if (hasActiveMerchant) true else requested) },
+                enabled = !ui.isGuest && !ui.isReopeningStore,
+                onCheckedChange = { requested -> onToggle(if (ui.hasActiveMerchant) true else requested) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = SensusPurple,
@@ -309,7 +325,13 @@ private fun MerchantModeToggleCard(
 }
 
 @Composable
-private fun MerchantToggleLabelContent(hasActiveMerchant: Boolean, merchantStoreName: String?, onStoreTextClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun MerchantToggleLabelContent(
+    hasActiveMerchant: Boolean,
+    merchantStoreName: String?,
+    isStoreOpen: Boolean,
+    onStoreTextClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(SensusPurple), contentAlignment = Alignment.Center) {
             Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
@@ -324,17 +346,21 @@ private fun MerchantToggleLabelContent(hasActiveMerchant: Boolean, merchantStore
                         fontWeight = FontWeight.Bold,
                         color = SensusPurple
                     )
-                    Surface(shape = RoundedCornerShape(6.dp), color = SensusSuccessBg) {
+                    Surface(shape = RoundedCornerShape(6.dp), color = if (isStoreOpen) SensusSuccessBg else SensusRedBg) {
                         Text(
-                            text = "Activo",
+                            text = if (isStoreOpen) "Abierta" else "Tienda cerrada",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = SensusSuccess,
+                            color = if (isStoreOpen) SensusSuccess else SensusRed,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
-                Text(text = "Pulsa el texto para abrir tu comercio", fontSize = 11.sp, color = SensusTextSecondary)
+                Text(
+                    text = if (isStoreOpen) "Pulsa para abrir tu perfil comercial" else "Oculta del mapa · Pulsa para reabrirla",
+                    fontSize = 11.sp,
+                    color = SensusTextSecondary
+                )
             } else {
                 Text(text = "Soy Comercio / Vendedor", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
                 Text(text = "Publica excedentes y recupera dinero", fontSize = 11.sp, color = SensusTextSecondary)

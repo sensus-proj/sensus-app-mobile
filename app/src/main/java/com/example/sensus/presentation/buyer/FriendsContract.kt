@@ -14,6 +14,7 @@ data class FriendsViewState(
     val sentRequests: List<SentFriendRequest> = emptyList(),
     val newlyArrivedRequest: PendingFriendRequest? = null,
     val newlyAcceptedFriend: ConnectedFriend? = null,
+    val activeThreadFriendUserId: String? = null,
     val sharedOffers: List<SharedOfferMessage> = emptyList(),
     val isLoadingThread: Boolean = false,
     val isSharingOffer: Boolean = false,
@@ -30,6 +31,7 @@ sealed interface FriendsViewIntent : ViewIntent {
     data class RejectPendingRequest(val requestId: String) : FriendsViewIntent
     data class RemoveFriend(val inviteCode: String) : FriendsViewIntent
     data class LoadSharedOffers(val friendUserId: String) : FriendsViewIntent
+    data object ClearSharedOffers : FriendsViewIntent
     data class ShareOffer(val offerId: String, val recipientUserIds: List<String>) : FriendsViewIntent
     data object ConsumePendingDeepLink : FriendsViewIntent
     data object NotificationShown : FriendsViewIntent

@@ -15,7 +15,9 @@ data class StoredMerchantStatus(
     val isRegistered: Boolean = false,
     val storeName: String? = null,
     val address: String? = null,
-    val postalCode: String? = null
+    val postalCode: String? = null,
+    val photoUrl: String? = null,
+    val isStoreOpen: Boolean = true
 )
 
 class SecurePreferences private constructor(preferencesFactory: () -> SharedPreferences) {
@@ -81,7 +83,9 @@ class SecurePreferences private constructor(preferencesFactory: () -> SharedPref
             isRegistered = prefs.getBoolean(KEY_MERCHANT_REGISTERED, false),
             storeName = prefs.getString(KEY_MERCHANT_STORE_NAME, null),
             address = prefs.getString(KEY_MERCHANT_ADDRESS, null),
-            postalCode = prefs.getString(KEY_MERCHANT_POSTAL_CODE, null)
+            postalCode = prefs.getString(KEY_MERCHANT_POSTAL_CODE, null),
+            photoUrl = prefs.getString(KEY_MERCHANT_PHOTO_URL, null),
+            isStoreOpen = prefs.getBoolean(KEY_MERCHANT_STORE_OPEN, true)
         )
         set(value) {
             prefs.edit().apply {
@@ -89,12 +93,16 @@ class SecurePreferences private constructor(preferencesFactory: () -> SharedPref
                 val normalizedName = value.storeName?.trim()?.takeIf { it.isNotBlank() }
                 if (value.isRegistered && normalizedName != null) {
                     putString(KEY_MERCHANT_STORE_NAME, normalizedName)
+                    putBoolean(KEY_MERCHANT_STORE_OPEN, value.isStoreOpen)
                     value.address?.trim()?.takeIf { it.isNotBlank() }?.let { putString(KEY_MERCHANT_ADDRESS, it) }
                     value.postalCode?.trim()?.takeIf { it.isNotBlank() }?.let { putString(KEY_MERCHANT_POSTAL_CODE, it) }
+                    value.photoUrl?.trim()?.takeIf { it.isNotBlank() }?.let { putString(KEY_MERCHANT_PHOTO_URL, it) }
                 } else {
                     remove(KEY_MERCHANT_STORE_NAME)
                     remove(KEY_MERCHANT_ADDRESS)
                     remove(KEY_MERCHANT_POSTAL_CODE)
+                    remove(KEY_MERCHANT_PHOTO_URL)
+                    remove(KEY_MERCHANT_STORE_OPEN)
                 }
                 apply()
             }
@@ -148,5 +156,7 @@ class SecurePreferences private constructor(preferencesFactory: () -> SharedPref
         private const val KEY_MERCHANT_STORE_NAME = "key_merchant_store_name"
         private const val KEY_MERCHANT_ADDRESS = "key_merchant_address"
         private const val KEY_MERCHANT_POSTAL_CODE = "key_merchant_postal_code"
+        private const val KEY_MERCHANT_PHOTO_URL = "key_merchant_photo_url"
+        private const val KEY_MERCHANT_STORE_OPEN = "key_merchant_store_open"
     }
 }

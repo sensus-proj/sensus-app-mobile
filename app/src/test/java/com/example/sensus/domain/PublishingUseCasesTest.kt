@@ -48,6 +48,7 @@ class PublishingUseCasesTest {
     fun offerPolicy_rejectsEachInvalidFieldIncludingNonFinitePrices() {
         val invalid = listOf(
             input.copy(title = " ") to OfferField.TITLE,
+            input.copy(description = " ") to OfferField.DESCRIPTION,
             input.copy(description = "x".repeat(501)) to OfferField.DESCRIPTION,
             input.copy(originalPrice = Double.NaN) to OfferField.PRICE,
             input.copy(discountPrice = Double.POSITIVE_INFINITY) to OfferField.PRICE,

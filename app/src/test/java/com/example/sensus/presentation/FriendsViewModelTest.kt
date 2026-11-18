@@ -200,6 +200,7 @@ class FriendsViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.viewState.value.sharedOffers.size)
         assertEquals("Café latte", vm.viewState.value.sharedOffers.first().offerTitle)
+        assertEquals("u-karla", vm.viewState.value.activeThreadFriendUserId)
 
         vm.viewEffect.test {
             val excessiveRecipients = (1..(MAX_OFFER_SHARE_FRIENDS + 1)).map { "u-$it" }
@@ -215,5 +216,51 @@ class FriendsViewModelTest {
             assertTrue(sharedMsg.message.contains("1 amigo"))
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun switchingFriendThread_clearsPreviousSharedOffers() = runTest(dispatcher) {
+        val mockApi = mockk<FriendsApiService>()
+        val friendKarla = FriendItemDto("u-karla", "SNS-112233", "Karla", "QR", "2026-11-16T12:00:00Z")
+        val friendLuis = FriendItemDto("u-other", "SNS-998877", "Luis", "QR", "2026-11-16T12:00:00Z")
+        val item = SharedOfferItemDto(
+            id = "sh-10",
+            offerId = "offer-10",
+            senderUserId = "u-karla",
+            recipientUserId = "u-self",
+            offerTitle = "Café latte",
+            storeName = "Cafetería Sur",
+            originalPrice = 55.0,
+            discountedPrice = 30.0,
+            discountPercentage = 45,
+            sharedAtUtc = "2026-11-16T12:05:00Z"
+        )
+        coEvery { mockApi.getFriendsOverview() } returns Response.success(
+            FriendsOverviewDto(myInviteCode = "SNS-SELF01", friends = listOf(friendKarla, friendLuis))
+        )
+        coEvery { mockApi.getFriendSharedOffers("u-karla") } returns Response.success(
+            FriendSharedOffersThreadDto(friend = friendKarla, offers = listOf(item))
+        )
+        coEvery { mockApi.getFriendSharedOffers("u-other") } returns Response.success(
+            FriendSharedOffersThreadDto(friend = friendLuis, offers = emptyList())
+        )
+
+        val repo = FriendsRepositoryImpl(null, sessionRepo, mockApi, dispatcher, testScope)
+        val vm = FriendsViewModel(repo, sessionRepo)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        vm.dispatchIntent(FriendsViewIntent.LoadSharedOffers("u-karla"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, vm.viewState.value.sharedOffers.size)
+
+        vm.dispatchIntent(FriendsViewIntent.LoadSharedOffers("u-other"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.sharedOffers.isEmpty())
+        assertEquals("u-other", vm.viewState.value.activeThreadFriendUserId)
+
+        vm.dispatchIntent(FriendsViewIntent.ClearSharedOffers)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(null, vm.viewState.value.activeThreadFriendUserId)
+        assertTrue(vm.viewState.value.sharedOffers.isEmpty())
     }
 }

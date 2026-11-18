@@ -3,7 +3,9 @@ package com.example.sensus.presentation.merchant
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.OfferField
 import com.example.sensus.domain.model.OfferPublishingPolicy
+import com.example.sensus.domain.model.OfferValidationError
 import com.example.sensus.domain.usecase.CreateOfferUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +29,12 @@ class MerchantNewOfferViewModel @Inject constructor(
 
     private fun publish(intent: MerchantNewOfferViewIntent.PublishOffer) {
         if (viewState.value.isPublishing) return
+        val bytes = intent.imageBytes
+        if (bytes == null || bytes.isEmpty()) {
+            val missingPhoto = OfferValidationError(OfferField.PHOTO, "Debes tomar o seleccionar una foto del producto")
+            updateState { copy(fieldError = missingPhoto, errorMessage = null) }
+            return
+        }
         val fieldError = OfferPublishingPolicy.validate(intent.input, System.currentTimeMillis())
         if (fieldError != null) {
             updateState { copy(fieldError = fieldError, errorMessage = null) }

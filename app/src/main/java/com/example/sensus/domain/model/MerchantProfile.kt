@@ -23,5 +23,25 @@ data class MerchantProfile(
     val codigoPostal: String,
     val latitud: Double = DEFAULT_UTTT_LAT,
     val longitud: Double = DEFAULT_UTTT_LNG,
-    val horarios: List<HorarioDia> = emptyList()
+    val horarios: List<HorarioDia> = emptyList(),
+    val fotoFachadaUrl: String? = null,
+    val activo: Boolean = true
+)
+
+data class MerchantActivationInput(
+    val nombreComercial: String,
+    val direccion: String,
+    val codigoPostal: String,
+    val coordinates: MerchantCoordinates? = null,
+    val fotoFachadaUrl: String? = null
+)
+
+data class MerchantProfileUpdateInput(
+    val nombreComercial: String?,
+    val direccion: String,
+    val codigoPostal: String,
+    val horarios: List<HorarioDia>,
+    val coordinates: MerchantCoordinates? = null,
+    val fotoFachadaUrl: String? = null,
+    val activo: Boolean? = null
 )
