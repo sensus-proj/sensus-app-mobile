@@ -77,7 +77,7 @@
 - [ ] Sin ubicacion en segundo plano (FT-08).
 - [ ] Permiso runtime `CAMERA` (con `required="false"`) solicitado solo al abrir escaner QR y sin subir video/frames (FT-14).
 - [ ] Permiso runtime `POST_NOTIFICATIONS` en Android 13+ sin bloquear app si se niega (FT-21).
-- [ ] `HttpLoggingInterceptor` en nivel `NONE` para compilaciones Release (FT-27).
+- [x] `HttpLoggingInterceptor` en nivel `NONE` para compilaciones Release (FT-27); `BASIC` con cabeceras redactadas en debug. Prueba: `NetworkLoggingSecurityTest`.
 - [ ] Validacion de subida multipart (`<= 4.5 MB`, JPEG/PNG/WebP) y moderacion estricta `fail-closed` antes de Cloudinary (FT-15).
 
 ## V11 — Logica de negocio

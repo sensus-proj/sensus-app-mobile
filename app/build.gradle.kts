@@ -24,14 +24,15 @@ android {
     val ciVersionCode =
         providers.gradleProperty("SENSUS_VERSION_CODE").orNull?.toIntOrNull()
             ?: providers.environmentVariable("SENSUS_VERSION_CODE").orNull?.toIntOrNull()
-    val baseVersionCode = 8
+    val baseVersionCode = 9
 
     defaultConfig {
         applicationId = "sensus.com"
         minSdk = 24
         targetSdk = 36
         versionCode = maxOf(baseVersionCode, ciVersionCode ?: baseVersionCode)
-        versionName = "1.3.0"
+        versionName = "1.4.0"
+        testInstrumentationRunner = "com.example.sensus.HiltTestRunner"
     }
 
     val keysPropertiesText =
@@ -95,7 +96,7 @@ android {
     buildFeatures {
         compose = true
         aidl = false
-        buildConfig = false
+        buildConfig = true
         shaders = false
     }
 
@@ -179,6 +180,8 @@ dependencies {
     // Hilt Dependency Injection
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    androidTestImplementation(libs.hilt.android.testing)
+    kaptAndroidTest(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Local Encrypted Persistence (Room + SQLCipher AES-256)

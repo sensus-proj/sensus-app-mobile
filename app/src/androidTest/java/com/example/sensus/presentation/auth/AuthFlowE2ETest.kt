@@ -1,6 +1,5 @@
 package com.example.sensus.presentation.auth
 
-import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -9,17 +8,32 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.sensus.HiltTestActivity
 import com.example.sensus.theme.SensusTheme
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+private const val GUEST_SESSION_TIMEOUT_MS = 20_000L
+
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class AuthFlowE2ETest {
 
-    @get:Rule
-    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val composeTestRule = createAndroidComposeRule<HiltTestActivity>()
+
+    @Before
+    fun inject() {
+        hiltRule.inject()
+    }
 
     @Test
     fun loginScreen_rendersHeaderAndFormElements_properly() {
@@ -39,6 +53,8 @@ class AuthFlowE2ETest {
         composeTestRule.onNodeWithText("Iniciar Sesión").assertExists()
         composeTestRule.onNodeWithText("Continuar como invitado").assertExists().performClick()
 
+        // El ViewModel real abre la sesión de invitado contra el backend: se espera su respuesta (E2E, FT-27).
+        composeTestRule.waitUntil(timeoutMillis = GUEST_SESSION_TIMEOUT_MS) { guestClicked }
         assertTrue(guestClicked)
     }
 

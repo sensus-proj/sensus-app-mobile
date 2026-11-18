@@ -74,3 +74,21 @@
 -dontwarn com.google.api.client.http.javanet.NetHttpTransport$Builder
 -dontwarn com.google.api.client.http.javanet.NetHttpTransport
 -dontwarn org.joda.time.Instant
+
+# ====================================================================
+# Release hardening (FT-27, RF-27-03 y RF-27-04)
+# ====================================================================
+# Retrofit, OkHttp, Room, Hilt, Kotlinx Serialization y ZXing core publican reglas de consumidor; las interfaces
+# de API y los DTO de la app se conservan con -keep class com.example.sensus.data.** (arriba). No se usan CameraX
+# ni ML Kit, por lo que no requieren reglas.
+
+# Elimina las llamadas de depuracion a android.util.Log en release (v/d/i); w/e se conservan para diagnostico.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
+
+# Trazas de fallos legibles en Play Console al subir el mapping.txt.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

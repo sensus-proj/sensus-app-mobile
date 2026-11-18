@@ -32,6 +32,9 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
  * perdida, archivo corrupto o acceso en hilo incorrecto), el chat de Sensi NO debe cerrar la app. La caché
  * es accesoria: un fallo de Room se trata como caché vacía y el turno sigue.
  */
+/** Timeout holgado: bajo carga de CI 500 ms hacia fallar pruebas de la capa HTTP de forma intermitente. */
+private const val HTTP_TIMEOUT_SECONDS = 10L
+
 class AiChatLocalCacheFailureTest {
 
     private val server = MockWebServer()
@@ -52,8 +55,8 @@ class AiChatLocalCacheFailureTest {
         server.start()
         every { sessionRepository.sessionState } returns sessionState
         val client = OkHttpClient.Builder()
-            .connectTimeout(500, TimeUnit.MILLISECONDS)
-            .readTimeout(500, TimeUnit.MILLISECONDS)
+            .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
         val api = Retrofit.Builder()
             .baseUrl(server.url("/"))
