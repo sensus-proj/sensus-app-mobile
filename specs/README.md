@@ -46,7 +46,7 @@ specs/FT-XX-<slug>/
 | `FT-24-sensi-ia` | Negocio (Ola 5) | P-25, C-39, Tesina | FT-12 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | En revision | `FriendModels.kt`, `FriendsApiService.kt`, `FriendsRepositoryImpl.kt`, `FriendsCommunityScreen.kt`, `QrScannerDialog.kt`, `FriendRequestNotifier.kt`, Spec `050` backend (pendiente despliegue AWS y landing) |
 | `FT-26-resenas-comercio` | Negocio (Ola 5) | P-15, C-28..C-31 | FT-14 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
-| `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | En ejecución (T27.1 a T27.5 hechas; T27.6 parcial) | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |
 | `FT-29-merchant-location-activation` | Negocio | Activación comercio + mapa interactivo + persistencia perfil | FT-06, FT-08, FT-10 | En revision | `MerchantLocationPickerModal.kt`, `MerchantActivationUseCasesTest.kt`, `158` unit tests / `Kover 90.72%`, 5 `check_*.py` PASS (pendiente commit/PR en `movil_Beto`) |
 

@@ -2,7 +2,6 @@ package com.example.sensus.data.repository
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
-import com.example.sensus.data.MockDataProvider
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.mapper.OfferMapper.toDomain
 import com.example.sensus.data.mapper.OfferMapper.toEntity
@@ -35,14 +34,13 @@ private val LEGACY_FAKE_OFFER_IDS = setOf("off_1", "off_2", "off_3", "off_4", "o
  * `GET /api/v1/merchants/my-offers`, `POST /api/v1/offers` y respaldada por Room + SQLCipher (OfferDao).
  * Estrategia de conflicto para inventario: server-wins (Constitución §5).
  */
-@Suppress("DEPRECATION")
 class OffersRepositoryImpl(
     private val offerDao: OfferDao? = null,
     private val offersApi: OffersApiService? = null
 ) : OffersRepository {
 
     override fun getOffers(): List<ProductOffer> {
-        val dao = offerDao ?: return MockDataProvider.sampleOffers
+        val dao = offerDao ?: return emptyList()
         return try {
             val cachedEntities = dao.getOffers().orEmpty()
             val realEntities = cachedEntities.filterNot { it.id in LEGACY_FAKE_OFFER_IDS }
@@ -57,7 +55,6 @@ class OffersRepositoryImpl(
     }
 
     override fun addOffer(offer: ProductOffer) {
-        MockDataProvider.addOffer(offer)
         try {
             offerDao?.insertOffer(offer.toEntity())
         } catch (_: Exception) {

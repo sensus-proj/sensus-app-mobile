@@ -133,6 +133,52 @@ fallar el paso, así que el escaneo SAST quedaba **sin ejecutarse** sin que el C
 **Regla preventiva.** Un paso verde que imprime `[ERROR]` no es un paso sano. Al añadir un pack, comprobar
 `curl -sL https://semgrep.dev/p/<pack>` (debe devolver YAML y código 200).
 
+## E-05 — Contraseñas y tokens JWT en logcat de producción (`HttpLoggingInterceptor` en `BODY`)
+
+| Campo | Valor |
+|---|---|
+| Síntoma | En `release`, las llamadas de login, registro y perfil imprimían cuerpos y cabeceras en logcat |
+| Detectado | 2026-11-17, auditoría de FT-27 (RF-27-03) |
+| Estado | Corregido |
+
+**Causa raíz.** `NetworkClient` creaba `HttpLoggingInterceptor` con nivel `BODY` sin condicionarlo al tipo de compilación.
+Solo los clientes de publicación (`publishingHttpClient`) quitaban el interceptor; `authApi`, `profileApi`, `merchantApi`,
+`mediaApi` y `friendsApi` usaban el cliente base. Contraseñas, tokens y PII viajaban a logcat también en producción.
+
+**Corrección.** `httpLoggingLevel(isDebug)`: `NONE` en release y `BASIC` en debug (método, URL y código; sin cabeceras ni
+cuerpos). `Authorization`, `Cookie` y `Set-Cookie` se redactan. Prueba de regresión: `NetworkLoggingSecurityTest`.
+
+**Regla preventiva.** Ningún nivel `BODY` o `HEADERS` en el código de la app. Todo interceptor de logging se crea con
+`buildLoggingInterceptor`. Las reglas R8 eliminan además `Log.v/d/i` en release.
+
+---
+
+## E-06 — La suite instrumentada nunca se había ejecutado
+
+| Campo | Valor |
+|---|---|
+| Síntoma | `connectedDebugAndroidTest` arrancaba 0 pruebas con `Process crashed` |
+| Detectado | 2026-11-17, FT-27 (T27.4) |
+| Estado | Corregido: 47 de 47 en emulador Android 15 |
+
+**Causa raíz.** (1) `app/build.gradle.kts` no declaraba `testInstrumentationRunner`. (2) Las pantallas con
+`hiltViewModel()` se probaban en una `ComponentActivity` común, que Hilt no admite sin `@AndroidEntryPoint` y sin
+`HiltTestApplication`. (3) Dos pruebas estaban desactualizadas respecto a la UI ("Compartir", "Explorar"). (4) `MainScreen`
+pide ubicación al abrirse y el diálogo del sistema pausaba la actividad. Como el CI solo **compila** las pruebas
+instrumentadas, nadie lo había notado.
+
+**Corrección.** `HiltTestRunner`, `HiltTestActivity` (solo `src/debug`), `hilt-android-testing` y `kaptAndroidTest`; las
+pruebas con Hilt usan `@HiltAndroidTest` y `HiltAndroidRule`; los permisos se conceden con `UiAutomation` antes de componer.
+
+**Regla preventiva.**
+- Compilar una prueba no es ejecutarla: antes de un release, correr `connectedDebugAndroidTest` en un emulador o dispositivo
+  de pruebas. Lanzarlo con `ANDROID_SERIAL=<emulador>` para no tocar un teléfono con la app de Play.
+- **Nunca** ejecutar `connectedDebugAndroidTest` ni `installDebug` en un dispositivo con la app de producción instalada: la
+  firma distinta obliga a desinstalar y borra los datos locales.
+- Las pruebas de pantallas con permisos deben concederlos antes de componer.
+
+---
+
 ---
 
 ## Lista de verificación antes de entregar un cambio de persistencia o sesión
@@ -143,3 +189,5 @@ fallar el paso, así que el escaneo SAST quedaba **sin ejecutarse** sin que el C
 - [ ] Probado en el teléfono: abrir Sensi, cerrar sesión, iniciar sesión y abrir Sensi otra vez.
 - [ ] `adb logcat -d -b crash` sin `FATAL EXCEPTION` tras esa secuencia.
 - [ ] Ningún ViewModel salta a un `Dispatchers.IO` real sin dispatcher sustituible en tests (E-03).
+- [ ] Sin `HttpLoggingInterceptor` en `BODY`/`HEADERS`; se usa `buildLoggingInterceptor` (E-05).
+- [ ] `connectedDebugAndroidTest` ejecutado en emulador antes de publicar, no solo compilado (E-06).

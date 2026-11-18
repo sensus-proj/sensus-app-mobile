@@ -34,6 +34,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 /** FT-24: las tarjetas de oferta que Sensi cita llegan completas del backend y sobreviven en la caché Room. */
+/** Timeout holgado: bajo carga de CI 500 ms hacia fallar pruebas de la capa HTTP de forma intermitente. */
+private const val HTTP_TIMEOUT_SECONDS = 10L
+
 class AiOffersCacheTest {
 
     private val server = MockWebServer()
@@ -62,8 +65,8 @@ class AiOffersCacheTest {
         every { sessionRepository.sessionState } returns
             MutableStateFlow(SessionState(isSessionActive = true, isGuest = false, activeToken = "t"))
         val client = OkHttpClient.Builder()
-            .connectTimeout(500, TimeUnit.MILLISECONDS)
-            .readTimeout(500, TimeUnit.MILLISECONDS)
+            .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
         val api = Retrofit.Builder()
             .baseUrl(server.url("/"))

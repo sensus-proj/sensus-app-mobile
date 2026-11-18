@@ -893,3 +893,14 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **E-03:** `CommunityViewModel.openComposer()` usaba `withContext(Dispatchers.IO)` (hilo real); el test terminaba y hacía `resetMain()` antes de que volviera, y `runTest` atribuía la excepción al test siguiente. Corregido con `ioDispatcher` sustituible y un test de regresión.
 - **E-04:** el pack `p/mobile` de Semgrep no existe; el escaneo no corría. Reemplazado por `p/kotlin` y `p/java` en `release-playstore.yml` y `security-scanners.yml`.
 - **Documentación:** entradas E-03 y E-04 en `docs/errores-conocidos.md`.
+
+## Bitácora - FT-27 QA de release: mocks, logging seguro, R8, E2E y versión (2026-11-17)
+
+- **T27.1:** `MockDataProvider.kt` eliminado; `OffersRepositoryImpl` y `StoreRepositoryImpl` sin datos de muestra. 0 referencias en `app/src/main`.
+- **T27.2 (hallazgo de seguridad, E-05):** el cliente base registraba cuerpos HTTP (`BODY`) también en `release`: contraseñas y tokens iban a logcat. Ahora `NONE` en release y `BASIC` en debug con cabeceras redactadas. `NetworkLoggingSecurityTest` (4).
+- **T27.3:** `minifyReleaseWithR8` sin clases faltantes; SQLCipher, Room, OSMDroid, ZXing y los DTO conservados. CameraX/ML Kit no son dependencias. Reglas nuevas para quitar `Log.v/d/i` y trazas legibles.
+- **T27.4 (E-06):** la suite instrumentada nunca se había ejecutado (sin `testInstrumentationRunner` ni Hilt de pruebas). Corregido y ejecutado en emulador Android 15: **47 de 47** (incluye 6 pruebas nuevas de Sensi y Markdown). Brecha: el canje QR del comerciante no tiene UI (FT-14), por eso no hay `MerchantScanE2ETest`.
+- **T27.5:** versión 1.4.0 (`baseVersionCode` 9; el CI calcula `4 + GITHUB_RUN_NUMBER`) y notas de Play de 452 caracteres.
+- **T27.6 (parcial):** gates locales en verde; los escáneres en la nube corren en CI al subir. Tag propuesto `v1.4.0-ft27`, sin crear.
+- **Cuidado en producción:** el teléfono de pruebas tiene instalada la versión de Play (1.3.0, versionCode 9). No se instaló ni se ejecutó nada en él; las pruebas se corrieron solo en el emulador con `ANDROID_SERIAL`.
+- **Pendiente:** `release-playstore.yml` se dispara con cada push a `main` y publica en `production` al 100 % si no recibe pista; se recomienda que el push publique en `internal`.
