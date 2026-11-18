@@ -5,6 +5,7 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.MerchantProfileUpdateInput
 import com.example.sensus.domain.repository.MerchantRepository
 
 private const val MIN_ADDRESS_LENGTH = 5
@@ -20,25 +21,16 @@ class UpdateMerchantProfileUseCase(private val merchantRepository: MerchantRepos
     ): Result<MerchantProfile> {
         val trimmedDireccion = direccion.trim()
         val trimmedCp = codigoPostal.trim()
-
-        val error = when {
-            trimmedDireccion.length !in MIN_ADDRESS_LENGTH..MAX_ADDRESS_LENGTH ->
-                "La dirección debe contener entre $MIN_ADDRESS_LENGTH y $MAX_ADDRESS_LENGTH caracteres."
-            !trimmedCp.matches(Regex("^\\d{5}$")) ->
-                "El código postal debe tener exactamente 5 dígitos numéricos."
-            else -> null
-        }
-        return if (error != null) {
-            Result.Failure(AppError.Validation(error))
-        } else if (coordinates == null) {
-            merchantRepository.updateMerchantProfile(
+        val error = validateFields(trimmedDireccion, trimmedCp)
+        return when {
+            error != null -> Result.Failure(AppError.Validation(error))
+            coordinates == null -> merchantRepository.updateMerchantProfile(
                 nombreComercial = nombreComercial?.trim(),
                 direccion = trimmedDireccion,
                 codigoPostal = trimmedCp,
                 horarios = horarios
             )
-        } else {
-            merchantRepository.updateMerchantProfile(
+            else -> merchantRepository.updateMerchantProfile(
                 nombreComercial = nombreComercial?.trim(),
                 direccion = trimmedDireccion,
                 codigoPostal = trimmedCp,
@@ -46,5 +38,31 @@ class UpdateMerchantProfileUseCase(private val merchantRepository: MerchantRepos
                 coordinates = coordinates
             )
         }
+    }
+
+    suspend operator fun invoke(input: MerchantProfileUpdateInput): Result<MerchantProfile> {
+        val trimmedDireccion = input.direccion.trim()
+        val trimmedCp = input.codigoPostal.trim()
+        val error = validateFields(trimmedDireccion, trimmedCp)
+        return if (error != null) {
+            Result.Failure(AppError.Validation(error))
+        } else {
+            merchantRepository.updateMerchantProfile(
+                input.copy(
+                    nombreComercial = input.nombreComercial?.trim(),
+                    direccion = trimmedDireccion,
+                    codigoPostal = trimmedCp,
+                    fotoFachadaUrl = input.fotoFachadaUrl?.trim()
+                )
+            )
+        }
+    }
+
+    private fun validateFields(trimmedDireccion: String, trimmedCp: String): String? = when {
+        trimmedDireccion.length !in MIN_ADDRESS_LENGTH..MAX_ADDRESS_LENGTH ->
+            "La dirección debe contener entre $MIN_ADDRESS_LENGTH y $MAX_ADDRESS_LENGTH caracteres."
+        !trimmedCp.matches(Regex("^\\d{5}$")) ->
+            "El código postal debe tener exactamente 5 dígitos numéricos."
+        else -> null
     }
 }

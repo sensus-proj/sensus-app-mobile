@@ -13,17 +13,17 @@
 
 - [ ] 100% de las historias `SE-001..SE-045` trazadas y verificadas con pruebas automatizadas
 - [ ] Kover `>= 80.00%` en `domain/` y `presentation/` verificado por `check_coverage.py --min 80`
-- [ ] Cero referencias a `MockDataProvider` en `app/src/main/**`
+- [x] Cero referencias a `MockDataProvider` en `app/src/main/**`
 - [ ] Controles OWASP ASVS L2 (V1..V14) cerrados con evidencia en `docs/asvs-l2-checklist.md`
 - [ ] `Memoria.md` §6 y `CHECKLIST_PR.md` actualizados para el comité de defensa
 
 ## Arquitectura y seguridad
 
 - [ ] `domain/` puro (sin `android.*`, Retrofit, Room ni serializadores JSON)
-- [ ] `presentation/` no importa `data/` (`check_layers.py` en PASS)
+- [x] `presentation/` no importa `data/` (`check_layers.py` en PASS)
 - [ ] ViewModels heredan de `MviViewModel<ViewState, ViewIntent, ViewEffect>`
-- [ ] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
-- [ ] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
+- [x] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
+- [x] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
 
 ## UI y accesibilidad
 
@@ -33,15 +33,15 @@
 
 ## Gates automatizados
 
-- [ ] `./gradlew.bat compileDebugKotlin` verde
-- [ ] `./gradlew.bat compileDebugAndroidTestSources` verde
-- [ ] `./gradlew.bat detekt ktlintCheck lint` verdes
-- [ ] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
-- [ ] `python scripts/check_sdd.py` PASS
-- [ ] `python scripts/check_layers.py` PASS
-- [ ] `python scripts/check_endpoints.py` PASS
-- [ ] `python scripts/check_secrets.py` PASS
-- [ ] `python scripts/check_coverage.py --min 80` PASS
+- [x] `./gradlew.bat compileDebugKotlin` verde
+- [x] `./gradlew.bat compileDebugAndroidTestSources` verde
+- [x] `./gradlew.bat detekt ktlintCheck lint` verdes
+- [x] `./gradlew.bat testDebugUnitTest koverVerifyDebug` verdes (`>= 80%`)
+- [x] `python scripts/check_sdd.py` PASS
+- [x] `python scripts/check_layers.py` PASS
+- [x] `python scripts/check_endpoints.py` PASS
+- [x] `python scripts/check_secrets.py` PASS
+- [x] `python scripts/check_coverage.py --min 80` PASS
 
 ## Cierre SDD
 

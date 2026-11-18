@@ -37,7 +37,7 @@ data class UploadedMedia(
     val url: String
 )
 
-enum class OfferField { TITLE, DESCRIPTION, PRICE, STOCK, EXPIRATION }
+enum class OfferField { TITLE, DESCRIPTION, PRICE, STOCK, EXPIRATION, PHOTO }
 
 data class OfferValidationError(
     val field: OfferField,
@@ -50,10 +50,13 @@ object OfferPublishingPolicy {
 
     fun validate(input: CreateOfferInput, nowMillis: Long): OfferValidationError? {
         val title = input.title.trim()
+        val description = input.description.trim()
         return when {
             title.length !in MIN_TITLE_LENGTH..MAX_TITLE_LENGTH ->
                 OfferValidationError(OfferField.TITLE, "El título debe tener entre $MIN_TITLE_LENGTH y $MAX_TITLE_LENGTH caracteres")
-            input.description.trim().length > MAX_DESCRIPTION_LENGTH ->
+            description.isEmpty() ->
+                OfferValidationError(OfferField.DESCRIPTION, "Ingresa una descripción del producto")
+            description.length > MAX_DESCRIPTION_LENGTH ->
                 OfferValidationError(OfferField.DESCRIPTION, "La descripción no puede superar $MAX_DESCRIPTION_LENGTH caracteres")
             else -> validatePrices(input) ?: validateStockAndExpiration(input, nowMillis)
         }

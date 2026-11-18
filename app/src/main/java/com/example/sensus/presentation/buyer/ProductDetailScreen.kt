@@ -86,6 +86,7 @@ fun ProductDetailScreen(
                 onRefreshFriends = { friendsViewModel.dispatchIntent(FriendsViewIntent.Refresh) },
                 onDismiss = { showShareSheet = false },
                 onSendToFriends = { recipientIds ->
+                    showShareSheet = false
                     friendsViewModel.dispatchIntent(FriendsViewIntent.ShareOffer(offerToShare.id, recipientIds))
                 }
             )

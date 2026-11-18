@@ -1,4 +1,4 @@
-• Selector de distancia personalizado en el mapa (desde 50 m hasta 5 km; hasta 2 km en modo invitado).
-• El mapa recuerda tu vista preferida (Estándar, Satélite, Relieve o Nocturno) de forma cifrada al abrir la app.
-• Detección mejorada de ubicación GPS y acceso directo al Aviso de Privacidad.
-• Cierre de sesión seguro con invalidación remota y mejoras de estabilidad, privacidad y rendimiento.
+• Sensi IA: tu asistente de ahorro encuentra ofertas cercanas y las muestra en tarjetas con precio, vigencia y botones para apartar, ver el detalle o llegar a la tienda.
+• Respuestas del asistente con formato claro: negritas y listas.
+• Mapa con distancia personalizable (50 m a 5 km; 2 km en modo invitado) y vista preferida guardada de forma cifrada.
+• Mayor privacidad: sin registros de red en la versión final. Mejoras de estabilidad y rendimiento.

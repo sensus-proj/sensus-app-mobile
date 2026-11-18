@@ -36,6 +36,9 @@ import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
+/** Timeout holgado: bajo carga de CI 500 ms hacia fallar pruebas de la capa HTTP de forma intermitente. */
+private const val HTTP_TIMEOUT_SECONDS = 10L
+
 class AiChatApiTest {
 
     private val server = MockWebServer()
@@ -88,8 +91,8 @@ class AiChatApiTest {
         every { sessionRepository.sessionState } returns sessionState
 
         val client = OkHttpClient.Builder()
-            .connectTimeout(500, TimeUnit.MILLISECONDS)
-            .readTimeout(500, TimeUnit.MILLISECONDS)
+            .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
         api = Retrofit.Builder()

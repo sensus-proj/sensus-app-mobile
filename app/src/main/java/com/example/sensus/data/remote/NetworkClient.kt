@@ -1,5 +1,6 @@
 package com.example.sensus.data.remote
 
+import com.example.sensus.BuildConfig
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.remote.api.AuthApiService
@@ -32,6 +33,23 @@ internal const val MEDIA_UPLOAD_TIMEOUT_SECONDS = 45L
 /** `POST /api/v1/ai/messages` (docs/rate-matrix.md, FT-24): el backend corta a 25 s; margen de red -> 30 s. */
 internal const val AI_CHAT_TIMEOUT_SECONDS = 30L
 
+/**
+ * Nivel de logging HTTP (FT-27, RF-27-03). En `release` es `NONE`: ningún dato de red llega a logcat. En `debug`
+ * es `BASIC` (método, URL y código): sin cabeceras ni cuerpos, así que no se imprimen tokens JWT, contraseñas
+ * ni PII ni en desarrollo.
+ */
+internal fun httpLoggingLevel(isDebug: Boolean): HttpLoggingInterceptor.Level =
+    if (isDebug) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+
+/** Interceptor de logging con cabeceras sensibles redactadas por defensa en profundidad. */
+internal fun buildLoggingInterceptor(isDebug: Boolean, logger: HttpLoggingInterceptor.Logger = HttpLoggingInterceptor.Logger.DEFAULT): HttpLoggingInterceptor =
+    HttpLoggingInterceptor(logger).apply {
+        level = httpLoggingLevel(isDebug)
+        redactHeader("Authorization")
+        redactHeader("Cookie")
+        redactHeader("Set-Cookie")
+    }
+
 class NetworkClient(
     private val securePreferences: SecurePreferences,
     baseUrl: String = DEFAULT_BASE_URL,
@@ -50,9 +68,7 @@ class NetworkClient(
         encodeDefaults = true
     }
 
-    internal val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
-    }
+    internal val loggingInterceptor = buildLoggingInterceptor(BuildConfig.DEBUG)
 
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)

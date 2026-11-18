@@ -17,9 +17,9 @@
 
 | ID | Requisito |
 |---|---|
-| RF-15-01 | Validar en `domain/usecase` que título no sea vacío, `discountPrice > 0`, `originalPrice > discountPrice`, `stock >= 1` y `expiresAt` sea futura respecto al reloj actual. |
+| RF-15-01 | Validar en `domain/usecase` y ViewModel que título (`3..100`), descripción obligatoria (`1..500`), foto de producto obligatoria, `discountPrice > 0`, `originalPrice > discountPrice`, `stock >= 1` y `expiresAt` futura estén completos respecto al reloj actual. |
 | RF-15-02 | Calcular y mostrar en tiempo real el porcentaje de descuento `(original - oferta) / original * 100` y el ahorro neto sin guardar inconsistencias. |
-| RF-15-03 | Al seleccionar foto de cámara o galería, comprimirla en `data/` a JPEG/WebP verificando tamaño `<= 4.5 MB` antes de enviarla por `MultipartBody.Part` a `POST /api/v1/media/upload`. |
+| RF-15-03 | Al seleccionar foto de cámara o galería (solicitando en tiempo de ejecución `CAMERA` antes de abrir cámara para evitar cierre inesperado), comprimirla en `data/` a JPEG/WebP verificando tamaño `<= 4.5 MB` antes de enviarla por `MultipartBody.Part` a `POST /api/v1/media/upload`. |
 | RF-15-04 | `ImageModerationService` DEBE operar estrictamente *fail-closed* (sin aprobar por defecto en producción si no hay red o falla el cliente) y el backend modera texto e imagen antes de persistir o publicar. |
 | RF-15-05 | Enviar `POST /api/v1/offers` con `mediaId`/URL devuelto, precios, stock, categoría y `expiresAt` UTC; al recibir `201 Created`, insertar la nueva oferta en `OfferDao` y notificar éxito. |
 | RF-15-06 | Si la imagen o texto es rechazado por moderación (`400`/`422`), bloquear la publicación y mostrar mensaje claro sin crear la oferta. |

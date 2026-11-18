@@ -52,6 +52,7 @@ class FriendsViewModel @Inject constructor(
                     sentRequests = lists.sent,
                     newlyArrivedRequest = lists.arrived,
                     newlyAcceptedFriend = lists.accepted,
+                    activeThreadFriendUserId = identity.thread.activeFriendUserId,
                     sharedOffers = identity.thread.offers,
                     isLoadingThread = identity.thread.isLoading,
                     isSharingOffer = identity.thread.isSharing,
@@ -81,6 +82,11 @@ class FriendsViewModel @Inject constructor(
                 emitEffect(FriendsViewEffect.ShowMessage("Amigo eliminado de tu red."))
             }
             is FriendsViewIntent.LoadSharedOffers -> loadSharedOffers(intent.friendUserId)
+            FriendsViewIntent.ClearSharedOffers -> threadState.value = threadState.value.copy(
+                activeFriendUserId = null,
+                offers = emptyList(),
+                isLoading = false
+            )
             is FriendsViewIntent.ShareOffer -> shareOffer(intent.offerId, intent.recipientUserIds)
             FriendsViewIntent.ConsumePendingDeepLink -> consumePendingDeepLink()
             FriendsViewIntent.NotificationShown -> friendsRepository.markNoticeHandled(FriendNoticeType.INCOMING_REQUEST)
@@ -90,10 +96,17 @@ class FriendsViewModel @Inject constructor(
     }
 
     private fun loadSharedOffers(friendUserId: String) {
+        val switchedFriend = threadState.value.activeFriendUserId != friendUserId
+        threadState.value = if (switchedFriend) {
+            threadState.value.copy(activeFriendUserId = friendUserId, offers = emptyList(), isLoading = true)
+        } else {
+            threadState.value.copy(isLoading = true)
+        }
         viewModelScope.launch {
-            threadState.value = threadState.value.copy(isLoading = true)
             val offers = friendsRepository.getSharedOffersWithFriend(friendUserId)
-            threadState.value = threadState.value.copy(offers = offers, isLoading = false)
+            if (threadState.value.activeFriendUserId == friendUserId) {
+                threadState.value = threadState.value.copy(offers = offers, isLoading = false)
+            }
         }
     }
 
@@ -187,6 +200,7 @@ class FriendsViewModel @Inject constructor(
 }
 
 private data class ThreadUiSnapshot(
+    val activeFriendUserId: String? = null,
     val offers: List<SharedOfferMessage> = emptyList(),
     val isLoading: Boolean = false,
     val isSharing: Boolean = false

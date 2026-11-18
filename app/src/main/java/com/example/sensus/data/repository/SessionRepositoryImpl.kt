@@ -34,7 +34,7 @@ class SessionRepositoryImpl(
         val isActive = isGuest || (hasToken && sessionType == SessionType.REGISTERED) || isLegacyManager
 
         val identity = resolveSessionIdentity(isActive, isGuest)
-        val (isMerchant, storeName) = resolveMerchantState(isActive, isGuest)
+        val (isMerchant, storeName, storeOpen) = resolveMerchantState(isActive, isGuest)
         return SessionState(
             isSessionActive = isActive,
             isGuest = isGuest,
@@ -46,17 +46,18 @@ class SessionRepositoryImpl(
             activePhotoUrl = identity.third,
             activeToken = token,
             isMerchantRegistered = isMerchant,
-            merchantStoreName = storeName
+            merchantStoreName = storeName,
+            isStoreOpen = storeOpen
         )
     }
 
-    private fun resolveMerchantState(isActive: Boolean, isGuest: Boolean): Pair<Boolean, String?> {
-        if (!isActive || isGuest) return false to null
+    private fun resolveMerchantState(isActive: Boolean, isGuest: Boolean): Triple<Boolean, String?, Boolean> {
+        if (!isActive || isGuest) return Triple(false, null, true)
         val status = securePreferences.storedMerchantStatus
         return if (status.isRegistered) {
-            true to status.storeName?.takeIf { it.isNotBlank() }
+            Triple(true, status.storeName?.takeIf { it.isNotBlank() }, status.isStoreOpen)
         } else {
-            false to null
+            Triple(false, null, true)
         }
     }
 
@@ -128,7 +129,20 @@ class SessionRepositoryImpl(
     }
 
     override suspend fun setMerchantStatus(isRegistered: Boolean, storeName: String?) {
-        securePreferences.storedMerchantStatus = com.example.sensus.data.local.StoredMerchantStatus(isRegistered, storeName)
+        val current = securePreferences.storedMerchantStatus
+        securePreferences.storedMerchantStatus = if (isRegistered) {
+            current.copy(isRegistered = true, storeName = storeName)
+        } else {
+            com.example.sensus.data.local.StoredMerchantStatus(isRegistered = false)
+        }
+        syncState()
+    }
+
+    override suspend fun setStoreOpen(isOpen: Boolean) {
+        val current = securePreferences.storedMerchantStatus
+        if (current.isRegistered) {
+            securePreferences.storedMerchantStatus = current.copy(isStoreOpen = isOpen)
+        }
         syncState()
     }
 }

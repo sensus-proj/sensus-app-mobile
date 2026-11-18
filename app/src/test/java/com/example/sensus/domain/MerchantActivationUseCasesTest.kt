@@ -3,13 +3,18 @@ package com.example.sensus.domain
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.GeoCoordinatePolicy
+import com.example.sensus.domain.model.HorarioDia
+import com.example.sensus.domain.model.MerchantActivationInput
+import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.MerchantProfileUpdateInput
 import com.example.sensus.domain.model.ResolvedAddress
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.ReverseGeocodingRepository
 import com.example.sensus.domain.usecase.ActivateMerchantUseCase
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.ResolveAddressFromCoordinatesUseCase
+import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -127,5 +132,64 @@ class MerchantActivationUseCasesTest {
         assertTrue(result is Result.Success)
         assertEquals("Abarrotes Luna", (result as Result.Success).data.nombreComercial)
         coVerify(exactly = 1) { repo.getMyMerchant() }
+    }
+
+    @Test
+    fun activateMerchantUseCase_withInput_trimsAndDelegatesBasedOnPhoto() = runTest {
+        val repo = mockk<MerchantRepository>()
+        val coords = MerchantCoordinates(19.43, -99.13)
+        val expected = MerchantProfile(
+            nombreComercial = "Tienda Foto",
+            direccion = "Av. Hidalgo 50",
+            codigoPostal = "42800",
+            fotoFachadaUrl = "https://cdn.sensus.com/fachada.jpg"
+        )
+        coEvery { repo.activateMerchant(any()) } returns Result.Success(expected)
+        coEvery { repo.activateMerchant(any(), any(), any(), any(), any()) } returns Result.Success(expected)
+
+        val useCase = ActivateMerchantUseCase(repo)
+        val invalid = useCase(MerchantActivationInput("A", "Av. Hidalgo 50", "42800", coords, "https://cdn.sensus.com/fachada.jpg"))
+        assertTrue(invalid is Result.Failure)
+
+        val noPhoto = useCase(MerchantActivationInput(" Tienda Foto ", " Av. Hidalgo 50 ", " 42800 ", coords, "   "))
+        assertTrue(noPhoto is Result.Success)
+        coVerify(exactly = 1) { repo.activateMerchant("Tienda Foto", "Av. Hidalgo 50", "42800", 19.43, -99.13) }
+
+        val withPhoto = useCase(MerchantActivationInput(" Tienda Foto ", " Av. Hidalgo 50 ", " 42800 ", coords, " https://cdn.sensus.com/fachada.jpg "))
+        assertTrue(withPhoto is Result.Success)
+        coVerify(exactly = 1) {
+            repo.activateMerchant(
+                MerchantActivationInput("Tienda Foto", "Av. Hidalgo 50", "42800", coords, "https://cdn.sensus.com/fachada.jpg")
+            )
+        }
+    }
+
+    @Test
+    fun updateMerchantProfileUseCase_withInputAndCoordinates_validatesAndTrims() = runTest {
+        val repo = mockk<MerchantRepository>()
+        val coords = MerchantCoordinates(19.41, -99.16)
+        val schedules = listOf(HorarioDia("Lunes", "08:00", "20:00", false))
+        val expected = MerchantProfile("m1", "u1", "Café Roma", "Roma Norte 55", "06700", 19.41, -99.16, schedules, "https://cdn.sensus.com/roma.jpg")
+
+        coEvery { repo.updateMerchantProfile(any()) } returns Result.Success(expected)
+        coEvery { repo.updateMerchantProfile(any(), any(), any(), any(), any()) } returns Result.Success(expected)
+
+        val useCase = UpdateMerchantProfileUseCase(repo)
+        val invalid = useCase(MerchantProfileUpdateInput("Café", "abc", "06700", schedules, coords, "https://cdn.sensus.com/roma.jpg"))
+        assertTrue(invalid is Result.Failure)
+
+        val legacyWithCoords = useCase(" Café Roma ", " Roma Norte 55 ", " 06700 ", schedules, coords)
+        assertTrue(legacyWithCoords is Result.Success)
+        coVerify(exactly = 1) { repo.updateMerchantProfile("Café Roma", "Roma Norte 55", "06700", schedules, coords) }
+
+        val inputResult = useCase(
+            MerchantProfileUpdateInput(" Café Roma ", " Roma Norte 55 ", " 06700 ", schedules, coords, " https://cdn.sensus.com/roma.jpg ")
+        )
+        assertTrue(inputResult is Result.Success)
+        coVerify(exactly = 1) {
+            repo.updateMerchantProfile(
+                MerchantProfileUpdateInput("Café Roma", "Roma Norte 55", "06700", schedules, coords, "https://cdn.sensus.com/roma.jpg")
+            )
+        }
     }
 }

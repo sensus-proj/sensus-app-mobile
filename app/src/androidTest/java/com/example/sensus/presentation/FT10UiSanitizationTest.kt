@@ -2,6 +2,7 @@ package com.example.sensus.presentation
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -67,8 +68,7 @@ class FT10UiSanitizationTest {
         composeTestRule
             .onAllNodesWithText("WhatsApp", substring = true, ignoreCase = true)
             .assertCountEquals(0)
-        composeTestRule.onNodeWithText("Compartir invitación").assertExists()
-        composeTestRule.onNodeWithText("Compartir").assertExists()
+        composeTestRule.onNodeWithText("Compartir invitación").assertExists().assertHasClickAction()
     }
 
     @Test

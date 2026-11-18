@@ -1,5 +1,8 @@
 package com.example.sensus.presentation.merchant
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,10 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
@@ -32,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,10 +61,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantCoordinates
@@ -78,6 +85,7 @@ import kotlinx.coroutines.launch
 
 private const val STORE_AVATAR_ALPHA = 0.12f
 private const val EDIT_BTN_ALPHA = 0.1f
+private const val ERROR_BG_ALPHA = 0.1f
 private const val DIVIDER_COLOR_HEX = 0xFFF1F5F9
 private const val MIN_ADDR_LEN = 5
 private const val MAX_ADDR_LEN = 250
@@ -103,12 +111,16 @@ private data class MerchantProfileDisplayState(
     val isOpen: Boolean = true,
     val updateSuccessMessage: String? = null,
     val storeLatitude: Double? = null,
-    val storeLongitude: Double? = null
+    val storeLongitude: Double? = null,
+    val isUpdatingPhoto: Boolean = false,
+    val isUpdatingStatus: Boolean = false,
+    val photoErrorMessage: String? = null
 )
 
 @ComposeUiModel
 private data class MerchantProfileActions(
     val onToggleOpen: (Boolean) -> Unit,
+    val onPhotoClick: () -> Unit,
     val onEditClick: () -> Unit,
     val onSwitchToBuyer: () -> Unit
 )
@@ -120,13 +132,17 @@ private data class MerchantEditSheetActions(
     val onSaveClick: () -> Unit
 )
 
+private enum class MerchantProfileSheet {
+    NONE,
+    FACADE_PICKER,
+    EDIT
+}
+
 @Composable
 fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(), onSwitchToBuyer: () -> Unit, modifier: Modifier = Modifier) {
     val profileState by viewModel.viewState.collectAsState()
     val store = profileState.store
-    val scope = rememberCoroutineScope()
-    var isSaving by remember { mutableStateOf(false) }
-    var showEditSheet by remember { mutableStateOf(false) }
+    var activeSheet by remember { mutableStateOf(MerchantProfileSheet.NONE) }
     var display by remember { mutableStateOf(buildMerchantDisplayState(store, profileState.schedules, MerchantProfileDisplayState())) }
 
     LaunchedEffect(Unit) { viewModel.dispatchIntent(MerchantProfileViewIntent.LoadMerchant) }
@@ -135,40 +151,90 @@ fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(),
     }
 
     MerchantProfileListContent(
-        display = display,
+        display = display.copy(
+            isOpen = store.isOpen,
+            updateSuccessMessage = profileState.statusMessage ?: display.updateSuccessMessage,
+            isUpdatingPhoto = profileState.isUpdatingPhoto,
+            isUpdatingStatus = profileState.isUpdatingStatus,
+            photoErrorMessage = profileState.errorMessage
+        ),
         store = store,
         actions = MerchantProfileActions(
-            onToggleOpen = { display = display.copy(isOpen = it) },
-            onEditClick = { showEditSheet = true },
+            onToggleOpen = { viewModel.dispatchIntent(MerchantProfileViewIntent.ToggleStoreOpen(it)) },
+            onPhotoClick = { activeSheet = MerchantProfileSheet.FACADE_PICKER },
+            onEditClick = { activeSheet = MerchantProfileSheet.EDIT },
             onSwitchToBuyer = onSwitchToBuyer
         ),
         modifier = modifier
     )
 
-    if (showEditSheet) {
-        val draft = MerchantEditDraft(
-            display.storeName,
-            display.storeAddress,
-            display.storePostalCode,
-            display.schedules,
-            display.storeLatitude,
-            display.storeLongitude
-        )
-        MerchantEditBottomSheet(
-            initialDraft = draft,
-            isSaving = isSaving,
-            onDismiss = { showEditSheet = false },
-            onSave = { edited, onError ->
-                scope.launch {
-                    isSaving = true
-                    saveMerchantEdit(viewModel, edited, onError) { updatedDisplay ->
-                        display = updatedDisplay.copy(isOpen = display.isOpen)
-                        showEditSheet = false
-                    }
-                    isSaving = false
-                }
+    MerchantProfileSheets(
+        viewModel = viewModel,
+        display = display,
+        activeSheet = activeSheet,
+        onDismiss = { activeSheet = MerchantProfileSheet.NONE },
+        onDisplayUpdated = { display = it }
+    )
+}
+
+@Composable
+private fun MerchantProfileSheets(
+    viewModel: MerchantProfileViewModel,
+    display: MerchantProfileDisplayState,
+    activeSheet: MerchantProfileSheet,
+    onDismiss: () -> Unit,
+    onDisplayUpdated: (MerchantProfileDisplayState) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
+    val launchCamera = rememberSafeMerchantCameraLauncher {
+        onDismiss()
+        viewModel.dispatchIntent(MerchantProfileViewIntent.UpdateFacadePhoto(encodeMerchantCameraBitmap(it)))
+    }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            onDismiss()
+            scope.launch {
+                val bytes = readMerchantImageBytes(context, uri)
+                if (bytes != null) viewModel.dispatchIntent(MerchantProfileViewIntent.UpdateFacadePhoto(bytes))
             }
+        }
+    }
+
+    when (activeSheet) {
+        MerchantProfileSheet.NONE -> Unit
+        MerchantProfileSheet.FACADE_PICKER -> PhotoPickerBottomSheet(
+            title = "Foto de la fachada de tu tienda",
+            onDismiss = onDismiss,
+            onCameraClick = launchCamera,
+            onGalleryClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
         )
+        MerchantProfileSheet.EDIT -> {
+            val draft = MerchantEditDraft(
+                display.storeName,
+                display.storeAddress,
+                display.storePostalCode,
+                display.schedules,
+                display.storeLatitude,
+                display.storeLongitude
+            )
+            MerchantEditBottomSheet(
+                initialDraft = draft,
+                isSaving = isSaving,
+                onDismiss = onDismiss,
+                onSave = { edited, onError ->
+                    scope.launch {
+                        isSaving = true
+                        saveMerchantEdit(viewModel, edited, onError) { updatedDisplay ->
+                            onDisplayUpdated(updatedDisplay.copy(isOpen = display.isOpen))
+                            onDismiss()
+                        }
+                        isSaving = false
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -199,14 +265,28 @@ private fun MerchantProfileListContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         display.updateSuccessMessage?.let { msg -> item { ProfileSuccessBanner(message = msg) } }
-        item { MerchantProfileHeaderCard(storeName = display.storeName, store = store, onEditClick = actions.onEditClick) }
-        item { MerchantOpenToggleCard(isOpen = display.isOpen, onToggle = actions.onToggleOpen) }
+        display.photoErrorMessage?.let { err ->
+            item {
+                Surface(shape = RoundedCornerShape(12.dp), color = SensusRed.copy(alpha = ERROR_BG_ALPHA), modifier = Modifier.fillMaxWidth()) {
+                    Text(text = err, fontSize = 12.sp, color = SensusRed, fontWeight = FontWeight.Medium, modifier = Modifier.padding(12.dp))
+                }
+            }
+        }
+        item {
+            MerchantProfileHeaderCard(
+                storeName = display.storeName,
+                store = store,
+                isUpdatingPhoto = display.isUpdatingPhoto,
+                onPhotoClick = actions.onPhotoClick,
+                onEditClick = actions.onEditClick
+            )
+        }
+        item { MerchantOpenToggleCard(isOpen = display.isOpen, isUpdating = display.isUpdatingStatus, onToggle = actions.onToggleOpen) }
         item {
             MerchantDetailsCard(
                 storeAddress = display.storeAddress,
                 storePostalCode = display.storePostalCode,
                 storeScheduleText = display.storeScheduleText,
-                phone = store.phone,
                 onEditClick = actions.onEditClick
             )
         }
@@ -240,6 +320,7 @@ private suspend fun saveMerchantEdit(
                     schedules = profile.horarios,
                     storeScheduleText = "Lun-Vie: 08:00 - 20:00 / Sáb: 09:00 - 18:00",
                     updateSuccessMessage = "¡Datos del local actualizados exitosamente! Coordenadas espaciales actualizadas.",
+                    isOpen = profile.activo,
                     storeLatitude = profile.latitud,
                     storeLongitude = profile.longitud
                 )
@@ -261,7 +342,7 @@ private fun ProfileSuccessBanner(message: String) {
 }
 
 @Composable
-private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, onEditClick: () -> Unit) {
+private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, isUpdatingPhoto: Boolean, onPhotoClick: () -> Unit, onEditClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -270,12 +351,11 @@ private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, o
             .clickable(onClick = onEditClick)
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(SensusPurple.copy(alpha = STORE_AVATAR_ALPHA)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(32.dp))
-            }
+            StoreProfileFacadeAvatar(
+                photoUrl = store.photoUrl,
+                isUpdating = isUpdatingPhoto,
+                onClick = onPhotoClick
+            )
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = storeName, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
@@ -299,14 +379,53 @@ private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, o
 }
 
 @Composable
-private fun MerchantOpenToggleCard(isOpen: Boolean, onToggle: (Boolean) -> Unit) {
+private fun StoreProfileFacadeAvatar(photoUrl: String?, isUpdating: Boolean, onClick: () -> Unit) {
+    val cleanUrl = photoUrl?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
+        if (raw.startsWith("http://", ignoreCase = true)) "https://${raw.drop("http://".length)}" else raw
+    }
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(SensusPurple.copy(alpha = STORE_AVATAR_ALPHA))
+            .clickable(enabled = !isUpdating, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (cleanUrl != null) {
+            AsyncImage(
+                model = cleanUrl,
+                contentDescription = "Foto de fachada del comercio",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
+            )
+        } else {
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = "Cambiar foto de tienda", tint = SensusPurple, modifier = Modifier.size(32.dp))
+        }
+        if (isUpdating) {
+            CircularProgressIndicator(color = SensusPurple, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+        } else {
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(3.dp).size(18.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(11.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MerchantOpenToggleCard(isOpen: Boolean, isUpdating: Boolean, onToggle: (Boolean) -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (isOpen) "Tienda Abierta" else "Tienda Cerrada",
                     fontSize = 15.sp,
@@ -314,13 +433,14 @@ private fun MerchantOpenToggleCard(isOpen: Boolean, onToggle: (Boolean) -> Unit)
                     color = if (isOpen) SensusSuccess else SensusRed
                 )
                 Text(
-                    text = if (isOpen) "Aceptando apartados y clientes" else "No se recibirán nuevos apartados",
+                    text = if (isOpen) "Visible en el mapa y aceptando apartados" else "Oculta del mapa · No se recibirán apartados",
                     fontSize = 11.sp,
                     color = SensusTextSecondary
                 )
             }
             Switch(
                 checked = isOpen,
+                enabled = !isUpdating,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = SensusSuccess)
             )
@@ -329,7 +449,7 @@ private fun MerchantOpenToggleCard(isOpen: Boolean, onToggle: (Boolean) -> Unit)
 }
 
 @Composable
-private fun MerchantDetailsCard(storeAddress: String, storePostalCode: String, storeScheduleText: String, phone: String, onEditClick: () -> Unit) {
+private fun MerchantDetailsCard(storeAddress: String, storePostalCode: String, storeScheduleText: String, onEditClick: () -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -351,7 +471,6 @@ private fun MerchantDetailsCard(storeAddress: String, storePostalCode: String, s
                 }
             }
             ProfileSimpleInfoRow(icon = Icons.Default.AccessTime, text = storeScheduleText)
-            ProfileSimpleInfoRow(icon = Icons.Default.Phone, text = phone)
         }
     }
 }
@@ -451,7 +570,16 @@ private fun MerchantEditSheetLazyBody(draft: MerchantEditDraft, editError: Strin
             .padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { EditSheetIntroHeader() }
+        item {
+            Column {
+                Text(text = "Editar datos del local comercial", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(
+                    text = "Al modificar la dirección física se recalcularán automáticamente las coordenadas espaciales.",
+                    fontSize = 12.sp,
+                    color = SensusTextSecondary
+                )
+            }
+        }
         item { EditSheetField("Nombre comercial", draft.name, "Nombre de la tienda") { actions.onDraftChange(draft.copy(name = it)) } }
         item {
             PeekingCatLocationButton(
@@ -477,34 +605,19 @@ private fun MerchantEditSheetLazyBody(draft: MerchantEditDraft, editError: Strin
             }
         }
         editError?.let { err -> item { Text(text = err, fontSize = 12.sp, color = SensusRed) } }
-        item { MerchantEditSaveButton(isSaving = isSaving, onClick = actions.onSaveClick) }
-    }
-}
-
-@Composable
-private fun MerchantEditSaveButton(isSaving: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = !isSaving,
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-    ) {
-        Text(text = if (isSaving) "Guardando..." else "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    }
-}
-
-@Composable
-private fun EditSheetIntroHeader() {
-    Column {
-        Text(text = "Editar datos del local comercial", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-        Text(
-            text = "Al modificar la dirección física se recalcularán automáticamente las coordenadas espaciales.",
-            fontSize = 12.sp,
-            color = SensusTextSecondary
-        )
+        item {
+            Button(
+                onClick = actions.onSaveClick,
+                enabled = !isSaving,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Text(text = if (isSaving) "Guardando..." else "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        }
     }
 }
 

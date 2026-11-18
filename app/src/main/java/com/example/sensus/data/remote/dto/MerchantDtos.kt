@@ -16,7 +16,8 @@ data class ActivateMerchantRequest(
     val direccion: String,
     val codigoPostal: String,
     val latitud: Double? = null,
-    val longitud: Double? = null
+    val longitud: Double? = null,
+    val fotoFachadaUrl: String? = null
 )
 
 @Serializable
@@ -26,7 +27,9 @@ data class UpdateMerchantProfileRequest(
     val codigoPostal: String,
     val horarios: List<HorarioDiaDto>? = null,
     val latitud: Double? = null,
-    val longitud: Double? = null
+    val longitud: Double? = null,
+    val fotoFachadaUrl: String? = null,
+    val activo: Boolean? = null
 )
 
 @Serializable
@@ -40,7 +43,8 @@ data class ComercioDto(
     val longitud: Double,
     val activo: Boolean = true,
     val fechaRegistro: String? = null,
-    val horarios: List<HorarioDiaDto>? = null
+    val horarios: List<HorarioDiaDto>? = null,
+    val fotoFachadaUrl: String? = null
 )
 
 @Serializable

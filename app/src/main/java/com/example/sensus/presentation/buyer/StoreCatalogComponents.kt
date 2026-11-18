@@ -106,6 +106,8 @@ internal fun StoreCatalogTopBar(storeName: String, offersCount: Int, onNavigateB
     )
 }
 
+private const val CATALOG_THUMB_DP = 54
+
 @Composable
 internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier = Modifier) {
     val addressText = if (cluster.postalCode.isNotBlank()) "${cluster.address} • C.P. ${cluster.postalCode}" else cluster.address
@@ -118,22 +120,26 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "${cluster.formattedDistance} • $addressText",
-                    fontSize = 12.sp,
-                    color = SensusTextSecondary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.AccessTime, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = scheduleText, fontSize = 12.sp, color = SensusTextMuted)
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            StoreAvatarThumbnail(photoUrl = cluster.merchantProfile?.fotoFachadaUrl, storeName = cluster.storeName, sizeDp = CATALOG_THUMB_DP)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${cluster.formattedDistance} • $addressText",
+                        fontSize = 12.sp,
+                        color = SensusTextSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.AccessTime, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = scheduleText, fontSize = 12.sp, color = SensusTextMuted)
+                }
             }
         }
     }

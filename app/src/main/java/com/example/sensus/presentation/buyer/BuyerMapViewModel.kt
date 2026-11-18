@@ -71,8 +71,7 @@ class BuyerMapViewModel @Inject constructor(
                 radiusKm = radiusKm.toDouble()
             )
             if (res is Result.Success) {
-                val resolved = res.data.filter { it.isPubliclyVisible }.ifEmpty { offersRepository.getOffers().filter { it.isPubliclyVisible } }
-                updateState { copy(offers = resolved) }
+                updateState { copy(offers = res.data.filter { it.isPubliclyVisible }) }
             }
         }
         viewModelScope.launch {
@@ -80,7 +79,7 @@ class BuyerMapViewModel @Inject constructor(
             val isGuest = viewState.value.isGuest || sessionRepository.sessionState.value.isGuest
             val merchantsRes = getNearbyMerchantsUseCase(location.latitude, location.longitude, radiusMeters, isGuest)
             if (merchantsRes is Result.Success) {
-                updateState { copy(nearbyMerchants = merchantsRes.data) }
+                updateState { copy(nearbyMerchants = merchantsRes.data.filter { it.activo }) }
             }
         }
     }
@@ -97,19 +96,22 @@ class BuyerMapViewModel @Inject constructor(
     private fun observeSession() {
         var lastEmail: String? = null
         var lastIsGuest: Boolean? = null
+        var lastIsStoreOpen: Boolean? = null
         viewModelScope.launch {
             sessionRepository.sessionState.collect { session ->
                 val userChanged = lastIsGuest != null &&
                     (lastEmail != session.activeEmail || lastIsGuest != session.isGuest)
+                val storeVisibilityChanged = lastIsStoreOpen != null && lastIsStoreOpen != session.isStoreOpen
                 lastEmail = session.activeEmail
                 lastIsGuest = session.isGuest
+                lastIsStoreOpen = session.isStoreOpen
                 updateState {
                     copy(
                         isGuest = session.isGuest,
                         selectedRadiusKm = GuestRadiusPolicy.clampRadius(selectedRadiusKm, session.isGuest)
                     )
                 }
-                if (userChanged) {
+                if (userChanged || storeVisibilityChanged) {
                     refreshNearbyOffers(viewState.value.userLocation, viewState.value.selectedRadiusKm)
                 }
             }

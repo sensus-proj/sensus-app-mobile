@@ -31,7 +31,8 @@ import org.junit.Test
 class OfferPublishingViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val useCase = mockk<CreateOfferUseCase>()
-    private val input = CreateOfferInput("Pan", "", StoreCategory.BAKERY, 100.0, 60.0, 7, Long.MAX_VALUE)
+    private val input = CreateOfferInput("Pan", "Pan dulce recién horneado", StoreCategory.BAKERY, 100.0, 60.0, 7, Long.MAX_VALUE)
+    private val sampleBytes = byteArrayOf(1, 2, 3)
 
     @Before
     fun setup() {
@@ -44,9 +45,17 @@ class OfferPublishingViewModelTest {
     }
 
     @Test
+    fun missingPhoto_stopsAtPhotoErrorWithoutCallingUseCase() = runTest(dispatcher) {
+        val vm = MerchantNewOfferViewModel(useCase)
+        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input, imageBytes = null))
+        assertEquals(OfferField.PHOTO, vm.viewState.value.fieldError?.field)
+        coVerify(exactly = 0) { useCase(any(), any()) }
+    }
+
+    @Test
     fun invalidPrice_stopsAtFieldErrorAndClearsWhenEdited() = runTest(dispatcher) {
         val vm = MerchantNewOfferViewModel(useCase)
-        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input.copy(discountPrice = 100.0)))
+        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input.copy(discountPrice = 100.0), sampleBytes))
         assertEquals(OfferField.PRICE, vm.viewState.value.fieldError?.field)
         coVerify(exactly = 0) { useCase(any(), any()) }
         vm.dispatchIntent(MerchantNewOfferViewIntent.FieldEdited)
@@ -59,8 +68,8 @@ class OfferPublishingViewModelTest {
         coEvery { useCase(any(), any()) } returns Result.Success(offer)
         val vm = MerchantNewOfferViewModel(useCase)
         vm.viewEffect.test {
-            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input))
-            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input))
+            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input, sampleBytes))
+            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input, sampleBytes))
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(MerchantNewOfferViewEffect.OfferCreated(offer), awaitItem())
             expectNoEvents()
@@ -73,7 +82,7 @@ class OfferPublishingViewModelTest {
         coEvery { useCase(any(), any()) } returns Result.Failure(AppError.ContentRejected("Imagen bloqueada"))
         val vm = MerchantNewOfferViewModel(useCase)
         vm.viewEffect.test {
-            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input))
+            vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input, sampleBytes))
             dispatcher.scheduler.advanceUntilIdle()
             expectNoEvents()
         }
@@ -87,7 +96,7 @@ class OfferPublishingViewModelTest {
     fun networkFailure_retainsFormAndAllowsRetry() = runTest(dispatcher) {
         coEvery { useCase(any(), any()) } returns Result.Failure(AppError.Network("Sin conexión"))
         val vm = MerchantNewOfferViewModel(useCase)
-        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input))
+        vm.dispatchIntent(MerchantNewOfferViewIntent.PublishOffer(input, sampleBytes))
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals("Sin conexión", vm.viewState.value.errorMessage)
         assertFalse(vm.viewState.value.isPublishing)
