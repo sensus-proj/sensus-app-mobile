@@ -58,7 +58,6 @@ import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusRating
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
@@ -154,7 +153,7 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
                     Text(text = scheduleText, fontSize = 12.sp, color = SensusTextMuted)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Star, contentDescription = "Reseñas", tint = SensusRating, modifier = Modifier.size(16.dp))
+                    Icon(imageVector = Icons.Default.Star, contentDescription = "Reseñas", tint = SensusPurple, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "$ratingLabel • Toca para ver reseñas",

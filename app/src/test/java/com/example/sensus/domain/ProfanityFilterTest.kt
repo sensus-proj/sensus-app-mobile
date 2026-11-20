@@ -93,4 +93,16 @@ class ProfanityFilterTest {
         assertTrue((merchantResult as Result.Failure).error is AppError.Validation)
         coVerify(exactly = 0) { merchantRepo.activateMerchant(any(), any(), any(), any(), any()) }
     }
+
+    @Test
+    fun containsProfanity_handlesNullBlankPunctuationPhrasesAndAllLeetSymbols() {
+        assertFalse(ProfanityFilter.containsProfanity(null))
+        assertFalse(ProfanityFilter.containsProfanity("   "))
+        assertFalse(ProfanityFilter.containsProfanity("...!!!---"))
+        assertFalse(ProfanityFilter.containsProfanity("mi hijo de buenos modales"))
+        assertTrue(ProfanityFilter.containsProfanity("h1j0 d3 pu74"))
+        assertTrue(ProfanityFilter.containsProfanity("|diot4 y \$h!7 @sshole p3nd3j0"))
+        assertTrue(ProfanityFilter.containsProfanity("eres un hijo de putamala luego hijo de puta"))
+        assertTrue(ProfanityFilter.containsProfanity("f u c k"))
+    }
 }

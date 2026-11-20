@@ -132,5 +132,40 @@ class StoreReviewsViewModelTest {
         vm.dispatchIntent(StoreReviewsViewIntent.Load("m-1", "Café", "Calle 1", null))
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals("Sin conexión", vm.viewState.value.errorMessage)
+
+        vm.dispatchIntent(StoreReviewsViewIntent.ClearError)
+        assertNull(vm.viewState.value.errorMessage)
+    }
+
+    @Test
+    fun failuresAndReplyProfanity_surfaceValidationAndNetworkErrors() = runTest(dispatcher) {
+        val vm = buildVm()
+        vm.dispatchIntent(StoreReviewsViewIntent.Load("m-1", "Café Central", "Av. Reforma", null))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coEvery { repository.toggleReviewLike("rev-1") } returns Result.Failure(AppError.Forbidden("Solo usuarios registrados"))
+        vm.dispatchIntent(StoreReviewsViewIntent.ToggleLikeReview("rev-1"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(vm.viewState.value.errorMessage)
+
+        vm.dispatchIntent(StoreReviewsViewIntent.OpenReply("rev-1"))
+        vm.dispatchIntent(StoreReviewsViewIntent.ReplyDraftChanged("Eres una puta mentira"))
+        vm.dispatchIntent(StoreReviewsViewIntent.SubmitReply("rev-1"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(vm.viewState.value.errorMessage)
+        coVerify(exactly = 0) { repository.replyToReview(any(), any()) }
+
+        coEvery { repository.replyToReview("rev-1", "Gracias amigo") } returns Result.Failure(AppError.Network("Timeout"))
+        vm.dispatchIntent(StoreReviewsViewIntent.ReplyDraftChanged("Gracias amigo"))
+        vm.dispatchIntent(StoreReviewsViewIntent.SubmitReply("rev-1"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals("Timeout", vm.viewState.value.errorMessage)
+
+        coEvery { repository.createReview("m-1", 5, "Todo limpio") } returns Result.Failure(AppError.Network("Error servidor"))
+        vm.dispatchIntent(StoreReviewsViewIntent.SelectRating(5))
+        vm.dispatchIntent(StoreReviewsViewIntent.CommentChanged("Todo limpio"))
+        vm.dispatchIntent(StoreReviewsViewIntent.SubmitReview("m-1"))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals("Error servidor", vm.viewState.value.errorMessage)
     }
 }

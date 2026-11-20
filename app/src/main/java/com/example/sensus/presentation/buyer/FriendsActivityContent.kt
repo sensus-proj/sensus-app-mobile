@@ -42,7 +42,6 @@ import com.example.sensus.domain.model.CommunityActivityItem
 import com.example.sensus.domain.model.CommunityActivityType
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusRating
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
@@ -209,7 +208,7 @@ private fun ActivityBadgeRow(item: CommunityActivityItem) {
                 Icon(
                     imageVector = Icons.Default.Star,
                     contentDescription = null,
-                    tint = if (idx <= stars) SensusRating else Color.LightGray,
+                    tint = if (idx <= stars) SensusPurple else Color.LightGray,
                     modifier = Modifier.size(14.dp)
                 )
             }

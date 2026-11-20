@@ -52,7 +52,6 @@ import com.example.sensus.domain.model.StoreReviewsSummary
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusRating
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
@@ -66,7 +65,7 @@ import java.util.TimeZone
 private const val MAX_STARS = 5
 private const val TRACK_COLOR_HEX = 0xFFE2E8F0
 private const val AVATAR_BG_ALPHA = 0.14f
-private val REVIEW_DATE_LOCALE = Locale("es", "MX")
+private val REVIEW_DATE_LOCALE = Locale.forLanguageTag("es-MX")
 private val ISO_PATTERNS = listOf(
     "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
     "yyyy-MM-dd'T'HH:mm:ss'Z'",
@@ -132,7 +131,7 @@ private fun PlayStoreScoreColumn(average: Double, totalReviews: Int) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = String.format(Locale.US, "%.1f", average), fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.width(4.dp))
-            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = SensusRating, modifier = Modifier.size(24.dp))
+            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(24.dp))
         }
         Text(text = "de $MAX_STARS", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextSecondary)
         Spacer(modifier = Modifier.height(2.dp))
@@ -171,7 +170,7 @@ internal fun ReviewComposerCard(state: StoreReviewsViewState, onIntent: (StoreRe
                         Icon(
                             imageVector = if (selected) Icons.Filled.Star else Icons.Outlined.StarBorder,
                             contentDescription = "$star estrellas",
-                            tint = if (selected) SensusRating else SensusTextMuted,
+                            tint = if (selected) SensusPurple else SensusTextMuted,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -261,7 +260,7 @@ private fun ReviewAuthorRow(name: String, photoUrl: String?, stars: Int, dateTex
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = if (idx <= stars) SensusRating else Color(TRACK_COLOR_HEX),
+                            tint = if (idx <= stars) SensusPurple else Color(TRACK_COLOR_HEX),
                             modifier = Modifier.size(13.dp)
                         )
                     }
