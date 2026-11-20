@@ -912,4 +912,5 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Corrección (T09.29):** `setup-java@v5` sin caché + `gradle/actions/setup-gradle@v4` en todos los jobs de `ci.yml` y `release-playstore.yml`; eliminados los `actions/cache` manuales. Documentado como E-07 en `docs/errores-conocidos.md`.
 - **Commit `cf5abdf`** en `movil_Rodrigo`. En el CI siguiente `unit-test` pasó, pero `instrumentation-compile` falló al resolver el plugin de Hilt 2.58 (disponible en Central, HTTP 200): descargas inestables desde Maven Central con caché vacía.
 - **Segunda corrección (2026-11-20):** `GRADLE_OPTS` con reintentos (5, backoff 2 s) y timeouts de 60 s en `ci.yml` y `release-playstore.yml`; `setup-gradle` escribe caché en `main` y `develop`.
-- **Pendiente:** confirmar `ci` en verde y que el push a `develop` genere la caché.
+- **Tercera corrección (2026-11-20):** el push a `develop` (run #117) falló otra vez por un 404 de Central, que Gradle no reintenta. Se antepone el mirror de Maven Central de Google en `settings.gradle.kts` (plugins y dependencias), con `mavenCentral()` de respaldo. Verificado en local con `dependencyInsight --refresh-dependencies`.
+- **Pendiente:** confirmar `ci` en verde en `develop` y en el PR a `main`.
