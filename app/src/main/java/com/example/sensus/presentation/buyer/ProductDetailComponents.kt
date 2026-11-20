@@ -1,5 +1,6 @@
 package com.example.sensus.presentation.buyer
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
@@ -34,6 +36,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -68,6 +71,7 @@ import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRating
+import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
@@ -156,6 +160,48 @@ internal fun ProductSaveInterestPill(isSaved: Boolean, onClick: () -> Unit) {
             Icon(imageVector = iconVector, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contentColor)
+        }
+    }
+}
+
+@Composable
+internal fun ProductSocialLikeRow(likesCount: Int, isLiked: Boolean, isBusy: Boolean, onToggleLike: () -> Unit) {
+    val containerColor = if (isLiked) SensusRed.copy(alpha = NOTICE_BG_ALPHA) else Color.White
+    val contentColor = if (isLiked) SensusRed else SensusTextSecondary
+    val label = if (isLiked) "Te gusta" else "Me gusta"
+    val countLabel = if (likesCount == 1) "1 persona dio me gusta" else "$likesCount personas dieron me gusta"
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, if (isLiked) SensusRed else SensusVioletBg),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = !isBusy, onClick = onToggleLike)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = label,
+                    tint = contentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contentColor)
+            }
+            Text(
+                text = countLabel,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isLiked) SensusRed else SensusTextMuted
+            )
         }
     }
 }

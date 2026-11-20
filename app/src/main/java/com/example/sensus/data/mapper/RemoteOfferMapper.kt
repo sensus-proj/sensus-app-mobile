@@ -92,7 +92,9 @@ object RemoteOfferMapper {
             merchantId = merchantId,
             status = resolvedStatus,
             version = version.coerceAtLeast(1),
-            expiresAtMillis = expiresMillis
+            expiresAtMillis = expiresMillis,
+            likesCount = likesCount,
+            isLikedByMe = isLikedByMe
         )
         return applyOfferCoordinates(offer)
     }

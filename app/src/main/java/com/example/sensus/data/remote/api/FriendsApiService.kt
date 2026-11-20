@@ -1,5 +1,6 @@
 package com.example.sensus.data.remote.api
 
+import com.example.sensus.data.remote.dto.CommunityActivityItemDto
 import com.example.sensus.data.remote.dto.FriendItemDto
 import com.example.sensus.data.remote.dto.FriendSharedOffersThreadDto
 import com.example.sensus.data.remote.dto.FriendsOverviewDto
@@ -13,6 +14,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface FriendsApiService {
     @GET("api/v1/friends")
@@ -35,4 +37,7 @@ interface FriendsApiService {
 
     @POST("api/v1/offers/{offerId}/share")
     suspend fun shareOfferWithFriends(@Path("offerId") offerId: String, @Body body: ShareOfferRequestBody): Response<ShareOfferResultDto>
+
+    @GET("api/v1/community/friends-activity")
+    suspend fun getFriendsActivity(@Query("limit") limit: Int = 50): Response<List<CommunityActivityItemDto>>
 }
