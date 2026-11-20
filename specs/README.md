@@ -34,7 +34,7 @@ specs/FT-XX-<slug>/
 | `FT-12-detalle-filtros-ruteo` | Negocio (Ola 1) | SE-015..SE-018; P-14, P-17, P-19 | FT-11 | En implementacion | 9/15 tareas; `GetOfferDetailUseCase`, `RegisterOfferViewUseCase`, `ProductDetailViewModel`; faltan filtros `C-35` y alertas de stock (auditoría 2026-11-15) |
 | `FT-13-reserva-qr-cliente` | Negocio (Ola 1) | P-16, P-18, P-20, P-21 | FT-12 | En implementacion | 11/14 tareas; `CreateClaimUseCase`, QR con ZXing; pendientes listado/cancelación (backend) y E2E en dispositivo (auditoría 2026-11-15) |
 | `FT-14-canje-qr-comercio` | Negocio (Ola 1) | P-33, C-48 | FT-13 | En implementacion | 8/11 tareas; `RedeemClaimUseCase` (`/offers/claims/{code}/redeem`); pendiente E2E en dispositivo (auditoría 2026-11-15) |
-| `FT-15-oferta-creacion-comercio` | Negocio (Ola 2) | SE-019..SE-022; P-32 | FT-10 | En revision | 14/14 tareas; `CreateOfferUseCase`, `OfferPublishingE2ETest`; pendiente E2E contra backend desplegado (auditoría 2026-11-15) |
+| `FT-15-oferta-creacion-comercio` | Negocio (Ola 2) | SE-019..SE-022; P-32 | FT-10 | En revision | 15/15 tareas (T15.15: `StoreCategory.apiCode` y mapeo inverso completados); `CreateOfferUseCase`, `OfferPublishingE2ETest`; pendiente E2E contra backend desplegado |
 | `FT-16-inventario-ciclo-vida` | Negocio (Ola 2) | SE-023..SE-026, SE-045; P-30, P-31 | FT-15 | En implementacion | 6/12 tareas; `GetMerchantInventoryUseCase`, `UpdateOfferUseCase`, `ChangeOfferStatusUseCase`, `MerchantEditOfferScreen`; faltan métricas y pestaña Finalizadas (auditoría 2026-11-15) |
 | `FT-17-favoritos` | Negocio (Ola 3) | SE-036; P-23 | FT-12 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-18-feed-comunidad` | Negocio (Ola 3) | SE-027..SE-029; P-24 | FT-11, FT-15 | En implementacion | 15/16 tareas; cliente de `/feed/posts` y `/feed/nearby` listo; bloqueada por specs backend 024/026 (auditoría 2026-11-15) |
@@ -49,6 +49,7 @@ specs/FT-XX-<slug>/
 | `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | En ejecución (T27.1 a T27.5 hechas; T27.6 parcial) | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |
 | `FT-29-merchant-location-activation` | Negocio | Activación comercio + mapa interactivo + persistencia perfil | FT-06, FT-08, FT-10 | En revision | `MerchantLocationPickerModal.kt`, `MerchantActivationUseCasesTest.kt`, `158` unit tests / `Kover 90.72%`, 5 `check_*.py` PASS (pendiente commit/PR en `movil_Beto`) |
+| `FT-30-feed-promociones-intereses` | Negocio (Ola 5) | Feed de promociones por intereses; selector de intereses | FT-12, FT-20 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md`; backend specs 042 v2.0.0, 054 y 055 (pendientes) |
 
 Estados permitidos: `Borrador`, `Especificada, sin ejecutar`, `En implementacion`, `En revision`, `Cerrada`.
 Ninguna feature pasa a `Cerrada` sin `checklists/checklist.md` completo y evidencia en `Memoria.md` §6.

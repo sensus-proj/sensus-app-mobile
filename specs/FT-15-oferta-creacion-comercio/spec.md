@@ -23,6 +23,7 @@
 | RF-15-04 | `ImageModerationService` DEBE operar estrictamente *fail-closed* (sin aprobar por defecto en producción si no hay red o falla el cliente) y el backend modera texto e imagen antes de persistir o publicar. |
 | RF-15-05 | Enviar `POST /api/v1/offers` con `mediaId`/URL devuelto, precios, stock, categoría y `expiresAt` UTC; al recibir `201 Created`, insertar la nueva oferta en `OfferDao` y notificar éxito. |
 | RF-15-06 | Si la imagen o texto es rechazado por moderación (`400`/`422`), bloquear la publicación y mostrar mensaje claro sin crear la oferta. |
+| RF-15-07 | Enviar en `category` el código del catálogo `OfferCategory` del backend (spec 034, obligatorio para publicar) y no el texto visible: Abarrotes → `Grocery`, Limpieza y Hogar → `CleaningHome`, Perecederos → `Perishables`, Lácteos → `Dairy`, Comida → `Food`, Panadería → `Bakery`, Bebidas → `Beverages`, Mascotas → `Pets`, Farmacia → `Pharmacy`. El texto visible se conserva solo en la UI. |
 
 ## 3. Requisitos no funcionales
 

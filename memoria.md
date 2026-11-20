@@ -914,3 +914,22 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Segunda corrección (2026-11-20):** `GRADLE_OPTS` con reintentos (5, backoff 2 s) y timeouts de 60 s en `ci.yml` y `release-playstore.yml`; `setup-gradle` escribe caché en `main` y `develop`.
 - **Tercera corrección (2026-11-20):** el push a `develop` (run #117) falló otra vez por un 404 de Central, que Gradle no reintenta. Se antepone el mirror de Maven Central de Google en `settings.gradle.kts` (plugins y dependencias), con `mavenCentral()` de respaldo. Verificado en local con `dependencyInsight --refresh-dependencies`.
 - **Pendiente:** confirmar `ci` en verde en `develop` y en el PR a `main`.
+
+## Bitácora - Feed de promociones por intereses (FT-30) y recorte de FT-20 (2026-11-20)
+
+- **Decisión del responsable:** el «ML» de Sensus es un feed de promociones **separado del feed de Comunidad**, ordenado en el backend por intereses (función determinista, ADR 0009 del backend), sin invitados y en `GET /api/v1/feed/offers`. Los intereses se eligen de forma opcional al terminar el registro y se editan en el perfil (`GET`/`PUT /api/v1/users/me/interests`).
+- **FT-30 creada** (spec, plan, tasks y checklist). **FT-20 recortada:** se retiran el carrusel «Recomendados para ti» y la telemetría desde el cliente; el backend registra impresiones, aperturas y apartados (spec 055).
+- **Documentos conciliados:** `docs/endpoints-internos.md`, `docs/rate-matrix.md` y `specs/README.md`.
+- **Pendiente:** implementar backend 054 → 055 → 042 antes de FT-30. Solo documentación; sin código, commit ni push.
+
+## Bitácora - Decisiones del ML: categorías, rutas y privacidad (2026-11-20)
+
+- **Catálogo de producto `OfferCategory`** en el backend (spec 034) con los 9 valores de `StoreCategory` (salvo `ALL`) como códigos en inglés (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets`, `Pharmacy`). La categoría es obligatoria al publicar. El móvil hoy envía el texto visible (`displayName`): **T15.15** cambia el envío al código. Los intereses de FT-30 usan este catálogo.
+- **Rutas:** búsqueda `GET /api/v1/offers/search` y alternativas `GET /api/v1/offers/{id}/alternatives` (antes `/ml/*`); invitados con radio de 2 km. FT-20 y `docs/endpoints-internos.md` actualizados.
+- **Privacidad:** solo aviso (sin ajuste para desactivar). Nuevo RF-23-04 y T23.7 en FT-23 para el Aviso de Privacidad embebido y la landing.
+- Solo documentación; sin código, commit ni push.
+
+## Bitácora - FT-15 T15.15: envío de códigos `OfferCategory` y mapeo inverso (2026-11-20)
+
+- **Cambio (`RF-15-07`, `T15.15`):** `StoreCategory` incorpora `apiCode` (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets`, `Pharmacy`; `null` para `ALL`), `fromApiCode` y `displayNameFor`. `RemoteOfferMapper.toRequest` envía `apiCode` en `CreateOfferRequest.category`; `OfferPublishingPolicy.validate` exige categoría distinta de `ALL` al crear (`OfferField.CATEGORY`). Al leer (`RemoteOfferMapper`, `OfferDetailsMapper`, `OfferMapper`, `AiDtos`, `FriendModels`) se mapea código → `displayName` conservando textos legacy en español; `MapStoreClusterBuilder` y `BuyerHomeScreen` filtran por ambos.
+- **Verificación:** `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt`, `ktlintCheck`, `lint`, `testDebugUnitTest` (364 pruebas, 0 fallos/omisiones), `koverVerifyDebug` (80.90 %) y `check_sdd.py`/`check_layers.py`/`check_endpoints.py`/`check_secrets.py`/`check_coverage.py` en PASS. Sin commit ni push.

@@ -11,10 +11,8 @@
 
 ## Funcionalidad y reglas de negocio
 
-- [ ] `GET /api/v1/ml/search` integrado con `debounce(350ms)` y cancelación de corrutina previa
+- [ ] `GET /api/v1/offers/search` integrado con `debounce(350ms)` y cancelación de corrutina previa
 - [ ] Historial de últimas 10 búsquedas en SQLCipher con opción `Limpiar historial`
-- [ ] `GET /api/v1/ml/recommendations` integrado en carrusel `Para ti` con fallback cold-start
-- [ ] `POST /api/v1/ml/interactions` envía eventos en lote sin PII
 - [ ] Pantallas `P-12` (búsqueda activa) y `P-13` (sin resultados) implementadas
 
 ## Arquitectura y seguridad
