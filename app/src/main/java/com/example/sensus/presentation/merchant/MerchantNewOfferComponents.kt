@@ -61,12 +61,16 @@ import coil.compose.AsyncImage
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
 private const val DEFAULT_UNITS_COUNT = 3
@@ -77,7 +81,6 @@ private const val PERCENT_SCALE = 100
 private const val EDIT_BTN_ALPHA = 0.9f
 private const val ICON_BG_ALPHA = 0.1f
 private const val SUCCESS_CHIP_ALPHA = 0.12f
-private const val UNSELECTED_CHIP_HEX = 0xFFF1F5F9
 
 @ComposeUiModel
 internal data class NewOfferFormState(
@@ -119,12 +122,12 @@ internal fun NewOfferHeader(onNavigateBack: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(SensusSurface)
         ) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusPurple)
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusVioletInk)
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = "Publicar Nueva Oferta", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(text = "Publicar Nueva Oferta", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
     }
 }
 
@@ -133,7 +136,7 @@ internal fun OfferPhotoCard(selectedBitmap: Bitmap?, selectedImageUri: Uri?, err
     Column {
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = SensusSurface),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
@@ -181,7 +184,7 @@ private fun SelectedOfferImageBox(selectedBitmap: Bitmap?, selectedImageUri: Uri
                 .size(36.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Cambiar foto", tint = SensusPurple, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Cambiar foto", tint = SensusVioletInk, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -202,10 +205,10 @@ private fun EmptyOfferPhotoPlaceholder() {
                 .background(SensusPurple.copy(alpha = ICON_BG_ALPHA)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Default.AddAPhoto, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(28.dp))
+            Icon(imageVector = Icons.Default.AddAPhoto, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(28.dp))
         }
         Spacer(modifier = Modifier.height(10.dp))
-        Text(text = "Agregar foto del excedente", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(text = "Agregar foto del excedente", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         Text(text = "Captura con la cámara o selecciona desde tu galería", fontSize = 11.sp, color = SensusTextMuted)
     }
 }
@@ -215,7 +218,7 @@ internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFo
     val discountPercent = calculateOfferDiscountPercent(form.originalPrice, form.discountPrice)
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -261,7 +264,7 @@ internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFo
 @Composable
 private fun OfferTextField(spec: OfferTextFieldSpec, onValueChange: (String) -> Unit) {
     Column {
-        Text(text = spec.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+        Text(text = spec.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = spec.value,
@@ -283,7 +286,7 @@ private fun OfferTextField(spec: OfferTextFieldSpec, onValueChange: (String) -> 
 @Composable
 private fun OfferCategoryPicker(selected: StoreCategory, onSelect: (StoreCategory) -> Unit) {
     Column {
-        Text(text = "Categoría", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+        Text(text = "Categoría", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(6.dp))
         Row(
             modifier = Modifier
@@ -294,8 +297,8 @@ private fun OfferCategoryPicker(selected: StoreCategory, onSelect: (StoreCategor
             StoreCategory.entries.filter { it != StoreCategory.ALL }.forEach { category ->
                 val isSelected = selected == category
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isSelected) SensusPurple else Color(UNSELECTED_CHIP_HEX),
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) SensusPurple else SensusVioletBg,
                     modifier = Modifier.clickable { onSelect(category) }
                 ) {
                     Text(
@@ -339,7 +342,7 @@ private fun OfferPriceRow(form: NewOfferFormState, errors: NewOfferErrors, onFor
 @Composable
 private fun PriceInputColumn(label: String, value: String, placeholder: String, modifier: Modifier = Modifier, onValueChange: (String) -> Unit) {
     Column(modifier = modifier) {
-        Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = value,
@@ -362,7 +365,7 @@ private fun DiscountPreviewChip(discountPercent: Int, savings: Double) {
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Descuento del $discountPercent% · Ahorro: $" + java.lang.String.format(java.util.Locale.getDefault(), "%.2f", savings),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusSuccess
             )
@@ -374,12 +377,12 @@ private fun DiscountPreviewChip(discountPercent: Int, savings: Double) {
 private fun OfferStockStepperRow(unitsCount: Int, onDecrement: () -> Unit, onIncrement: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Column {
-            Text(text = "Unidades disponibles", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+            Text(text = "Unidades disponibles", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
             Text(text = "Stock total de este lote", fontSize = 11.sp, color = SensusTextMuted)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StepperCircleButton(Icons.Default.Remove, "Menos", onDecrement)
-            Text(text = "$unitsCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+            Text(text = "$unitsCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
             StepperCircleButton(Icons.Default.Add, "Más", onIncrement)
         }
     }
@@ -389,7 +392,7 @@ private fun OfferStockStepperRow(unitsCount: Int, onDecrement: () -> Unit, onInc
 private fun StepperCircleButton(icon: ImageVector, description: String, onClick: () -> Unit) {
     Surface(shape = CircleShape, color = SensusBackground, modifier = Modifier.size(32.dp).clickable(onClick = onClick)) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = description, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = icon, contentDescription = description, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -399,7 +402,7 @@ internal fun PublishOfferButton(isLoading: Boolean, isEnabled: Boolean = true, o
     Button(
         onClick = onClick,
         enabled = !isLoading && isEnabled,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 14.dp)
@@ -407,7 +410,7 @@ internal fun PublishOfferButton(isLoading: Boolean, isEnabled: Boolean = true, o
         if (isLoading) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             Spacer(modifier = Modifier.width(10.dp))
-            Text("Verificando seguridad...", fontSize = 14.sp, color = Color.White)
+            Text("Verificando seguridad...", fontSize = 15.sp, color = Color.White)
         } else {
             Text(text = "Publicar Oferta Ahora", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
@@ -422,7 +425,7 @@ internal fun PhotoPickerBottomSheet(
     onGalleryClick: () -> Unit,
     title: String = "Seleccionar fotografía del producto"
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SensusSurface, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
             Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(16.dp))
@@ -442,9 +445,9 @@ private fun PickerOptionRow(icon: ImageVector, label: String, onClick: () -> Uni
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(24.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = SensusTextPrimary)
+        Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = SensusTextPrimary)
     }
 }
 
@@ -456,7 +459,7 @@ internal fun ModerationAlertDialog(reason: String, onDismiss: () -> Unit) {
         title = { Text(text = "Políticas de Seguridad", fontWeight = FontWeight.Bold, color = SensusTextPrimary) },
         text = { Text(text = reason, fontSize = 13.sp, color = SensusTextSecondary) },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
+            Button(shape = SensusButtonShape, onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
                 Text("Entendido")
             }
         }

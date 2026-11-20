@@ -11,6 +11,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.HTTP
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface AuthApiService {
 
@@ -29,8 +30,9 @@ interface AuthApiService {
     @POST("api/v1/auth/guest")
     suspend fun createGuestSession(): Response<GuestSessionResponse>
 
+    /** FT-39: con `deviceId` el backend también desactiva el token push de esta instalación. */
     @POST("api/v1/auth/logout")
-    suspend fun logout(): Response<Unit>
+    suspend fun logout(@Query("deviceId") deviceId: String?): Response<Unit>
 
     @HTTP(method = "DELETE", path = "api/v1/users/account", hasBody = true)
     suspend fun deleteAccount(@Body request: DeleteAccountRequest): Response<Unit>

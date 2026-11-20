@@ -56,9 +56,9 @@ import com.example.sensus.presentation.merchant.MerchantSalesScreen
 import com.example.sensus.theme.SensusBackground
 
 private const val TAB_SENSI = 2
-private const val TAB_COMMUNITY = 3
+internal const val TAB_COMMUNITY = 3
 private const val TAB_PROFILE = 4
-private const val MERCHANT_TAB_SALES = 2
+internal const val MERCHANT_TAB_SALES = 2
 private const val MERCHANT_TAB_PROFILE = 3
 
 @Composable
@@ -89,6 +89,8 @@ fun MainAppContainer(
             state.openFriendsTabSignal += 1
         }
     )
+
+    MainPushHost(state = state, isGuest = isGuest)
 
     BackHandler(enabled = true) {
         handleMainBackNavigation(state, context)

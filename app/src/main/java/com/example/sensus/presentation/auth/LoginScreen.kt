@@ -1,79 +1,71 @@
 package com.example.sensus.presentation.auth
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
-import com.example.sensus.theme.SensusCardBorder
-import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.BrandOrange
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusRed
-import com.example.sensus.theme.SensusTextMuted
+import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
-import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusTheme
+import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import com.example.sensus.theme.sensusTextButtonColors
 
-private const val SUBTITLE_ALPHA = 0.85f
-private const val ERROR_BG_ALPHA = 0.08f
-private const val ERROR_BORDER_ALPHA = 0.4f
 private const val MIN_PHONE_DIGITS = 8
 private const val MAX_PHONE_DIGITS = 15
 private const val MIN_PASSWORD_LENGTH = 4
@@ -109,8 +101,9 @@ private data class LoginFormHandlers(
 
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier, callbacks: LoginCallbacks = LoginCallbacks(), viewModel: LoginViewModel = hiltViewModel()) {
-    val state by viewModel.viewState.collectAsState()
-    var localErrorMessage by remember { mutableStateOf<String?>(null) }
+    val state by viewModel.viewState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var localError by remember { mutableStateOf<Int?>(null) }
     var emailOrPhone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -129,7 +122,7 @@ fun LoginScreen(modifier: Modifier = Modifier, callbacks: LoginCallbacks = Login
         emailOrPhone = emailOrPhone,
         password = password,
         isPasswordVisible = isPasswordVisible,
-        visibleError = state.errorMessage ?: localErrorMessage,
+        visibleError = localError?.let { context.getString(it, MIN_PASSWORD_LENGTH) } ?: state.errorMessage,
         isLoading = state.isLoading,
         isGuestLoading = state.isGuestLoading
     )
@@ -137,264 +130,187 @@ fun LoginScreen(modifier: Modifier = Modifier, callbacks: LoginCallbacks = Login
         callbacks = callbacks,
         onEmailOrPhoneChange = {
             emailOrPhone = it
-            localErrorMessage = null
+            localError = null
+            viewModel.dispatchIntent(LoginViewIntent.DismissError)
         },
         onPasswordChange = {
             password = it
-            localErrorMessage = null
+            localError = null
+            viewModel.dispatchIntent(LoginViewIntent.DismissError)
         },
         onTogglePasswordVisibility = { isPasswordVisible = !isPasswordVisible },
-        onSubmitLogin = { localErrorMessage = submitLoginIfValid(viewModel, emailOrPhone, password) },
-        onContinueAsGuest = { viewModel.dispatchIntent(LoginViewIntent.StartGuestSession) }
-    )
-    LoginScreenScaffold(uiState = formProps, handlers = handlers, modifier = modifier)
-}
-
-@Composable
-private fun LoginScreenScaffold(uiState: LoginFormProps, handlers: LoginFormHandlers, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SensusBackground)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-        ) {
-            LoginHeader()
-            LoginBody(uiState = uiState, handlers = handlers)
-        }
-    }
-}
-
-@Composable
-private fun LoginHeader() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = SensusPurple,
-                shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-            )
-            .padding(horizontal = 24.dp, vertical = 36.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Surface(shape = CircleShape, color = SensusVioletBg, shadowElevation = 6.dp, modifier = Modifier.size(76.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Image(
-                        painter = painterResource(id = R.drawable.sensus_logo),
-                        contentDescription = "Logo Sensus",
-                        modifier = Modifier.size(56.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(text = "Sensus", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, letterSpacing = 1.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Descuentos locales en tu zona",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = SUBTITLE_ALPHA),
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun LoginBody(uiState: LoginFormProps, handlers: LoginFormHandlers) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 20.dp)
-    ) {
-        LoginFormCard(uiState = uiState, handlers = handlers)
-        Spacer(modifier = Modifier.height(20.dp))
-        LoginRegisterFooter(onNavigateToRegister = handlers.callbacks.onNavigateToRegister)
-    }
-}
-
-@Composable
-private fun LoginFormCard(uiState: LoginFormProps, handlers: LoginFormHandlers) {
-    val hasError = uiState.visibleError != null
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(22.dp)) {
-            Text("Iniciar Sesión", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-            Text(
-                text = "Ingresa para acceder a cupones exclusivos de tu colonia",
-                fontSize = 13.sp,
-                color = SensusTextSecondary,
-                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
-            )
-            LoginIdentifierField(uiState.emailOrPhone, hasError, handlers.onEmailOrPhoneChange)
-            Spacer(modifier = Modifier.height(14.dp))
-            LoginPasswordField(uiState.password, uiState.isPasswordVisible, hasError, handlers.onPasswordChange, handlers.onTogglePasswordVisibility)
-            LoginSecondaryLinks(handlers.callbacks.onNavigateToOtp, handlers.callbacks.onForgotPassword)
-            LoginErrorBanner(uiState.visibleError)
-            LoginSubmitButton(uiState.isLoading, uiState.isGuestLoading, handlers.onSubmitLogin)
-            Spacer(modifier = Modifier.height(18.dp))
-            LoginDividerRow()
-            Spacer(modifier = Modifier.height(14.dp))
-            GuestContinueButton(uiState.isGuestLoading, handlers.onContinueAsGuest)
-        }
-    }
-}
-
-@Composable
-private fun LoginIdentifierField(value: String, isError: Boolean, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text("Correo o Teléfono") },
-        leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null, tint = if (isError) SensusRed else SensusPurple) },
-        singleLine = true,
-        isError = isError,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-        shape = RoundedCornerShape(14.dp),
-        colors = loginFieldColors(),
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
-@Composable
-private fun LoginPasswordField(value: String, isVisible: Boolean, isError: Boolean, onValueChange: (String) -> Unit, onToggleVisibility: () -> Unit) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text("Contraseña") },
-        leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = if (isError) SensusRed else SensusPurple) },
-        trailingIcon = {
-            IconButton(onClick = onToggleVisibility) {
-                Icon(
-                    imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = null,
-                    tint = SensusTextMuted
-                )
-            }
+        onSubmitLogin = {
+            viewModel.dispatchIntent(LoginViewIntent.DismissError)
+            localError = submitLoginIfValid(viewModel, emailOrPhone, password)
         },
-        visualTransformation = if (isVisible) VisualTransformation.None else PasswordVisualTransformation(),
-        singleLine = true,
-        isError = isError,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-        shape = RoundedCornerShape(14.dp),
-        colors = loginFieldColors(),
-        modifier = Modifier.fillMaxWidth()
+        onContinueAsGuest = {
+            localError = null
+            viewModel.dispatchIntent(LoginViewIntent.StartGuestSession)
+        }
     )
+    LoginScreenScaffold(form = formProps, handlers = handlers, modifier = modifier)
 }
 
 @Composable
-private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = SensusPurple,
-    unfocusedBorderColor = SensusCardBorder,
-    focusedLabelColor = SensusPurple,
-    errorBorderColor = SensusRed,
-    errorLabelColor = SensusRed
-)
-
-@Composable
-private fun LoginSecondaryLinks(onNavigateToOtp: () -> Unit, onForgotPassword: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TextButton(onClick = onNavigateToOtp) {
-            Text(text = "Entrar con código SMS", fontSize = 12.sp, color = SensusPurple, fontWeight = FontWeight.SemiBold)
-        }
-        TextButton(onClick = onForgotPassword) {
-            Text(text = "¿Olvidaste tu contraseña?", fontSize = 12.sp, color = SensusTextSecondary)
-        }
+private fun LoginScreenScaffold(form: LoginFormProps, handlers: LoginFormHandlers, modifier: Modifier = Modifier) {
+    AuthAccessScreenLayout(modifier, header = { AuthAccessBrand(showBackSpace = false) }) {
+        AuthAccessSelector(isRegister = false, onSwitch = handlers.callbacks.onNavigateToRegister)
+        AuthDataFrame { LoginForm(form, handlers) }
     }
 }
 
 @Composable
-private fun LoginErrorBanner(visibleError: String?) {
-    if (visibleError.isNullOrBlank()) {
-        Spacer(modifier = Modifier.height(12.dp))
-        return
-    }
-    Surface(
-        color = SensusRed.copy(alpha = ERROR_BG_ALPHA),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, SensusRed.copy(alpha = ERROR_BORDER_ALPHA)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Warning, contentDescription = "Error", tint = SensusRed, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(text = visibleError, color = SensusRed, fontSize = 13.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp)
-        }
-    }
-}
-
-@Composable
-private fun LoginSubmitButton(isLoading: Boolean, isGuestLoading: Boolean, onSubmit: () -> Unit) {
-    Button(
-        onClick = onSubmit,
-        enabled = !isLoading && !isGuestLoading,
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-    ) {
-        Text(text = if (isLoading) "Iniciando..." else "Entrar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Spacer(modifier = Modifier.width(8.dp))
-        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-    }
-}
-
-@Composable
-private fun LoginDividerRow() {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        HorizontalDivider(modifier = Modifier.weight(1f), color = SensusCardBorder)
-        Text(text = "  O  ", fontSize = 12.sp, color = SensusTextMuted)
-        HorizontalDivider(modifier = Modifier.weight(1f), color = SensusCardBorder)
-    }
-}
-
-@Composable
-private fun GuestContinueButton(isGuestLoading: Boolean, onContinueAsGuest: () -> Unit) {
-    OutlinedButton(
-        onClick = onContinueAsGuest,
-        enabled = !isGuestLoading,
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = SensusPurple),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-    ) {
-        Text(text = "Continuar como invitado", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
-    }
-}
-
-@Composable
-private fun LoginRegisterFooter(onNavigateToRegister: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "¿No tienes una cuenta? ", fontSize = 14.sp, color = SensusTextSecondary)
+private fun LoginForm(form: LoginFormProps, handlers: LoginFormHandlers) {
+    val busy = form.isLoading || form.isGuestLoading
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AuthFormTitle(stringResource(R.string.login_title))
         Text(
-            text = "Regístrate aquí",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = SensusPurple,
-            modifier = Modifier.clickable(onClick = onNavigateToRegister)
+            stringResource(R.string.commerce_login_intro),
+            color = SensusTextSecondary,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        LoginIdentifierField(form.emailOrPhone, handlers.onEmailOrPhoneChange)
+        LoginPasswordField(form, handlers, busy)
+        LoginErrorBanner(form.visibleError)
+        LoginSecondaryActions(handlers.callbacks)
+        Button(
+            onClick = handlers.onSubmitLogin,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+            shape = CircleShape,
+            contentPadding = AuthActionPadding
+        ) {
+            LoginActionContent(stringResource(R.string.login_submit), stringResource(R.string.login_submitting), form.isLoading)
+        }
+        AuthGuestButton(form.isGuestLoading, !busy, handlers.onContinueAsGuest)
+    }
+}
+
+@Composable
+private fun LoginSecondaryActions(callbacks: LoginCallbacks) {
+    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        TextButton(colors = sensusTextButtonColors(), onClick = callbacks.onForgotPassword, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.login_forgot_password), style = MaterialTheme.typography.labelMedium)
+        }
+        TextButton(colors = sensusTextButtonColors(), onClick = callbacks.onNavigateToOtp, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.login_sms), style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+@Composable
+internal fun AuthGuestButton(isLoading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Button(
+        colors = ButtonDefaults.buttonColors(containerColor = BrandOrange, contentColor = Ink),
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth(),
+        shape = CircleShape,
+        contentPadding = AuthActionPadding
+    ) {
+        Icon(Icons.Default.Storefront, contentDescription = null, modifier = Modifier.size(20.dp))
+        LoginActionContent(
+            stringResource(R.string.login_guest),
+            stringResource(R.string.login_guest_loading),
+            isLoading,
+            modifier = Modifier.padding(start = 8.dp)
         )
     }
 }
 
-private fun submitLoginIfValid(viewModel: LoginViewModel, emailOrPhone: String, password: String): String? {
+@Composable
+private fun LoginIdentifierField(value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(R.string.login_identifier)) },
+        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+        shape = RoundedCornerShape(14.dp),
+        colors = sensusOutlinedTextFieldColors(),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun LoginPasswordField(form: LoginFormProps, handlers: LoginFormHandlers, busy: Boolean) {
+    OutlinedTextField(
+        value = form.password,
+        onValueChange = handlers.onPasswordChange,
+        label = { Text(stringResource(R.string.login_password)) },
+        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+        trailingIcon = {
+            IconButton(onClick = handlers.onTogglePasswordVisibility) {
+                Icon(
+                    imageVector = if (form.isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = stringResource(
+                        if (form.isPasswordVisible) R.string.login_hide_password else R.string.login_show_password
+                    )
+                )
+            }
+        },
+        visualTransformation = if (form.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { if (!busy) handlers.onSubmitLogin() }),
+        shape = RoundedCornerShape(14.dp),
+        colors = sensusOutlinedTextFieldColors(),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun LoginErrorBanner(message: String?) {
+    AnimatedVisibility(visible = !message.isNullOrBlank()) {
+        Surface(
+            color = SensusRedBg,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = SensusRed, modifier = Modifier.size(20.dp))
+                Text(message.orEmpty(), style = MaterialTheme.typography.bodySmall, color = SensusTextPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoginActionContent(label: String, loadingLabel: String, isLoading: Boolean, modifier: Modifier = Modifier) {
+    Crossfade(targetState = isLoading, modifier = modifier, label = "loginLoading") { loading ->
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = LocalContentColor.current,
+                    strokeWidth = 2.dp
+                )
+            }
+            Text(if (loading) loadingLabel else label, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Preview(name = "Compact login", widthDp = 320, heightDp = 560, fontScale = 1.3f)
+@Composable
+internal fun LoginCompactPreview() {
+    SensusTheme {
+        LoginScreenScaffold(
+            form = LoginFormProps("", "", false, null, false, false),
+            handlers = LoginFormHandlers(LoginCallbacks(), {}, {}, {}, {}, {})
+        )
+    }
+}
+
+private fun submitLoginIfValid(viewModel: LoginViewModel, emailOrPhone: String, password: String): Int? {
     val cleanEmail = emailOrPhone.trim()
     val cleanPass = password.trim()
     val validationError = validateLoginCredentials(cleanEmail, cleanPass)
@@ -406,11 +322,11 @@ private fun submitLoginIfValid(viewModel: LoginViewModel, emailOrPhone: String, 
     return validationError
 }
 
-private fun validateLoginCredentials(cleanEmail: String, cleanPass: String): String? = when {
-    cleanEmail.isBlank() -> "Ingresa tu correo o teléfono."
-    !isValidLoginIdentifier(cleanEmail) -> "El correo electrónico o teléfono no es válido."
-    cleanPass.isBlank() -> "Ingresa tu contraseña."
-    cleanPass.length < MIN_PASSWORD_LENGTH -> "La contraseña debe tener al menos $MIN_PASSWORD_LENGTH caracteres."
+private fun validateLoginCredentials(cleanEmail: String, cleanPass: String): Int? = when {
+    cleanEmail.isBlank() -> R.string.login_error_identifier_required
+    !isValidLoginIdentifier(cleanEmail) -> R.string.login_error_identifier_invalid
+    cleanPass.isBlank() -> R.string.login_error_password_required
+    cleanPass.length < MIN_PASSWORD_LENGTH -> R.string.login_error_password_length
     else -> null
 }
 

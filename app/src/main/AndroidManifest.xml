@@ -103,6 +103,22 @@
                     android:path="/sensus/" />
             </intent-filter>
         </activity>
+
+        <!-- FT-39: notificaciones push por FCM HTTP v1 -->
+        <service
+            android:name=".presentation.push.SensusMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/push_channel_id" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_sensus" />
     </application>
 
 </manifest>

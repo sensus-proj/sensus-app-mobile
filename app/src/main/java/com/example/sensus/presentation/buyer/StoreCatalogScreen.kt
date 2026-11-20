@@ -98,13 +98,13 @@ private fun StoreCatalogGridBody(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Este comercio aún no tiene ofertas activas", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Vuelve más tarde para descubrir sus promociones.", fontSize = 12.sp, color = SensusTextMuted)
+                Text(text = "Vuelve más tarde para descubrir sus promociones.", fontSize = 13.sp, color = SensusTextMuted)
             }
         }
     } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(CATALOG_GRID_COLUMNS),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()

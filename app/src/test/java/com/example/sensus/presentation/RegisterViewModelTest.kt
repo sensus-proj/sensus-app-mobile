@@ -1,6 +1,7 @@
 package com.example.sensus.presentation
 
 import app.cash.turbine.test
+import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.usecase.RegisterUseCase
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -97,5 +99,26 @@ class RegisterViewModelTest {
 
         assertEquals("Pass123#", viewModel.viewState.value.confirmPassword)
         assertEquals(null, viewModel.viewState.value.errorMessage)
+    }
+
+    @Test
+    fun registrationFailureShowsErrorAndKeepsEnteredFields() = runTest(testDispatcher) {
+        val error = "Correo ya registrado."
+        coEvery { registerUseCase(any(), any(), any()) } returns Result.Failure(AppError.Validation(error))
+        viewModel.dispatchIntent(RegisterViewIntent.NameChanged("Ana Lopez"))
+        viewModel.dispatchIntent(RegisterViewIntent.EmailChanged("ana@example.com"))
+        viewModel.dispatchIntent(RegisterViewIntent.PasswordChanged("SecurePass123"))
+        viewModel.dispatchIntent(RegisterViewIntent.ConfirmPasswordChanged("SecurePass123"))
+
+        viewModel.effect.test {
+            viewModel.dispatchIntent(RegisterViewIntent.SubmitRegister)
+            assertEquals(RegisterViewEffect.ShowToast(error), awaitItem())
+            assertFalse(viewModel.viewState.value.isLoading)
+            assertEquals(error, viewModel.viewState.value.errorMessage)
+            assertEquals("ana@example.com", viewModel.viewState.value.email)
+
+            viewModel.dispatchIntent(RegisterViewIntent.DismissError)
+            assertNull(viewModel.viewState.value.errorMessage)
+        }
     }
 }

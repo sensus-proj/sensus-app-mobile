@@ -7,17 +7,22 @@ import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.presentation.base.MviViewModel
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val logoutUseCase: LogoutUseCase,
     private val getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase,
-    private val friendsRepository: FriendsRepository? = null
+    private val friendsRepository: Lazy<FriendsRepository>? = null
 ) : MviViewModel<AppViewState, AppViewIntent, AppViewEffect>(AppViewState()) {
+
+    internal var ioDispatcher = Dispatchers.IO
 
     init {
         viewModelScope.launch {
@@ -76,7 +81,9 @@ class AppViewModel @Inject constructor(
 
     private fun handleFriendInviteDeepLink(inviteUrl: String) {
         viewModelScope.launch {
-            friendsRepository?.queuePendingInvite(inviteUrl)
+            withContext(ioDispatcher) {
+                friendsRepository?.get()?.queuePendingInvite(inviteUrl)
+            }
             val session = sessionRepository.sessionState.value
             updateState {
                 copy(

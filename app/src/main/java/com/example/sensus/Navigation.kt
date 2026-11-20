@@ -168,6 +168,7 @@ private fun EntryProviderScope<NavKey>.registerAuthEntries(
                 navigateAfterAuth(AppScreen.REGISTER, appState.hasAcceptedTerms, onSetPreviousTermsScreen, onIntent)
             },
             onNavigateToLogin = { onIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) },
+            onContinueAsGuest = { onIntent(AppViewIntent.NavigateTo(AppScreen.MAIN)) },
             onNavigateToTerms = {
                 onSetPreviousTermsScreen(AppScreen.REGISTER)
                 onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))

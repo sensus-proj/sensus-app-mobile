@@ -63,7 +63,8 @@ class NotificationPreferencesConcurrencyTest {
         val vm = NotificationsViewModel(
             NotificationsGetSettingsUseCase(repository, session),
             NotificationsUpdateSettingsUseCase(repository, session),
-            NotificationsRegisterDeviceUseCase(provider, repository, session)
+            NotificationsRegisterDeviceUseCase(provider, repository, session),
+            io.mockk.mockk<com.example.sensus.domain.usecase.NotificationsLocationUseCase>(relaxed = true)
         )
         vm.processIntent(NotificationsViewIntent.Retry)
         vm.processIntent(NotificationsViewIntent.Edit(draft))
@@ -94,7 +95,8 @@ class NotificationPreferencesConcurrencyTest {
         val vm = NotificationsViewModel(
             NotificationsGetSettingsUseCase(repository, session),
             NotificationsUpdateSettingsUseCase(repository, session),
-            NotificationsRegisterDeviceUseCase(provider, repository, session)
+            NotificationsRegisterDeviceUseCase(provider, repository, session),
+            io.mockk.mockk<com.example.sensus.domain.usecase.NotificationsLocationUseCase>(relaxed = true)
         )
         advanceUntilIdle()
         assertEquals(settings, vm.viewState.value.preferences)

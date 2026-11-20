@@ -152,16 +152,20 @@ class OffersRepositoryOfflineTest {
         val userSessionDao = mockk<UserSessionDao>(relaxed = true)
         val pendingSyncDao = mockk<PendingSyncDao>(relaxed = true)
         val offerDao = mockk<OfferDao>(relaxed = true)
+        val resolveSessionDao = mockk<() -> UserSessionDao>()
+        every { resolveSessionDao() } returns userSessionDao
 
         val sessionRepo = SessionRepositoryImpl(
             securePreferences = prefs,
-            userSessionDao = userSessionDao,
-            pendingSyncDao = pendingSyncDao,
-            offerDao = offerDao
+            userSessionDao = resolveSessionDao,
+            pendingSyncDao = { pendingSyncDao },
+            offerDao = { offerDao }
         )
 
+        verify(exactly = 0) { resolveSessionDao() }
         sessionRepo.clearSession()
 
+        verify(exactly = 1) { resolveSessionDao() }
         verify(exactly = 1) { prefs.clearAll() }
         verify(exactly = 1) { userSessionDao.clearSession() }
         verify(exactly = 1) { pendingSyncDao.clearAll() }

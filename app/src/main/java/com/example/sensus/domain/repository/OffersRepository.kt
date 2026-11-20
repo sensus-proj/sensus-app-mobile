@@ -12,8 +12,8 @@ interface OffersRepository {
     suspend fun republishOffer(input: RepublishOfferInput): Result<ProductOffer>
 
     fun getOffers(): List<ProductOffer>
+    suspend fun readCachedOffers(): List<ProductOffer> = getOffers()
     fun addOffer(offer: ProductOffer)
-    fun syncOffersFromServer(remoteOffers: List<ProductOffer>) = Unit
 
     /** Consulta las ofertas reales cercanas en `GET /api/v1/offers/nearby` (Spec 007) y sincroniza caché local. */
     suspend fun fetchNearbyOffers(latitude: Double, longitude: Double, radiusKm: Double? = null, category: String? = null): Result<List<ProductOffer>> =

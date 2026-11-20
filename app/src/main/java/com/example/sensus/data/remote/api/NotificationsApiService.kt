@@ -2,10 +2,12 @@ package com.example.sensus.data.remote.api
 
 import com.example.sensus.data.remote.dto.NotificationsDeviceRequest
 import com.example.sensus.data.remote.dto.NotificationsDeviceResponse
+import com.example.sensus.data.remote.dto.NotificationsLocationRequest
 import com.example.sensus.data.remote.dto.NotificationsSettingsDto
 import com.example.sensus.data.remote.dto.NotificationsUpdateRequest
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PUT
 
@@ -18,4 +20,10 @@ interface NotificationsApiService {
 
     @PUT("api/v1/users/device-token")
     suspend fun registerDevice(@Body request: NotificationsDeviceRequest): Response<NotificationsDeviceResponse>
+
+    @PUT("api/v1/users/notification-location")
+    suspend fun shareLocation(@Body request: NotificationsLocationRequest): Response<Unit>
+
+    @DELETE("api/v1/users/notification-location")
+    suspend fun deleteLocation(): Response<Unit>
 }

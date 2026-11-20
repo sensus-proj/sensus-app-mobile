@@ -64,11 +64,16 @@ import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -79,8 +84,6 @@ private const val INITIAL_TOTAL_SECONDS = INITIAL_MINUTES * SECONDS_PER_MINUTE +
 private const val TIMER_TICK_MS = 1000L
 private const val COUNTDOWN_BG_ALPHA = 0.08f
 private const val QR_STATUS_ALPHA = 0.15f
-private const val QR_CONTAINER_HEX = 0xFFF8FAFC
-private const val COUPON_CHIP_HEX = 0xFFF1F5F9
 
 private const val QR_GRID_DIVISIONS = 7f
 private const val FINDER_OUTER_SCALE = 2.2f
@@ -201,14 +204,14 @@ private fun ApartadoTopBar(storeName: String, onNavigateBack: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(SensusSurface)
         ) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusPurple)
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusVioletInk)
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(text = "Apartado confirmado", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-            Text(text = "Tu ahorro te espera en $storeName", fontSize = 12.sp, color = SensusTextSecondary)
+            Text(text = "Apartado confirmado", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Tu ahorro te espera en $storeName", fontSize = 13.sp, color = SensusTextSecondary)
         }
     }
 }
@@ -239,13 +242,13 @@ private fun ApartadoCountdownCard(formattedTimer: String) {
             Column {
                 Text(
                     text = "$formattedTimer restantes para recoger",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SensusPurple
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusVioletInk
                 )
                 Text(
                     text = "Tienes hasta las 20:00 para acudir y pagar en caja",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
             }
@@ -257,7 +260,7 @@ private fun ApartadoCountdownCard(formattedTimer: String) {
 private fun ApartadoQrCard(order: ApartadoOrder, onCopyCoupon: () -> Unit) {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -273,7 +276,7 @@ private fun ApartadoQrCard(order: ApartadoOrder, onCopyCoupon: () -> Unit) {
                 modifier = Modifier
                     .size(200.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(QR_CONTAINER_HEX))
+                    .background(SensusBackground)
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -284,7 +287,7 @@ private fun ApartadoQrCard(order: ApartadoOrder, onCopyCoupon: () -> Unit) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = "Presenta este código al encargado para validar y pagar en caja.",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary
             )
         }
@@ -302,7 +305,7 @@ private fun QrActiveStatusChip(totalUnits: Int) {
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Código QR Activo ($totalUnits u.)",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusSuccess
             )
@@ -312,17 +315,17 @@ private fun QrActiveStatusChip(totalUnits: Int) {
 
 @Composable
 private fun CouponCopyBadge(couponCode: String, onClick: () -> Unit) {
-    Surface(color = Color(COUPON_CHIP_HEX), shape = RoundedCornerShape(10.dp), modifier = Modifier.clickable(onClick = onClick)) {
+    Surface(color = SensusVioletBg, shape = RoundedCornerShape(12.dp), modifier = Modifier.clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
             Text(
                 text = couponCode,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = SensusPurple
+                color = SensusVioletInk
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copiar", tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copiar", tint = SensusVioletInk, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -331,11 +334,11 @@ private fun CouponCopyBadge(couponCode: String, onClick: () -> Unit) {
 private fun ApartadoSummaryCard(order: ApartadoOrder) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Resumen del apartado", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Resumen del apartado", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(10.dp))
             order.items.forEach { item ->
                 ApartadoLineItemRow(item = item)
@@ -354,12 +357,12 @@ private fun ApartadoSummaryCard(order: ApartadoOrder) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "Total a pagar en caja:", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = SensusTextPrimary)
+                Text(text = "Total a pagar en caja:", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Text(
                     text = "$${String.format(Locale.US, "%.2f", order.totalDiscountPrice)} MXN",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SensusPurple
+                    fontWeight = FontWeight.Bold,
+                    color = SensusVioletInk
                 )
             }
         }
@@ -385,7 +388,7 @@ private fun ApartadoLineItemRow(item: CartItem) {
             text = "$${String.format(Locale.US, "%.2f", item.totalDiscountPrice)} MXN",
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = SensusPurple
+            color = SensusVioletInk
         )
     }
 }
@@ -393,8 +396,8 @@ private fun ApartadoLineItemRow(item: CartItem) {
 @Composable
 private fun SummaryKeyValueRow(label: String, value: String, valueColor: Color, fontWeight: FontWeight) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, fontSize = 12.sp, color = SensusTextSecondary)
-        Text(text = value, fontSize = 12.sp, fontWeight = fontWeight, color = valueColor)
+        Text(text = label, fontSize = 13.sp, color = SensusTextSecondary)
+        Text(text = value, fontSize = 13.sp, fontWeight = fontWeight, color = valueColor)
     }
 }
 
@@ -402,30 +405,32 @@ private fun SummaryKeyValueRow(label: String, value: String, valueColor: Color, 
 private fun ApartadoActionButtons(onOpenGoogleMaps: () -> Unit, onNavigateToRoute: () -> Unit, onCancelApartado: () -> Unit) {
     Button(
         onClick = onOpenGoogleMaps,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 14.dp)
     ) {
         Icon(imageVector = Icons.Default.Navigation, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "Cómo llegar con Google Maps", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(text = "Cómo llegar con Google Maps", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
     Spacer(modifier = Modifier.height(10.dp))
     OutlinedButton(
+        colors = sensusOutlinedButtonColors(),
         onClick = onNavigateToRoute,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 12.dp)
     ) {
-        Icon(imageVector = Icons.Default.Map, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+        Icon(imageVector = Icons.Default.Map, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "Ver ruta en mapa Sensus", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+        Text(text = "Ver ruta en mapa Sensus", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
     }
     Spacer(modifier = Modifier.height(10.dp))
     OutlinedButton(
+        colors = sensusOutlinedButtonColors(),
         onClick = onCancelApartado,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 12.dp)
     ) {

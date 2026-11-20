@@ -24,11 +24,13 @@ import com.example.sensus.domain.model.OfferClaim
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ConfirmedClaimQr
 import com.example.sensus.presentation.common.claimsErrorText
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.sensusTextButtonColors
 import java.time.Clock
 import java.time.Instant
 import kotlinx.coroutines.delay
 
-private const val CLAIM_CONTENT_PADDING = 24
+private const val CLAIM_CONTENT_PADDING = 20
 private const val CONTENT_SPACING = 16
 private const val EXPIRY_TICK_MS = 1000L
 
@@ -58,7 +60,7 @@ fun ClaimOfferScreen(offer: ProductOffer, actions: ClaimsScreenActions, modifier
 @Composable
 fun ClaimOfferContent(offer: ProductOffer, state: ClaimOfferViewState, actions: ClaimsScreenActions, onClaim: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.verticalScroll(rememberScrollState()).padding(CLAIM_CONTENT_PADDING.dp), verticalArrangement = Arrangement.spacedBy(CONTENT_SPACING.dp)) {
-        TextButton(onClick = actions.onNavigateBack) { Text(stringResource(R.string.claims_back)) }
+        TextButton(colors = sensusTextButtonColors(), onClick = actions.onNavigateBack) { Text(stringResource(R.string.claims_back)) }
         Text(offer.name)
         Text(stringResource(R.string.claims_one_unit))
         if (state.loading) CircularProgressIndicator()
@@ -69,7 +71,7 @@ fun ClaimOfferContent(offer: ProductOffer, state: ClaimOfferViewState, actions: 
         } else if (state.existingCodeUnavailable) {
             Text(stringResource(R.string.claims_existing_code_unavailable))
         } else {
-            Button(onClick = onClaim, enabled = state.canSubmit) { Text(stringResource(R.string.claims_confirm)) }
+            Button(shape = SensusButtonShape, onClick = onClaim, enabled = state.canSubmit) { Text(stringResource(R.string.claims_confirm)) }
         }
     }
 }
@@ -87,7 +89,7 @@ private fun ClaimConfirmationContent(claim: OfferClaim, onNavigateToRoute: () ->
     } else {
         ConfirmedClaimQr(claim.qrPayload)
         Text(claim.code)
-        Button(onClick = onNavigateToRoute) { Text(stringResource(R.string.claims_route)) }
+        Button(shape = SensusButtonShape, onClick = onNavigateToRoute) { Text(stringResource(R.string.claims_route)) }
     }
     Text(stringResource(R.string.claims_expiry, Instant.ofEpochMilli(claim.expiresAtEpochMs).toString()))
 }

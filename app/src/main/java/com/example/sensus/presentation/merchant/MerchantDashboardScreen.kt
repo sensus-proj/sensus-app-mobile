@@ -1,22 +1,27 @@
 package com.example.sensus.presentation.merchant
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,13 +38,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,31 +55,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sensus.R
 import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.OfferPublishingPolicy
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.presentation.common.CommerceFeedFeedback
+import com.example.sensus.presentation.common.CommerceHero
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusCardBorder
+import com.example.sensus.theme.SensusOrangeDark
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusSuccess
-import com.example.sensus.theme.SensusTextMuted
+import com.example.sensus.theme.SensusSuccessBg
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.SensusWhite
+import com.example.sensus.theme.sensusOutlinedButtonColors
+import com.example.sensus.theme.sensusTextButtonColors
 import java.util.Locale
 
-private const val STATUS_BADGE_ALPHA = 0.25f
-private const val RATING_ALPHA = 0.85f
-private const val CATEGORY_ALPHA = 0.7f
 private const val KPI_BG_ALPHA = 0.1f
 private const val ACTIVE_BADGE_ALPHA = 0.15f
-private const val PAUSED_BADGE_HEX = 0xFFD97706L
 
 @ComposeUiModel
 data class MerchantDashboardCallbacks(
@@ -86,7 +104,7 @@ data class MerchantDashboardCallbacks(
 
 @Composable
 fun MerchantDashboardScreen(callbacks: MerchantDashboardCallbacks, viewModel: MerchantDashboardViewModel = hiltViewModel(), modifier: Modifier = Modifier) {
-    val dashState by viewModel.viewState.collectAsState()
+    val dashState by viewModel.viewState.collectAsStateWithLifecycle()
     var selectedOfferForStock by remember { mutableStateOf<ProductOffer?>(null) }
 
     LaunchedEffect(Unit) {
@@ -122,24 +140,24 @@ private fun MerchantDashboardFeed(
     modifier: Modifier = Modifier
 ) {
     val store = dashState.store
-    val visibleOffers = dashState.filteredOffers
+    val visibleOffers = remember(dashState.selectedFilter, dashState.allStoreOffers) { dashState.filteredOffers }
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(SensusBackground),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { MerchantStoreBannerCard(store = store, onSwitchToBuyer = callbacks.onSwitchToBuyer) }
-        item { MerchantKpisCard(store = store) }
         item { MerchantQuickActionsRow(onNewOfferClick = callbacks.onNewOfferClick, onScanQrClick = callbacks.onScanQrClick) }
+        item { MerchantKpisCard(store = store) }
+        item { CommerceFeedFeedback(dashState.isLoading, dashState.errorMessage) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Gestionar mis ofertas (${visibleOffers.size})",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SensusTextPrimary
+                    text = stringResource(R.string.commerce_merchant_offers, visibleOffers.size),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.semantics { heading() }
                 )
                 MerchantOfferFilterRow(
                     selectedFilter = dashState.selectedFilter,
@@ -159,6 +177,7 @@ private fun MerchantDashboardFeed(
             items(visibleOffers, key = { it.id }) { offer ->
                 MerchantOfferItem(
                     offer = offer,
+                    modifier = Modifier.animateItem(),
                     onEditClick = { callbacks.onEditOfferClick(offer) },
                     onAdjustClick = { onAdjustStockClick(offer) }
                 )
@@ -176,18 +195,19 @@ private fun MerchantOfferFilterRow(selectedFilter: MerchantOfferFilter, allOffer
         MerchantOfferFilter.entries.forEach { filter ->
             val count = filterOfferCount(filter, allOffers)
             val selected = filter == selectedFilter
+            val background by animateColorAsState(if (selected) SensusVioletBg else SensusSurface, label = "offerFilter")
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = if (selected) SensusPurple else Color.White,
+                color = background,
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { onSelectFilter(filter) }
+                    .heightIn(min = 48.dp)
+                    .selectable(selected) { onSelectFilter(filter) }
             ) {
                 Text(
                     text = "${filter.label} ($count)",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (selected) Color.White else SensusTextSecondary,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) SensusVioletInk else SensusTextSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
                 )
@@ -223,7 +243,7 @@ private fun EmptyMerchantOffersCard(selectedFilter: MerchantOfferFilter, onNewOf
     }
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -241,14 +261,14 @@ private fun EmptyMerchantOffersCard(selectedFilter: MerchantOfferFilter, onNewOf
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = subtitle,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary,
                 textAlign = TextAlign.Center
             )
             if (selectedFilter == MerchantOfferFilter.ACTIVE) {
                 Spacer(modifier = Modifier.height(12.dp))
-                TextButton(onClick = onNewOfferClick) {
-                    Text(text = "+ Publicar mi primera oferta", color = SensusPurple, fontWeight = FontWeight.Bold)
+                TextButton(colors = sensusTextButtonColors(), onClick = onNewOfferClick) {
+                    Text(text = "+ Publicar mi primera oferta", color = SensusVioletInk, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -274,7 +294,7 @@ private fun AdjustOfferStockDialog(offer: ProductOffer, onDismiss: () -> Unit, o
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     StockStepButton(Icons.Default.Remove) { if (stockValue > 0) stockValue -= 1 }
-                    Text(text = "$stockValue u.", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                    Text(text = "$stockValue u.", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
                     StockStepButton(Icons.Default.Add) {
                         if (stockValue < OfferPublishingPolicy.MAX_STOCK) stockValue += 1
                     }
@@ -283,6 +303,7 @@ private fun AdjustOfferStockDialog(offer: ProductOffer, onDismiss: () -> Unit, o
         },
         confirmButton = {
             Button(
+                shape = SensusButtonShape,
                 onClick = { onConfirm(stockValue) },
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)
             ) {
@@ -290,7 +311,7 @@ private fun AdjustOfferStockDialog(offer: ProductOffer, onDismiss: () -> Unit, o
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
+            TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
         }
     )
 }
@@ -305,47 +326,30 @@ private fun StockStepButton(icon: ImageVector, onClick: () -> Unit) {
             .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
         }
     }
 }
 
 @Composable
 private fun MerchantStoreBannerCard(store: MerchantStore, onSwitchToBuyer: () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = SensusPurple),
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StoreOpenStatusBadge(isOpen = store.isOpen)
-                SwitchToBuyerButton(onClick = onSwitchToBuyer)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = store.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${store.rating} (${store.reviewCount} opiniones)",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = RATING_ALPHA)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "• ${store.category}",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = CATEGORY_ALPHA)
-                )
-            }
+    CommerceHero(title = store.name, modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            StoreOpenStatusBadge(store.isOpen)
+            Text("• ${store.category}", style = MaterialTheme.typography.labelMedium, color = SensusWhite)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Default.Star, contentDescription = null, tint = SensusWhite, modifier = Modifier.size(16.dp))
+            Text("${store.rating} (${store.reviewCount} opiniones)", color = SensusWhite)
+        }
+        TextButton(
+            onClick = onSwitchToBuyer,
+            modifier = Modifier.heightIn(min = 48.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = SensusWhite)
+        ) {
+            Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Modo Comprador")
         }
     }
 }
@@ -354,39 +358,14 @@ private fun MerchantStoreBannerCard(store: MerchantStore, onSwitchToBuyer: () ->
 private fun StoreOpenStatusBadge(isOpen: Boolean) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = (if (isOpen) SensusSuccess else SensusRed).copy(alpha = STATUS_BADGE_ALPHA)
+        color = if (isOpen) SensusSuccessBg else SensusRedBg
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Text(
+            text = if (isOpen) "Tienda Abierta" else "Tienda Cerrada",
+            style = MaterialTheme.typography.labelMedium,
+            color = SensusTextPrimary,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = if (isOpen) "Tienda Abierta" else "Tienda Cerrada",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-    }
-}
-
-@Composable
-private fun SwitchToBuyerButton(onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-    ) {
-        Icon(imageVector = Icons.Default.SwapHoriz, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = "Modo Comprador", fontSize = 11.sp, color = Color.White)
+        )
     }
 }
 
@@ -394,7 +373,7 @@ private fun SwitchToBuyerButton(onClick: () -> Unit) {
 private fun MerchantKpisCard(store: MerchantStore) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -411,37 +390,22 @@ private fun MerchantKpisCard(store: MerchantStore) {
 
 @Composable
 private fun MerchantQuickActionsRow(onNewOfferClick: () -> Unit, onScanQrClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        QuickActionButton(
-            icon = Icons.Default.Add,
-            label = "Nueva Oferta",
-            onClick = onNewOfferClick,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionButton(
-            icon = Icons.Default.QrCodeScanner,
-            label = "Escanear QR",
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(shape = SensusButtonShape, onClick = onNewOfferClick, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Nueva Oferta")
+        }
+        OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
+            shape = SensusButtonShape,
             onClick = onScanQrClick,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun QuickActionButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        modifier = modifier,
-        contentPadding = PaddingValues(vertical = 12.dp)
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        ) {
+            Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Escanear QR")
+        }
     }
 }
 
@@ -455,63 +419,39 @@ private fun MerchantKpi(icon: ImageVector, value: String, label: String) {
                 .background(SensusPurple.copy(alpha = KPI_BG_ALPHA)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.height(6.dp))
-        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-        Text(text = label, fontSize = 11.sp, color = SensusTextMuted)
+        Text(text = value, style = MaterialTheme.typography.titleLarge, color = SensusTextPrimary)
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = SensusTextSecondary, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
-private fun MerchantOfferItem(offer: ProductOffer, onEditClick: () -> Unit, onAdjustClick: () -> Unit) {
+private fun MerchantOfferItem(offer: ProductOffer, onEditClick: () -> Unit, onAdjustClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onEditClick)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
+        border = BorderStroke(1.dp, SensusCardBorder),
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = offer.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = "${offer.category} • Quedan ${offer.unitsLeft} piezas", fontSize = 12.sp, color = SensusTextSecondary)
-                Spacer(modifier = Modifier.height(4.dp))
-                OfferPriceAndStatusRow(discountPrice = offer.discountPrice, status = offer.status, unitsLeft = offer.unitsLeft)
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SensusPurple.copy(alpha = KPI_BG_ALPHA),
-                    modifier = Modifier.clickable(onClick = onEditClick)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(offer.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                "${offer.category} • Quedan ${offer.unitsLeft} piezas",
+                style = MaterialTheme.typography.bodySmall,
+                color = SensusTextSecondary
+            )
+            OfferPriceAndStatusRow(offer.discountPrice, offer.status, offer.unitsLeft)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(colors = sensusTextButtonColors(), onClick = onEditClick, modifier = Modifier.heightIn(min = 48.dp)) { Text("Gestionar") }
+                OutlinedButton(
+                    colors = sensusOutlinedButtonColors(),
+                    shape = SensusButtonShape,
+                    onClick = onAdjustClick,
+                    modifier = Modifier.heightIn(min = 48.dp)
                 ) {
-                    Text(
-                        text = "Gestionar",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = SensusPurple,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
-                }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SensusBackground,
-                    modifier = Modifier.clickable(onClick = onAdjustClick)
-                ) {
-                    Text(
-                        text = "Stock",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = SensusTextSecondary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    Text("Stock")
                 }
             }
         }
@@ -521,29 +461,28 @@ private fun MerchantOfferItem(offer: ProductOffer, onEditClick: () -> Unit, onAd
 @Composable
 private fun OfferPriceAndStatusRow(discountPrice: Double, status: OfferLifecycleStatus, unitsLeft: Int) {
     val (label, color) = resolveStatusBadge(status, unitsLeft)
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "$${String.format(Locale.US, "%.2f", discountPrice)} MXN",
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = SensusPurple
+            color = SensusVioletInk
         )
-        Spacer(modifier = Modifier.width(8.dp))
         Surface(color = color.copy(alpha = ACTIVE_BADGE_ALPHA), shape = RoundedCornerShape(4.dp)) {
             Text(
                 text = label,
-                color = color,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
+                color = SensusTextPrimary,
+                style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
     }
 }
 
+@Composable
 private fun resolveStatusBadge(status: OfferLifecycleStatus, unitsLeft: Int): Pair<String, Color> = when {
     status == OfferLifecycleStatus.ARCHIVED -> "De baja" to SensusRed
     status == OfferLifecycleStatus.EXPIRED -> "Expirada" to SensusRed
-    status == OfferLifecycleStatus.PAUSED || unitsLeft <= 0 -> "Pausada" to Color(PAUSED_BADGE_HEX)
+    status == OfferLifecycleStatus.PAUSED || unitsLeft <= 0 -> "Pausada" to SensusOrangeDark
     else -> "Activa" to SensusSuccess
 }

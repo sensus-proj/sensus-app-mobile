@@ -2,7 +2,6 @@ package com.example.sensus.presentation.buyer
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -32,6 +30,7 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.sensusTextButtonColors
 
 @Composable
 fun ProductDetailScreen(
@@ -115,12 +114,13 @@ internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewS
     val canClaim = state.details?.canClaim(System.currentTimeMillis()) == true
     val context = LocalContext.current
     var showAddedNotice by remember(offer.id) { mutableStateOf(false) }
-    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         ProductDetailScrollSection(
             offer = current,
             showAddedNotice = showAddedNotice,
             state = state,
-            actions = actions
+            actions = actions,
+            modifier = Modifier.weight(1f)
         )
         ProductDetailBottomBar(
             offer = current,
@@ -140,24 +140,28 @@ internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewS
                     }
                 },
                 hasActiveClaim = state.details?.hasActiveClaim == true
-            ),
-            modifier = Modifier.align(Alignment.BottomCenter)
+            )
         )
     }
 }
 
 @Composable
-private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boolean, state: ProductDetailViewState, actions: ProductDetailActions) {
+private fun ProductDetailScrollSection(
+    offer: ProductOffer,
+    showAddedNotice: Boolean,
+    state: ProductDetailViewState,
+    actions: ProductDetailActions,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val quantity = state.quantity
     val callbacks = actions.navigation
     val hasCoordinates = offer.latitude.isFinite() && offer.longitude.isFinite()
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(bottom = 120.dp)
     ) {
         ProductDetailTopBar(
             onNavigateBack = callbacks.onNavigateBack,
@@ -201,7 +205,7 @@ internal fun ProductDetailStatus(state: ProductDetailViewState, onRetry: () -> U
         state.isLoading -> Text(stringResource(R.string.detail_refreshing), modifier = Modifier.padding(16.dp))
         state.error != null -> Column(modifier = Modifier.padding(16.dp)) {
             Text(state.error.message, color = SensusRed)
-            TextButton(onClick = onRetry) { Text(stringResource(R.string.detail_retry)) }
+            TextButton(colors = sensusTextButtonColors(), onClick = onRetry) { Text(stringResource(R.string.detail_retry)) }
         }
         state.details?.hasActiveClaim == true -> Text(stringResource(R.string.detail_active_claim), modifier = Modifier.padding(16.dp))
         state.details?.canClaim(System.currentTimeMillis()) == false -> Text(stringResource(R.string.detail_unavailable), modifier = Modifier.padding(16.dp))

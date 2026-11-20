@@ -14,3 +14,5 @@ Integración principal: 257 tests unitarios sin fallos; compilación principal/i
 
 - [x] Regresiones unitarias de JSON inválido, identidad y restauración en memoria ejecutadas.
 - [ ] Pruebas Compose y transacciones E2E reales ejecutadas.
+
+- [ ] Verificar con un QR real que se rellena el folio y que la solicitud se envía solo al confirmar.

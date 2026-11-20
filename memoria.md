@@ -933,3 +933,121 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 
 - **Cambio (`RF-15-07`, `T15.15`):** `StoreCategory` incorpora `apiCode` (`Grocery`, `CleaningHome`, `Perishables`, `Dairy`, `Food`, `Bakery`, `Beverages`, `Pets`, `Pharmacy`; `null` para `ALL`), `fromApiCode` y `displayNameFor`. `RemoteOfferMapper.toRequest` envía `apiCode` en `CreateOfferRequest.category`; `OfferPublishingPolicy.validate` exige categoría distinta de `ALL` al crear (`OfferField.CATEGORY`). Al leer (`RemoteOfferMapper`, `OfferDetailsMapper`, `OfferMapper`, `AiDtos`, `FriendModels`) se mapea código → `displayName` conservando textos legacy en español; `MapStoreClusterBuilder` y `BuyerHomeScreen` filtran por ambos.
 - **Verificación:** `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt`, `ktlintCheck`, `lint`, `testDebugUnitTest` (364 pruebas, 0 fallos/omisiones), `koverVerifyDebug` (80.90 %) y `check_sdd.py`/`check_layers.py`/`check_endpoints.py`/`check_secrets.py`/`check_coverage.py` en PASS. Sin commit ni push.
+
+### Firebase de desarrollo (FT-21)
+
+- Se verificó la configuración oficial de sensus-dev-4f843 para sensus.com y se instaló en app/google-services.json, ignorado por Git. Gradle aplica Google Services cuando el archivo local está presente. processDebugGoogleServices generó los recursos. La entrega FCM y el registro en un teléfono quedan pendientes de un dispositivo disponible.
+
+## Bitácora - FT-39: recepción de notificaciones push, ciclo de sesión y ubicación (2026-11-19)
+
+- **Contrato del backend revisado en `sensus-back` (main):** `data["type"]` puede ser `nearby_offer`, `friend_offer_shared`, `claim_confirmed`, `merchant_offer_claimed`, `friend_request`, `friend_accepted`, `sanction_applied` o `sanction_reverted`. La app acepta solo `type`, `offerId`, `claimId` y `requestId`, y descarta lo demás (por ejemplo `expiresAtUtc` y `senderInviteCode`).
+- **Decisión: `deviceId` = UUID por instalación en un archivo propio (`sensus_push_installation`), no en `SecurePreferences`.** `clearAll()` corre en cada logout y en cada 401 y cambiaría el `deviceId`, así que el backend no podría desactivar el teléfono correcto. Ese archivo no guarda secretos ni datos personales. Sustituye al ID de Firebase Installations de FT-21 (RF-21-06).
+- **Registro:** `NotificationsDeviceSync` registra tras el login, al abrir la app con sesión y en `onNewToken`. Ante 503 o falta de red reintenta a los 30 s, 2 min y 10 min. Invitados, nunca.
+- **Logout:** `POST /api/v1/auth/logout?deviceId=` y se olvida el consentimiento de ubicación del usuario.
+- **Ubicación:** solo con consentimiento explícito y en primer plano. Se renueva al volver a la app si pasaron 6 h (el backend la vence a las 24 h) y nunca se envía el punto por defecto de `FusedLocationRepository`.
+- **Apertura:** `MainActivity` lee los extras (FCM en segundo plano o la notificación propia en primer plano) y los borra; `PushOpenRequests` guarda el destino hasta que existe la pantalla principal. El QR del apartado solo se muestra dentro de la app.
+- **Capas:** el servicio FCM vive en `presentation/push` porque `MainActivity`/`SensusApp` cuentan como presentación y no pueden importar `data/`.
+- **Evidencia:** `testDebugUnitTest` 413 pruebas y 0 fallos; Kover 80.46 % (el código nuevo lo había bajado a 78.58 %; se recuperó con pruebas de navegación y del lector del intent, sin tocar exclusiones); `compileDebugKotlin`, `compileDebugAndroidTestSources`, `lint`, `detekt`, `ktlintCheck` y los 5 `check_*.py` PASS.
+- **Pendiente:** prueba en teléfono físico (permiso, registro 200 y apertura en primer plano, en segundo plano y cerrada); casos E2E con el backend desplegado (oferta cercana, apartado y logout). El backend de producción respondía 503 en todas las rutas (pausa nocturna sin reactivar), lo que bloquea esas pruebas.
+
+## Bitácora - FT-31: tema visual y login (2026-11-19)
+
+- La paleta solicitada se aplica en `SensusTheme` y en los componentes que migraron a sus tokens. Inter se empaqueta con cuatro pesos y licencia OFL. El violeta principal del tema es `#7C3AED`; el valor histórico de la constitución §9 sigue pendiente de conciliar por el equipo.
+- El acceso prioriza los campos y la acción de entrar. Usa ancho máximo, desplazamiento con insets y teclado, animaciones para carga y error, y controles identificables por lectores de pantalla.
+- Se añadió un escenario Compose a 320 dp y escala del 150 % para comprobar los enlaces secundarios, la visibilidad de contraseña y la validación local. La ejecución en dispositivo sigue pendiente.
+- Evidencia local: SDD, capas, contratos, secretos y Gitleaks pass. Semgrep señala la actividad lanzadora exportada en el manifiesto, presente en HEAD antes de FT-31.
+- Compilación Android e instrumentada, Lint, Detekt, ktlint, unitarias debug y verificación Kover completados. Cobertura debug del proyecto: 80.46 %.
+
+## Bitácora - FT-32 a FT-37: rendimiento sin cambios funcionales (2026-11-19)
+
+- El índice SDD registra la secuencia acordada: línea base, visibilidad al cerrar comercio, mapa, imágenes, sesión y arranque, y demás pantallas. Cada slice tiene spec, plan, tareas y checklist. Los comportamientos actuales forman parte de sus criterios de aceptación.
+- FT-32 T32.1 completada. `scripts/summarize_performance.py` resume intentos por flujo, métrica, versión, dispositivo, red y estado de caché. Calcula p50 y p95 de éxitos y cuenta fallos y expiraciones como incumplimientos de latencia. Cinco pruebas unitarias pasan con datos sintéticos.
+- Verificación local: SDD, capas, endpoints, secretos y cobertura PASS. Gradle completó compilación debug e instrumentada, Lint, Detekt, ktlint, unitarias y Kover debug (80.46 %). No se generó APK ni AAB.
+- Semgrep de repositorio completo terminó con hallazgos en archivos existentes de workflows, manifiesto y gate de cobertura, y avisos del analizador. El gate de seguridad sigue abierto. El workflow existente declara pasos de seguridad con `continue-on-error`, en desacuerdo con la exigencia bloqueante de la constitución §4.7. Se conserva para revisión fuera de este alcance.
+- T32.2 pendiente. ADB no listó ningún dispositivo. Sin muestras físicas de referencia, las mediciones y los cambios Android de FT-33 a FT-37 siguen pendientes. El protocolo y el formato CSV están en `specs/FT-32-linea-base-rendimiento/plan.md`.
+
+### Seguimiento en teléfono y primera implementación
+
+- FT-32: dispositivo V2341, Sensus debug 1.4.0, código 9, con datos móviles y sesión cerrada. Veinte arranques fríos dieron p50 de 1239 ms y p95 de 1377 ms hasta el primer fotograma. Android registró las detenciones manuales de la prueba como `FORCE STOP`. Quedan pendientes pantalla usable, pruebas autenticadas y propagación en dos clientes.
+- FT-33: Inicio conserva una respuesta vacía como válida, reutiliza la caché ante un fallo y deja inaplicable una consulta cancelada. El perfil comercial comparte su lectura en curso y conserva el interruptor optimista. Revisado el backend local: el PUT exige dirección y código postal, invalida caché remota y la consulta de ofertas filtra comercios activos. Sigue pendiente medir el backend desplegado y verificar la invalidación por comercio.
+- FT-34: las consultas activas equivalentes del mapa se comparten. Una búsqueda nueva reemplaza las consultas de ofertas y comercios obsoletas. Las lecturas de caché de esta ruta y el fallback del repositorio ejecutan E/S fuera de Main. Queda pendiente separar la caché persistente por alcance de búsqueda y medir render en dispositivo.
+- FT-35: miniaturas de 288 y 640 px máximos para ofertas públicas Cloudinary compatibles en vista previa y catálogo. Coil reutiliza las URLs estables y la URL original se usa si falla la variante. Pendientes las mediciones de transferencia y las demás superficies.
+- FT-36: el ViewModel admite un intento de login o invitado en curso. Se conserva la validación remota y el flujo de navegación. FT-37 tiene el inventario inicial de recorridos.
+- Evidencia: 417 pruebas Android unitarias sin fallos, compilación Kotlin e instrumentada, Lint, Detekt y ktlint correctos, cobertura debug 80.79 %. Los cinco gates locales SDD pasan. Semgrep de repositorio completo conserva 65 hallazgos en workflows, manifiesto y gate de cobertura, con 15 avisos del analizador. El gate de seguridad permanece abierto. Las pruebas en el teléfono requieren instalar la compilación de trabajo con autorización expresa y usar una cuenta de prueba. El teléfono conserva la compilación inicial.
+
+### FT-36 RF-36-02: objetivo de arranque inferior a 1000 ms
+
+- La resolución de DAOs de sesión se difiere hasta la purga local, que se completa aunque se cancele la acción y ejecuta las operaciones Room en IO. La construcción del repositorio de preferencias tampoco abre la base. Su lectura y validación de SQLCipher ocurren en IO. El repositorio de amigos se resuelve bajo demanda para los enlaces.
+- Verificación: 418 unitarias sin fallos, compilación Kotlin e instrumentada, Lint, Detekt, ktlint y Kover debug con 81.03 %. Semgrep conserva los 65 hallazgos previos en los mismos archivos.
+- Referencia en V2341: p95 de 1377 ms hasta primer fotograma. Pendiente instalar la versión debug con autorización expresa y repetir 20 arranques en condiciones comparables. Registrar también la pantalla usable antes de dar por cumplida la meta.
+
+## Bitácora - FT-38: experiencia comercial
+
+- Se revisaron el acceso, el inicio comprador y el panel de comercio. Shopify App Design Guidelines orientó la jerarquía de tareas y la separación entre publicar y escanear. La guía de Compose orientó los movimientos de entrada, selección y actualización de listas.
+- Se reutilizó Inter y la paleta de FT-31. El catálogo usa las miniaturas públicas existentes, muestra precios con jerarquía y permite envolver etiquetas y controles. El panel organiza publicación, canje, indicadores e inventario.
+- Se conservaron las rutas, ViewModels, intents y repositorios existentes. Se agregó una prueba instrumentada para comprobar precio, guardado y detalle a 320 dp con fuente al 150 %.
+- Pendientes la ejecución en dispositivo y el cotejo con el Figma oficial, inaccesible en esta sesión. Semgrep en app/src conserva el hallazgo existente de MainActivity exportada.
+- Verificación: compilación Kotlin e instrumentada, Lint, Detekt y ktlint correctos. 418 pruebas unitarias sin fallos y Kover debug del 81.03 %. Pasaron los cinco gates locales de scripts.
+
+### FT-38: sistema visual global
+
+- Se amplió el tema Compose con los esquemas claro y oscuro y la escala Inter existente. La apariencia se guarda por instalación y se puede seleccionar desde los perfiles de Cliente y Comercio. Automático sigue la configuración del sistema.
+- Se revisaron las superficies del acceso, Cliente y Comercio, incluidos mapas, diálogos, hojas y menú inferior. Los descuentos usan naranja con texto oscuro. Se conservan las fotos de las ofertas, el video de marca, el campo blanco de los QR y los callbacks de navegación y acciones.
+- Se ajustaron la distribución de etiquetas y acciones del detalle para ventanas compactas, el área de canje y la posición de los destinos del menú inferior. La selección del menú expone su estado a lectores de pantalla.
+- La validación incluye cuatro casos unitarios de apariencia y contraste y un escenario instrumentado de selección a 320 dp con fuente al 150 %. ADB no detectó dispositivo para la ejecución instrumentada ni se generaron APK o AAB.
+- La compilación Kotlin e instrumentada, Lint, Detekt y ktlint pasaron. Se ejecutaron 422 pruebas unitarias sin fallos y Kover debug alcanzó 80.69 %. Los cinco gates locales de scripts pasaron.
+- PITest pasó su umbral de 45 % con un resultado de 50 %. El reporte registró 327 mutaciones con tiempo de espera agotado.
+- Semgrep encontró cero hallazgos en el escaneo de presentación y mantiene 65 en el escaneo completo, en workflows, manifiesto y `check_coverage.py`. La revisión de seguridad y los recorridos visuales en dispositivo siguen abiertos.
+- La divergencia documentada en FT-31 entre el violeta histórico de la constitución §9 y la paleta solicitada sigue pendiente de ratificación formal.
+
+### FT-38: consolidación de escala, márgenes y estados (2026-11-20)
+
+- Los tamaños fijos de texto en `presentation/` se llevaron a la escala Inter: 11, 13, 15, 16, 20 y 24 sp. Los títulos de hojas y diálogos pasan a 20 sp y los encabezados grandes a 24 sp. Los pesos ExtraBold y Black pasan a Bold, el peso mayor empaquetado.
+- Las esquinas de 10 dp pasan a 12 dp y las de 24 dp a 20 dp. Los márgenes laterales de las pantallas raíz usan 20 dp.
+- Se agregó el token `SensusDisabled` (gris suave `#9A94A8`, oscuro `#7D7590`) para iconos deshabilitados, en lugar de `Color.LightGray`.
+- En el menú inferior, los destinos inactivos usan el texto secundario y el activo conserva el violeta relleno. La sombra del botón central baja a 2 dp.
+- No cambian lógica, navegación, ViewModels ni repositorios. Pasaron la compilación Kotlin e instrumentada y las pruebas unitarias debug, Detekt y ktlint. La revisión visual en dispositivo sigue pendiente.
+
+### FT-38 y FT-14 — Fondo de arranque y captura de folio (2026-11-20)
+
+- El splash comparte el amarillo de marca #F4B340 con la ventana de arranque de Android. El mismo fondo cubre el espacio alrededor del video y la espera hasta su primer fotograma.
+- Canjes QR reutiliza el lector de cámara y galería para rellenar el folio. El comercio puede editarlo y confirma la operación con el botón existente. La ventana de canje y el diálogo del lector aplican FLAG_SECURE.
+- Se agregó una prueba Compose del estado habilitado del escáner. La lectura de un QR real y la inspección visual del splash quedan pendientes de instalación en el dispositivo.
+- Semgrep reporta la actividad lanzadora exportada que ya figuraba en el manifiesto. Los gates de SDD, capas, contratos y secretos pasaron.
+- Pasaron la compilación Kotlin e instrumentada, Android Lint, Detekt, ktlint y 422 pruebas unitarias. Kover debug verificó 80,69 %.
+
+### FT-31 y FT-38 — Acceso y video de arranque (2026-11-20)
+
+- Login y Registro comparten una cabecera con el gatito original de Sensus, el eslogan «Lo bueno, por menos» y un selector animado que llama a los callbacks existentes. Se conservan formularios, validaciones y acciones. «Mirar como invitado» tiene una acción naranja propia en Login.
+- Se retiraron la capa amarilla y su configuración de ventana. El video original se reproduce directamente y la transición al terminar, omitir o fallar sigue el flujo establecido.
+- Pasaron compilación Kotlin e instrumentada, Lint, Detekt, ktlint, 435 pruebas unitarias y los cinco gates locales. Cobertura Kover debug de 80,01 %. Semgrep conserva el hallazgo previo de la actividad lanzadora exportada. La revisión visual y las pruebas instrumentadas en dispositivo siguen pendientes.
+
+### FT-39, FT-31 y FT-38 — Aviso de ubicación, acceso y márgenes del video (2026-11-20)
+
+- E-08. La marca del aviso de ofertas cercanas pertenece a la instalación. El cierre de sesión limpia la autorización y la hora del último envío. Las preferencias permiten activar el envío explícitamente.
+- El vídeo del gato conserva su proporción y el amarillo #F3B443 de los fotogramas rellena sus márgenes durante la reproducción.
+- Login y Registro usan un contenedor compartido con fondo cálido, acentos naranja y violeta y una entrada breve. Los textos usan los estilos de Inter del tema.
+- Pasaron compilación Kotlin e instrumentada, Detekt, ktlint y 435 pruebas unitarias. Kover alcanzó 80,01 %. Semgrep mantiene el hallazgo previo de la actividad lanzadora exportada. La revisión visual queda pendiente en dispositivo.
+
+### FT-31 — Prototipo de ola en el acceso (2026-11-20)
+
+- Login y Registro usan una cabecera de color plano recortada por una ola profunda. El PNG original del gato aparece una sola vez y conserva su transparencia. La cabecera usa naranja suave en claro y ciruela en oscuro.
+- Los botones principales y de invitado adoptan la forma de cápsula con menor altura visual. Compose Material conserva la zona táctil mínima. Los formularios y callbacks existentes se reutilizan.
+- Compilaron las fuentes principales e instrumentadas. Pasaron 435 pruebas unitarias y Kover reportó 80,58 %. Semgrep mantiene el hallazgo previo de la actividad lanzadora exportada. La inspección visual sigue pendiente de dispositivo.
+- Android Lint, Detekt, ktlint y los cinco controles locales pasaron. ADB no detectó un dispositivo conectado.
+
+### FT-31 — Marco centrado para los formularios
+
+- Login y Registro comparten una superficie con borde lavanda y esquinas redondeadas. El formulario se centra horizontalmente y la composición se centra en el espacio disponible cuando cabe. Los insets y el desplazamiento mantienen los campos alcanzables con el teclado abierto.
+- Pasaron la compilación principal e instrumentada, los linters y la suite unitaria. Kover verificó 80,58 %. Semgrep conserva el hallazgo previo sobre la actividad lanzadora exportada.
+
+### FT-31 — Movimiento y acceso de invitado en ambas tarjetas
+
+- La ola se dibuja detrás de las tarjetas y usa una segunda capa cálida con desplazamiento lento. El selector y la entrada del formulario animan el cambio entre Login y Crear cuenta.
+- El título de cada formulario usa Inter Display y el violeta adaptado al tema. «Mirar como invitado» aparece dentro de las dos tarjetas con la misma operación de invitado. Se retiraron los enlaces inferiores duplicados.
+- Pasaron la compilación Kotlin e instrumentada, los linters y las pruebas unitarias. Kover debug reportó 80,58 %. Semgrep mantiene el hallazgo previo sobre MainActivity exportada. La prueba visual queda pendiente en el teléfono.
+
+### FT-39 — Renumeración de notificaciones push (2026-11-20)
+
+- El feed por intereses conserva FT-30. La recepción de notificaciones push y la ubicación para ofertas cercanas pasan a FT-39. Se renumeraron sus requisitos y tareas y se actualizaron el índice, la continuación de FT-21 y los contratos relacionados.
+- Los gates de estructura SDD, capas, endpoints y secretos pasaron. La revisión de identificadores en las specs locales confirmó que el feed y push tienen requisitos distintos.

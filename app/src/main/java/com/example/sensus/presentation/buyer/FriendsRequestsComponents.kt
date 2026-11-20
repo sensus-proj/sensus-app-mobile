@@ -52,18 +52,19 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.sensus.domain.model.PendingFriendRequest
 import com.example.sensus.domain.model.SentFriendRequest
+import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
 
 private const val BADGE_ALPHA = 0.14f
 private const val AVATAR_BG_ALPHA = 0.12f
 private const val AVATAR_ICON_RATIO = 0.55f
-private const val REQUEST_CARD_COLOR = 0xFFF9F7FD
-private val RequestCardBg = Color(REQUEST_CARD_COLOR)
 
 @Composable
 internal fun FriendAvatar(name: String, photoUrl: String?, size: Dp = 42.dp) {
@@ -80,7 +81,7 @@ internal fun FriendAvatar(name: String, photoUrl: String?, size: Dp = 42.dp) {
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = name,
-            tint = SensusPurple,
+            tint = SensusVioletInk,
             modifier = Modifier.size(size * AVATAR_ICON_RATIO)
         )
         if (cleanUrl != null) {
@@ -100,7 +101,7 @@ internal fun PendingRequestsSectionCard(pendingRequests: List<PendingFriendReque
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -137,14 +138,14 @@ private fun PendingRequestsHeaderRow(count: Int, expanded: Boolean, onToggle: ()
                 .background(SensusPurple.copy(alpha = BADGE_ALPHA)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = "Solicitudes pendientes", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Text(
                 text = if (count == 0) "No tienes invitaciones por revisar" else "Pulsa para aceptar o rechazar",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary
             )
         }
@@ -154,8 +155,8 @@ private fun PendingRequestsHeaderRow(count: Int, expanded: Boolean, onToggle: ()
         ) {
             Text(
                 text = count.toString(),
-                color = if (count > 0) Color.White else SensusPurple,
-                fontSize = 12.sp,
+                color = if (count > 0) Color.White else SensusVioletInk,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
             )
@@ -178,7 +179,7 @@ private fun PendingRequestsBody(pendingRequests: List<PendingFriendRequest>, onA
         if (pendingRequests.isEmpty()) {
             Text(
                 text = "Cuando un vecino escanee tu QR o abra tu enlace, aparecerá aquí para que aceptes o canceles.",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextMuted
             )
         } else {
@@ -196,7 +197,7 @@ private fun PendingRequestsBody(pendingRequests: List<PendingFriendRequest>, onA
 @Composable
 private fun PendingRequestItemRow(request: PendingFriendRequest, onAccept: () -> Unit, onReject: () -> Unit) {
     Surface(
-        color = RequestCardBg,
+        color = SensusBackground,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -209,7 +210,7 @@ private fun PendingRequestItemRow(request: PendingFriendRequest, onAccept: () ->
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = request.senderName,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = SensusTextPrimary,
                     maxLines = 1,
@@ -251,7 +252,7 @@ internal fun SentRequestsSummaryCard(sentRequests: List<SentFriendRequest>) {
     if (sentRequests.isEmpty()) return
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -260,7 +261,7 @@ internal fun SentRequestsSummaryCard(sentRequests: List<SentFriendRequest>) {
             sentRequests.forEach { sent ->
                 Text(
                     text = "• ${sent.targetName} (${sent.targetInviteCode}) — esperando confirmación",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

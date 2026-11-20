@@ -1,56 +1,142 @@
 package com.example.sensus.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-private const val HEX_PURPLE = 0xFF7C3AED
-private const val HEX_PURPLE_LIGHT = 0xFF9061F9
-private const val HEX_PURPLE_DARK = 0xFF5B21B6
-private const val HEX_VIOLET_LIGHT = 0xFFF6F2FD
-private const val HEX_VIOLET_BG = 0xFFF2EBFE
-private const val HEX_TEXT_PRIMARY = 0xFF211A2E
-private const val HEX_TEXT_SECONDARY = 0xFF6B7280
-private const val HEX_TEXT_MUTED = 0xFF9CA3AF
-private const val HEX_BACKGROUND = 0xFFF8F9FA
-private const val HEX_SURFACE = 0xFFFFFFFF
-private const val HEX_CARD_BORDER = 0xFFE8E1F5
-private const val HEX_SUCCESS = 0xFF10B981
-private const val HEX_SUCCESS_BG = 0xFFECFDF5
-private const val HEX_RED = 0xFFDC2626
-private const val HEX_RED_BG = 0xFFFEF2F2
-private const val HEX_ORANGE = 0xFFF97316
-private const val HEX_AMBER = 0xFFF59E0B
-private const val HEX_SPLASH_YELLOW = 0xFFF4B340
-private const val HEX_BEIGE = 0xFFE6D5B8
+internal val LocalSensusDark = staticCompositionLocalOf { false }
 
-// Brand Primary & Secondary Colors (Figma Design Tokens)
-val SensusPurple = Color(HEX_PURPLE) // Primary Violet (#7C3AED)
-val SensusPurpleLight = Color(HEX_PURPLE_LIGHT)
-val SensusPurpleDark = Color(HEX_PURPLE_DARK)
-val SensusViolet = Color(HEX_PURPLE)
-val SensusVioletLight = Color(HEX_VIOLET_LIGHT)
-val SensusVioletBg = Color(HEX_VIOLET_BG)
+private const val BRAND_VIOLET_HEX = 0xFF7C3AED
+private const val BRAND_VIOLET_DARK_HEX = 0xFF6D28D9
+private const val BRAND_VIOLET_SOFT_HEX = 0xFFF2EBFE
+private const val BRAND_ORANGE_HEX = 0xFFF97316
+private const val BRAND_ORANGE_DARK_HEX = 0xFFEA580C
+private const val BRAND_ORANGE_SOFT_HEX = 0xFFFFF1E6
+private const val STATUS_GREEN_HEX = 0xFF238561
+private const val STATUS_GREEN_SOFT_HEX = 0xFFEAF6EF
+private const val STATUS_RED_HEX = 0xFFDC2626
+private const val STATUS_RED_SOFT_HEX = 0xFFFEE2E2
+private const val INK_HEX = 0xFF211A2E
+private const val INK_SECONDARY_HEX = 0xFF716B7C
+private const val INK_MUTED_HEX = 0xFF9A94A8
+private const val DARK_MUTED_HEX = 0xFF7D7590
+private const val LIGHT_BACKGROUND_HEX = 0xFFF9FAFB
+private const val LIGHT_BORDER_HEX = 0xFFEFE9FA
+private const val DARK_BACKGROUND_HEX = 0xFF171320
+private const val DARK_SURFACE_HEX = 0xFF241D30
+private const val DARK_ELEVATED_HEX = 0xFF302342
+private const val DARK_SECONDARY_HEX = 0xFFB6AFC2
+private const val DARK_BORDER_HEX = 0xFF40364D
 
-// Text Colors (Figma)
-val SensusTextPrimary = Color(HEX_TEXT_PRIMARY) // Primary Dark (#211A2E)
-val SensusTextSecondary = Color(HEX_TEXT_SECONDARY)
-val SensusTextMuted = Color(HEX_TEXT_MUTED)
+internal val BrandViolet = Color(BRAND_VIOLET_HEX)
+internal val BrandVioletDark = Color(BRAND_VIOLET_DARK_HEX)
+internal val BrandVioletSoft = Color(BRAND_VIOLET_SOFT_HEX)
+internal val BrandOrange = Color(BRAND_ORANGE_HEX)
+internal val BrandOrangeDark = Color(BRAND_ORANGE_DARK_HEX)
+internal val BrandOrangeSoft = Color(BRAND_ORANGE_SOFT_HEX)
+internal val StatusGreen = Color(STATUS_GREEN_HEX)
+internal val StatusGreenSoft = Color(STATUS_GREEN_SOFT_HEX)
+internal val StatusRed = Color(STATUS_RED_HEX)
+internal val StatusRedSoft = Color(STATUS_RED_SOFT_HEX)
+internal val Ink = Color(INK_HEX)
+internal val InkSecondary = Color(INK_SECONDARY_HEX)
+internal val InkMuted = Color(INK_MUTED_HEX)
+internal val DarkMuted = Color(DARK_MUTED_HEX)
+internal val LightBackground = Color(LIGHT_BACKGROUND_HEX)
+internal val LightBorder = Color(LIGHT_BORDER_HEX)
+internal val DarkBackground = Color(DARK_BACKGROUND_HEX)
+internal val DarkSurface = Color(DARK_SURFACE_HEX)
+internal val DarkElevated = Color(DARK_ELEVATED_HEX)
+internal val DarkSecondary = Color(DARK_SECONDARY_HEX)
+internal val DarkBorder = Color(DARK_BORDER_HEX)
 
-// UI Accent & State Colors
-val SensusBackground = Color(HEX_BACKGROUND)
-val SensusSurface = Color(HEX_SURFACE)
-val SensusCardBorder = Color(HEX_CARD_BORDER)
-val SensusBorder = Color(HEX_CARD_BORDER)
+val SensusPurple = BrandViolet
+val SensusPurpleDark = BrandVioletDark
+val SensusPurpleLight = BrandViolet
+val SensusWhite = Color.White
+val SensusDiscountTag = BrandOrange
 
-// Status & Action Colors
-val SensusSuccess = Color(HEX_SUCCESS)
-val SensusSuccessBg = Color(HEX_SUCCESS_BG)
-val SensusDiscountTag = Color(HEX_RED)
-val SensusRed = Color(HEX_RED)
-val SensusRedBg = Color(HEX_RED_BG)
-val SensusOrange = Color(HEX_ORANGE)
-val SensusAmber = Color(HEX_AMBER)
-val SensusRating = Color(HEX_AMBER)
+val SensusSurface: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(SensusWhite, DarkSurface)
 
-val SensusSplashYellow = Color(HEX_SPLASH_YELLOW)
-val SensusBeige = Color(HEX_BEIGE)
-val SensusWhite = Color(HEX_SURFACE)
+val SensusBackground: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(LightBackground, DarkBackground)
+
+val SensusCardBorder: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(LightBorder, DarkBorder)
+
+val SensusVioletBg: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(BrandVioletSoft, DarkElevated)
+
+val SensusVioletLight: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = SensusVioletBg
+
+val SensusTextPrimary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(Ink, LightBackground)
+
+val SensusTextSecondary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(InkSecondary, DarkSecondary)
+
+val SensusTextMuted: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = SensusTextSecondary
+
+val SensusDisabled: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(InkMuted, DarkMuted)
+
+val SensusVioletInk: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(BrandVioletDark, BrandVioletSoft)
+
+val SensusRed: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(StatusRed, StatusRedSoft)
+
+val SensusRedBg: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(StatusRedSoft, DarkElevated)
+
+val SensusSuccess: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(StatusGreen, StatusGreenSoft)
+
+val SensusSuccessBg: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(StatusGreenSoft, DarkElevated)
+
+val SensusOrangeDark: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = themed(Ink, BrandOrange)
+
+val SensusRating: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = SensusOrangeDark
+
+@Composable
+@ReadOnlyComposable
+private fun themed(light: Color, dark: Color): Color = if (LocalSensusDark.current) dark else light

@@ -15,11 +15,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.sensus.domain.model.FriendInviteCodec
 import com.example.sensus.presentation.common.FriendRequestNotifier
-import com.example.sensus.theme.SensusTheme
+import com.example.sensus.presentation.push.PushLaunchParser
+import com.example.sensus.presentation.push.PushOpenRequests
+import com.example.sensus.theme.SensusAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var pushOpenRequests: PushOpenRequests
 
     private var deepLinkResetToken by mutableStateOf<String?>(null)
     private var deepLinkInviteUrl by mutableStateOf<String?>(null)
@@ -32,9 +38,11 @@ class MainActivity : ComponentActivity() {
 
         deepLinkResetToken = parseResetToken(intent)
         deepLinkInviteUrl = parseFriendInviteUrl(intent)
+        // FT-39: app cerrada o en segundo plano; el sistema abre la actividad con el bloque `data` como extras.
+        if (savedInstanceState == null) handlePushIntent(intent)
 
         setContent {
-            SensusTheme {
+            SensusAppTheme(window) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -61,6 +69,12 @@ class MainActivity : ComponentActivity() {
         if (!inviteUrl.isNullOrBlank()) {
             deepLinkInviteUrl = inviteUrl
         }
+        handlePushIntent(intent)
+    }
+
+    private fun handlePushIntent(intent: Intent?) {
+        PushLaunchParser.parse(intent)?.let(pushOpenRequests::submit)
+        PushLaunchParser.consume(intent)
     }
 
     companion object {

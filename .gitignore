@@ -17,6 +17,7 @@
 # Secretos, firma y MCP local
 keys.properties
 local.properties
+/app/google-services.json
 mcp_config.json
 .agent/mcp_config.json
 .cursor/mcp.json

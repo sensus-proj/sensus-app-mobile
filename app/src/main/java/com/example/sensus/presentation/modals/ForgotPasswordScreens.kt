@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,11 +57,15 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.PasswordPolicy
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import kotlinx.coroutines.launch
 
 private const val STEP_REQUEST_EMAIL = 1
@@ -178,9 +183,9 @@ private fun ForgotPasswordTopBar(step: Int, onNavigateBack: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(SensusSurface)
         ) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusPurple)
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusVioletInk)
         }
         Spacer(modifier = Modifier.width(12.dp))
         val title = when (step) {
@@ -188,17 +193,17 @@ private fun ForgotPasswordTopBar(step: Int, onNavigateBack: () -> Unit) {
             STEP_LINK_SENT -> "Revisa tu correo"
             else -> "Nueva contraseña"
         }
-        Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
     }
 }
 
 @Composable
 private fun RequestResetStepCard(email: String, isLoading: Boolean, errorMessage: String?, onEmailChange: (String) -> Unit, onSubmit: () -> Unit) {
-    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            StepCircleBadge(icon = Icons.Default.Key, description = "Recuperación de contraseña", tint = SensusPurple)
+            StepCircleBadge(icon = Icons.Default.Key, description = "Recuperación de contraseña", tint = SensusVioletInk)
             Spacer(modifier = Modifier.height(14.dp))
-            Text(text = "Recuperación por correo", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Recuperación por correo", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "Ingresa tu correo electrónico registrado. Te enviaremos un enlace de recuperación " +
@@ -212,24 +217,24 @@ private fun RequestResetStepCard(email: String, isLoading: Boolean, errorMessage
                 value = email,
                 onValueChange = onEmailChange,
                 placeholder = { Text("ejemplo@correo.com", fontSize = 13.sp) },
-                leadingIcon = { Icon(imageVector = Icons.Default.MailOutline, contentDescription = null, tint = SensusPurple) },
+                leadingIcon = { Icon(imageVector = Icons.Default.MailOutline, contentDescription = null, tint = SensusVioletInk) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true
             )
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = errorMessage, fontSize = 12.sp, color = SensusRed, modifier = Modifier.align(Alignment.Start))
+                Text(text = errorMessage, fontSize = 13.sp, color = SensusRed, modifier = Modifier.align(Alignment.Start))
             }
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = onSubmit,
                 enabled = !isLoading,
-                shape = RoundedCornerShape(14.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
             ) {
                 Text(
                     text = if (isLoading) "Enviando solicitud..." else "Enviar enlace de recuperación",
@@ -244,35 +249,40 @@ private fun RequestResetStepCard(email: String, isLoading: Boolean, errorMessage
 
 @Composable
 private fun ResetLinkSentStepCard(onOpenEmailApp: () -> Unit, onAdvanceToNewPassword: () -> Unit) {
-    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             StepCircleBadge(icon = Icons.Default.MarkEmailRead, description = "Enlace enviado", tint = SensusSuccess, sizeDp = LARGE_BADGE_DP)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "¡Enlace enviado!", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "¡Enlace enviado!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Hemos enviado las instrucciones para restablecer tu contraseña a tu correo. " +
                     "Recuerda que el enlace tiene una vigencia estricta de 15 minutos.",
                 fontSize = 13.sp,
                 color = SensusTextSecondary,
-                lineHeight = 19.sp
+                lineHeight = 22.sp
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onOpenEmailApp,
-                shape = RoundedCornerShape(14.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
             ) {
                 Icon(imageVector = Icons.Default.MailOutline, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "Abrir app de correo", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(onClick = onAdvanceToNewPassword, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                Text(text = "Ingresar nueva contraseña", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+            OutlinedButton(
+                colors = sensusOutlinedButtonColors(),
+                onClick = onAdvanceToNewPassword,
+                shape = SensusButtonShape,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            ) {
+                Text(text = "Ingresar nueva contraseña", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
             }
         }
     }
@@ -280,15 +290,15 @@ private fun ResetLinkSentStepCard(onOpenEmailApp: () -> Unit, onAdvanceToNewPass
 
 @Composable
 private fun NewPasswordStepCard(uiState: ForgotPasswordFormProps, actions: ForgotPasswordStepActions) {
-    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                StepCircleBadge(icon = Icons.Default.LockReset, description = null, tint = SensusPurple)
+                StepCircleBadge(icon = Icons.Default.LockReset, description = null, tint = SensusVioletInk)
             }
-            Text(text = "Establece tu nueva contraseña", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Establece tu nueva contraseña", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Text(
                 text = "Mínimo 8 caracteres, incluyendo al menos una mayúscula, una minúscula y un número.",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary
             )
             NewPasswordInputField(
@@ -305,16 +315,16 @@ private fun NewPasswordStepCard(uiState: ForgotPasswordFormProps, actions: Forgo
                 spec = PasswordInputSpec("Confirmar contraseña", uiState.confirmPassword, "Repite tu nueva contraseña"),
                 onValueChange = { actions.onStateChange(uiState.copy(confirmPassword = it, errorMessage = null)) }
             )
-            uiState.errorMessage?.let { Text(text = it, fontSize = 12.sp, color = SensusRed) }
+            uiState.errorMessage?.let { Text(text = it, fontSize = 13.sp, color = SensusRed) }
             Spacer(modifier = Modifier.height(6.dp))
             Button(
                 onClick = actions.onSubmitNewPassword,
                 enabled = !uiState.isLoading,
-                shape = RoundedCornerShape(14.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
             ) {
                 Text(
                     text = if (uiState.isLoading) "Restableciendo..." else "Restablecer e iniciar sesión",
@@ -356,7 +366,7 @@ private fun NewPasswordInputField(spec: PasswordInputSpec, onValueChange: (Strin
                         Icon(
                             imageVector = if (spec.visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = "Mostrar contraseña",
-                            tint = SensusPurple
+                            tint = SensusVioletInk
                         )
                     }
                 }

@@ -63,10 +63,13 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusRedBg
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 import kotlinx.coroutines.launch
 
@@ -332,8 +335,8 @@ private fun MerchantRegisterScaffoldContent(bundle: MerchantRegisterUiBundle, ac
             Surface(shape = RoundedCornerShape(12.dp), color = SensusRedBg, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = apiError,
-                    color = SensusRed,
-                    fontSize = 12.sp,
+                    color = SensusTextPrimary,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(12.dp)
                 )
@@ -352,12 +355,12 @@ private fun MerchantRegisterTopBar(onNavigateBack: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(SensusSurface)
         ) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusPurple)
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusVioletInk)
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = "¿Cambiarte a vendedor?", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(text = "¿Cambiarte a vendedor?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
     }
 }
 
@@ -375,7 +378,7 @@ private fun MerchantBenefitsCard() {
                 Text(text = "Convierte excedentes en ganancias", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Text(
                     text = "Publica excedentes en segundos y liquida stock antes del cierre",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = Color.White.copy(alpha = HERO_SUBTITLE_ALPHA)
                 )
             }
@@ -393,7 +396,7 @@ private fun MerchantRegisterFormCard(
 ) {
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -453,7 +456,7 @@ private fun MerchantRegisterFormCard(
 @Composable
 private fun MerchantLabeledField(spec: MerchantFieldSpec, onValueChange: (String) -> Unit) {
     Column {
-        Text(text = spec.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+        Text(text = spec.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = spec.value,
@@ -477,7 +480,7 @@ private fun MerchantRegisterSubmitButton(isRegistering: Boolean, onClick: () -> 
     Button(
         onClick = onClick,
         enabled = !isRegistering,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 14.dp)

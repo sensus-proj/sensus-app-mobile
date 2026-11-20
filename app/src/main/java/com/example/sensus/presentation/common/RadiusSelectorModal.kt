@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -53,11 +54,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.domain.model.GuestRadiusPolicy
+import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -84,11 +91,6 @@ private const val GUEST_BANNER_BORDER_ALPHA = 0.25f
 private const val READOUT_BORDER_ALPHA = 0.2f
 private const val DISABLED_STEPPER_ALPHA = 0.4f
 private const val SLIDER_INACTIVE_ALPHA = 0.2f
-
-private const val DIVIDER_HEX = 0xFFF1F5F9
-private const val READOUT_BG_HEX = 0xFFF8F7FF
-private const val BORDER_LIGHT_HEX = 0xFFE2E8F0
-private const val BORDER_MEDIUM_HEX = 0xFFCBD5E1
 
 private data class RadiusSheetProps(
     val selectedMeters: Int,
@@ -154,7 +156,7 @@ fun RadiusSelectorBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         RadiusSelectorSheetBody(
@@ -218,7 +220,7 @@ private fun RadiusSelectorSheetBody(
             GuestRadiusLimitBanner(attemptedOverflow = state.attemptedGuestOverflow, onClick = onRequireAuth)
         }
         Spacer(modifier = Modifier.height(14.dp))
-        HorizontalDivider(color = Color(DIVIDER_HEX))
+        HorizontalDivider(color = SensusVioletBg)
         Spacer(modifier = Modifier.height(14.dp))
         RadiusStepperCard(
             selectedMeters = state.selectedMeters,
@@ -256,15 +258,15 @@ private fun applyFinalRadiusSelection(state: RadiusSheetProps, onRadiusSelected:
 @Composable
 private fun RadiusSheetHeader(isGuest: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Surface(shape = RoundedCornerShape(10.dp), color = SensusPurple.copy(alpha = HEADER_ICON_ALPHA), modifier = Modifier.size(38.dp)) {
-            Icon(imageVector = Icons.Default.NearMe, contentDescription = null, tint = SensusPurple, modifier = Modifier.padding(8.dp).size(22.dp))
+        Surface(shape = RoundedCornerShape(12.dp), color = SensusPurple.copy(alpha = HEADER_ICON_ALPHA), modifier = Modifier.size(38.dp)) {
+            Icon(imageVector = Icons.Default.NearMe, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.padding(8.dp).size(22.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(text = "Distancia de búsqueda", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Distancia de búsqueda", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Text(
                 text = if (isGuest) "Modo Invitado: de 50 m hasta 2 km" else "Personaliza desde 50 m hasta 5 km",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = if (isGuest) SensusPurple else SensusTextSecondary
             )
         }
@@ -280,14 +282,14 @@ private fun GuestRadiusLimitBanner(attemptedOverflow: Boolean, onClick: () -> Un
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             val text = if (attemptedOverflow) {
                 "Límite de 2 km en Modo Invitado. Toca aquí para iniciar sesión y desbloquear hasta 5 km."
             } else {
                 "Regístrate o inicia sesión para ampliar tu cobertura hasta 5 km."
             }
-            Text(text = text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+            Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
         }
     }
 }
@@ -300,7 +302,7 @@ private fun RadiusStepperCard(selectedMeters: Int, isGuest: Boolean, onMetersUpd
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color(READOUT_BG_HEX),
+        color = SensusBackground,
         border = BorderStroke(1.dp, SensusPurple.copy(alpha = READOUT_BORDER_ALPHA)),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -314,7 +316,12 @@ private fun RadiusStepperCard(selectedMeters: Int, isGuest: Boolean, onMetersUpd
                 onMetersUpdated(next, false)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = formatRadiusText(selectedMeters / METERS_PER_KM_FLOAT), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = SensusPurple)
+                Text(
+                    text = formatRadiusText(selectedMeters / METERS_PER_KM_FLOAT),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusVioletInk
+                )
                 Text(text = "$selectedMeters metros alrededor", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = SensusTextSecondary)
             }
             RadiusStepCircleButton(if (atGuestCeiling) Icons.Default.Lock else Icons.Default.Add, "Aumentar 50 metros", canIncrement) {
@@ -329,13 +336,13 @@ private fun RadiusStepperCard(selectedMeters: Int, isGuest: Boolean, onMetersUpd
 private fun RadiusStepCircleButton(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
     Surface(
         shape = CircleShape,
-        color = Color.White,
+        color = SensusSurface,
         shadowElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(BORDER_LIGHT_HEX)),
+        border = BorderStroke(1.dp, SensusCardBorder),
         modifier = Modifier.size(40.dp).alpha(if (enabled) 1f else DISABLED_STEPPER_ALPHA).clickable(enabled = enabled, onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = description, tint = SensusPurple, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = description, tint = SensusVioletInk, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -398,7 +405,7 @@ private fun ExactMetersInputField(input: String, isOutOfBounds: Boolean, isGuest
 
 @Composable
 private fun QuickRadiusChipsRow(selectedMeters: Int, isGuest: Boolean, onSelectMeters: (Int) -> Unit, onLockedClick: () -> Unit) {
-    Text(text = "Accesos rápidos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextSecondary)
+    Text(text = "Accesos rápidos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextSecondary)
     Spacer(modifier = Modifier.height(8.dp))
     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         availableRadiusOptions.forEach { (km, label) ->
@@ -424,15 +431,16 @@ private fun QuickRadiusChip(label: String, isLocked: Boolean, isSelected: Boolea
                 Icon(imageVector = Icons.Default.Lock, contentDescription = "Bloqueado", tint = SensusTextMuted, modifier = Modifier.size(13.dp))
                 Spacer(modifier = Modifier.width(4.dp))
             }
-            Text(text = label, fontSize = 12.sp, fontWeight = palette.weight, color = palette.textColor)
+            Text(text = label, fontSize = 13.sp, fontWeight = palette.weight, color = palette.textColor)
         }
     }
 }
 
+@Composable
 private fun resolveQuickChipPalette(isSelected: Boolean, isLocked: Boolean): QuickChipPalette = when {
     isSelected -> QuickChipPalette(SensusPurple, SensusPurple, Color.White, FontWeight.Bold)
-    isLocked -> QuickChipPalette(Color(DIVIDER_HEX), Color(BORDER_LIGHT_HEX), SensusTextMuted, FontWeight.Medium)
-    else -> QuickChipPalette(Color.White, Color(BORDER_MEDIUM_HEX), SensusTextPrimary, FontWeight.Medium)
+    isLocked -> QuickChipPalette(SensusVioletBg, SensusCardBorder, SensusTextMuted, FontWeight.Medium)
+    else -> QuickChipPalette(SensusSurface, SensusTextMuted, SensusTextPrimary, FontWeight.Medium)
 }
 
 @Composable
@@ -440,9 +448,9 @@ private fun ApplyRadiusButton(selectedMeters: Int, enabled: Boolean, onClick: ()
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        modifier = Modifier.fillMaxWidth().height(50.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
     ) {
         Text(
             text = "Aplicar distancia (${formatRadiusText(selectedMeters / METERS_PER_KM_FLOAT)})",

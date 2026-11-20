@@ -13,3 +13,6 @@ detekt, ktlintCheck, koverVerify y scripts check_sdd/check_layers/check_endpoint
 
 Integración de UI: ClaimOfferScreen(offer, actions = ClaimsScreenActions(onNavigateBack, onNavigateToRoute, onClaimConfirmed)).
 Callbacks y Clock agrupados en ClaimsScreenActions (@ComposeUiModel); Screen y Content tienen cuatro parámetros, sin supresiones.
+
+## Captura con cámara
+Reutilizar el lector QR y enviar el contenido leído al intent Edit. Verificar que la lectura no dispare Submit.

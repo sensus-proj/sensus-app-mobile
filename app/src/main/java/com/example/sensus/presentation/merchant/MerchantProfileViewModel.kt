@@ -15,6 +15,9 @@ import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 private const val POSTAL_CODE_LENGTH = 5
@@ -32,6 +35,8 @@ class MerchantProfileViewModel @Inject constructor(
 ) {
 
     private var fetchRealMerchantEnabled: Boolean = true
+    private var profileRequest: Deferred<Result<MerchantProfile>>? = null
+    private var profileLoad: Job? = null
 
     constructor(
         storeRepository: StoreRepository,
@@ -81,7 +86,7 @@ class MerchantProfileViewModel @Inject constructor(
                 is Result.Failure -> updateState {
                     copy(
                         isUpdatingStatus = false,
-                        store = store.copy(isOpen = !isOpen),
+                        store = store.copy(isOpen = currentStore.isOpen),
                         errorMessage = res.error.message
                     )
                 }
@@ -94,7 +99,7 @@ class MerchantProfileViewModel @Inject constructor(
         fotoFachadaUrl: String? = null,
         activo: Boolean? = null
     ): MerchantProfileUpdateInput {
-        val loaded = (getMyMerchantUseCase() as? Result.Success)?.data
+        val loaded = (awaitMerchantProfile() as? Result.Success)?.data
         val addr = (loaded?.direccion ?: currentStore.address).removePrefix("Dirección: ").trim().ifBlank { "Dirección local" }
         val cp = (loaded?.codigoPostal ?: currentStore.postalCode).trim().takeIf { it.length == POSTAL_CODE_LENGTH } ?: "42800"
         return MerchantProfileUpdateInput(
@@ -161,17 +166,23 @@ class MerchantProfileViewModel @Inject constructor(
     }
 
     private fun loadMerchantProfile() {
-        if (!fetchRealMerchantEnabled) return
-        viewModelScope.launch {
-            when (val res = getMyMerchantUseCase()) {
+        if (!fetchRealMerchantEnabled || profileLoad?.isActive == true) return
+        profileLoad = viewModelScope.launch {
+            when (val res = awaitMerchantProfile()) {
                 is Result.Success -> applyLoadedMerchant(res.data)
                 is Result.Failure -> Unit
             }
         }
     }
 
+    private suspend fun awaitMerchantProfile(): Result<MerchantProfile> {
+        val request = profileRequest?.takeIf { it.isActive } ?: viewModelScope.async { getMyMerchantUseCase() }
+            .also { profileRequest = it }
+        return request.await()
+    }
+
     private suspend fun applyLoadedMerchant(profile: MerchantProfile) {
-        sessionRepository?.setStoreOpen(profile.activo)
+        if (!viewState.value.isUpdatingStatus) sessionRepository?.setStoreOpen(profile.activo)
         updateState {
             val formattedSchedule = formatSchedulesSummary(profile.horarios).ifBlank { store.schedule }
             copy(
@@ -182,7 +193,7 @@ class MerchantProfileViewModel @Inject constructor(
                     latitude = profile.latitud,
                     longitude = profile.longitud,
                     schedule = formattedSchedule,
-                    isOpen = profile.activo,
+                    isOpen = if (isUpdatingStatus) store.isOpen else profile.activo,
                     photoUrl = profile.fotoFachadaUrl ?: store.photoUrl
                 ),
                 schedules = profile.horarios

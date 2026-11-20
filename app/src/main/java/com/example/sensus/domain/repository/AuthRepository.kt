@@ -9,6 +9,8 @@ interface AuthRepository {
     suspend fun requestPasswordReset(email: String): Result<Unit>
     suspend fun resetPassword(token: String, newPassword: String): Result<Unit>
     suspend fun createGuestSession(): Result<String>
-    suspend fun logout(): Result<Unit>
+
+    /** [deviceId] identifica la instalación para que el backend desactive su token push; `null` si no aplica. */
+    suspend fun logout(deviceId: String? = null): Result<Unit>
     suspend fun deleteAccount(password: String): Result<Unit>
 }

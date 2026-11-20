@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -66,19 +66,25 @@ import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.usecase.RepublishOfferUseCase
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusOrangeDark
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.StatusRed
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import com.example.sensus.theme.sensusTextButtonColors
 
 private const val REPUBLISH_START_LEAD_MILLIS = 60_000L
 private const val DEFAULT_LEAD_MILLIS = 3_600_000L
 private const val DESCRIPTION_MIN_LINES = 2
 private const val STATUS_ALPHA = 0.14f
-private const val PAUSED_COLOR_HEX = 0xFFD97706L
 
 @ComposeUiModel
 private data class EditOfferFormHolder(
@@ -256,14 +262,14 @@ private fun EditOfferHeader(offer: ProductOffer, onNavigateBack: () -> Unit) {
             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = SensusTextPrimary)
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Gestionar promoción", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-            Text(text = offer.name, fontSize = 12.sp, color = SensusTextSecondary)
+            Text(text = "Gestionar promoción", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = offer.name, fontSize = 13.sp, color = SensusTextSecondary)
         }
         Surface(color = color.copy(alpha = STATUS_ALPHA), shape = RoundedCornerShape(8.dp)) {
             Text(
                 text = label,
                 color = color,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -271,10 +277,11 @@ private fun EditOfferHeader(offer: ProductOffer, onNavigateBack: () -> Unit) {
     }
 }
 
+@Composable
 private fun editOfferStatusAppearance(offer: ProductOffer): Pair<String, Color> = when {
     offer.status == OfferLifecycleStatus.ARCHIVED -> "De baja" to SensusRed
     offer.status == OfferLifecycleStatus.EXPIRED -> "Expirada" to SensusRed
-    offer.status == OfferLifecycleStatus.PAUSED || offer.unitsLeft <= 0 -> "Pausada" to Color(PAUSED_COLOR_HEX)
+    offer.status == OfferLifecycleStatus.PAUSED || offer.unitsLeft <= 0 -> "Pausada" to SensusOrangeDark
     else -> "Activa" to SensusSuccess
 }
 
@@ -285,7 +292,7 @@ private fun EditOfferLifecycleCard(offer: ProductOffer, isBusy: Boolean, onToggl
     val isArchived = offer.status == OfferLifecycleStatus.ARCHIVED
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -302,7 +309,7 @@ private fun EditOfferLifecycleCard(offer: ProductOffer, isBusy: Boolean, onToggl
                 } else {
                     "Pausa temporalmente esta oferta si se agotó por mostrador o deseas ocultarla al público sin perder sus datos."
                 }
-                Text(text = hint, fontSize = 12.sp, color = SensusTextSecondary)
+                Text(text = hint, fontSize = 13.sp, color = SensusTextSecondary)
                 LifecycleActionButtons(
                     isPaused = isPausedOrZero,
                     isBusy = isBusy,
@@ -322,13 +329,14 @@ private fun EditOfferLifecycleCard(offer: ProductOffer, isBusy: Boolean, onToggl
 private fun LifecycleActionButtons(isPaused: Boolean, isBusy: Boolean, canReactivate: Boolean, onTogglePause: () -> Unit, onRequestArchive: () -> Unit) {
     val toggleLabel = if (isPaused) "Reactivar promoción" else "Pausar promoción"
     val toggleIcon = if (isPaused) Icons.Default.PlayCircleOutline else Icons.Default.PauseCircleOutline
-    val toggleColor = if (isPaused) SensusSuccess else Color(PAUSED_COLOR_HEX)
+    val toggleColor = if (isPaused) SensusSuccess else SensusOrangeDark
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
             onClick = onTogglePause,
             enabled = !isBusy && (!isPaused || canReactivate),
             border = BorderStroke(1.dp, toggleColor),
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(imageVector = toggleIcon, contentDescription = null, tint = toggleColor, modifier = Modifier.size(18.dp))
@@ -339,14 +347,15 @@ private fun LifecycleActionButtons(isPaused: Boolean, isBusy: Boolean, canReacti
             Text(
                 text = "Primero aumenta el stock a 1 o más piezas y guarda cambios para poder reactivarla.",
                 fontSize = 11.sp,
-                color = Color(PAUSED_COLOR_HEX)
+                color = SensusOrangeDark
             )
         }
         OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
             onClick = onRequestArchive,
             enabled = !isBusy,
             border = BorderStroke(1.dp, SensusRed),
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = null, tint = SensusRed, modifier = Modifier.size(18.dp))
@@ -363,7 +372,7 @@ private fun EditOfferFormCard(form: EditOfferFormHolder, fieldError: OfferValida
     val discountPercent = OfferPublishingPolicy.discountPercent(orig, disc)
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -435,9 +444,9 @@ private fun EditPricesRow(form: EditOfferFormHolder, discountPercent: Int, field
             )
         }
         if (fieldError?.field == OfferField.PRICE) {
-            Text(text = fieldError.message, color = SensusRed, fontSize = 12.sp)
+            Text(text = fieldError.message, color = SensusRed, fontSize = 13.sp)
         } else if (discountPercent > 0) {
-            Text(text = "Descuento aplicado: -$discountPercent%", color = SensusSuccess, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Descuento aplicado: -$discountPercent%", color = SensusSuccess, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -446,19 +455,19 @@ private fun EditPricesRow(form: EditOfferFormHolder, discountPercent: Int, field
 private fun EditStockRow(stockCount: Int, fieldError: OfferValidationError?, onStockChange: (Int) -> Unit) {
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Stock disponible", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = SensusTextPrimary)
+            Text(text = "Stock disponible", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = SensusTextPrimary)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 IconButton(onClick = { if (stockCount > 1) onStockChange(stockCount - 1) }) {
-                    Icon(imageVector = Icons.Default.Remove, contentDescription = "Disminuir stock", tint = SensusPurple)
+                    Icon(imageVector = Icons.Default.Remove, contentDescription = "Disminuir stock", tint = SensusVioletInk)
                 }
-                Text(text = "$stockCount u.", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                Text(text = "$stockCount u.", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
                 IconButton(onClick = { if (stockCount < OfferPublishingPolicy.MAX_STOCK) onStockChange(stockCount + 1) }) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Aumentar stock", tint = SensusPurple)
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Aumentar stock", tint = SensusVioletInk)
                 }
             }
         }
         fieldError?.takeIf { it.field == OfferField.STOCK }?.let {
-            Text(text = it.message, color = SensusRed, fontSize = 12.sp)
+            Text(text = it.message, color = SensusRed, fontSize = 13.sp)
         }
     }
 }
@@ -469,10 +478,10 @@ private fun SaveOfferChangesButton(isSaving: Boolean, enabled: Boolean, onClick:
         onClick = onClick,
         enabled = !isSaving && enabled,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .heightIn(min = 50.dp)
     ) {
         if (isSaving) {
             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
@@ -489,12 +498,12 @@ private fun ArchiveConfirmationDialog(offerName: String, onDismiss: () -> Unit, 
         title = { Text(text = "Dar de baja promoción", fontWeight = FontWeight.Bold) },
         text = { Text(text = "¿Seguro que deseas dar de baja \"$offerName\"? Ya no volverá a mostrarse al público.") },
         confirmButton = {
-            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = SensusRed)) {
+            Button(shape = SensusButtonShape, onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = StatusRed)) {
                 Text(text = "Sí, dar de baja", color = Color.White)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) {
                 Text(text = "Cancelar", color = SensusTextMuted)
             }
         }
@@ -504,7 +513,7 @@ private fun ArchiveConfirmationDialog(offerName: String, onDismiss: () -> Unit, 
 @Composable
 internal fun RepublishOfferButton(status: OfferLifecycleStatus, isBusy: Boolean, onClick: () -> Unit) {
     if (RepublishOfferUseCase.supports(status)) {
-        Button(onClick = onClick, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
+        Button(shape = SensusButtonShape, onClick = onClick, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.republish_action))
         }
     }

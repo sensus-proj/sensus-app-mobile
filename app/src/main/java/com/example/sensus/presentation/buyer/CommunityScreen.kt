@@ -53,9 +53,12 @@ import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusTextButtonColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val COMMUNITY_NAV_CLEARANCE_DP = 96
@@ -99,11 +102,11 @@ fun CommunityScreen(
     }
     Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         Row(modifier = Modifier.statusBarsPadding()) {
-            TextButton(onClick = {
+            TextButton(colors = sensusTextButtonColors(), onClick = {
                 localShowFriends = false
                 callbacks.onSelectFriendsTab(false)
             }) { Text(stringResource(R.string.community_tab)) }
-            TextButton(onClick = {
+            TextButton(colors = sensusTextButtonColors(), onClick = {
                 localShowFriends = true
                 callbacks.onSelectFriendsTab(true)
             }) { Text(stringResource(R.string.community_friends_tab)) }
@@ -147,7 +150,7 @@ internal fun CommunityFeedContent(
     PullToRefreshBox(isRefreshing = state.isLoading, onRefresh = { onIntent(CommunityViewIntent.Refresh) }, modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
             contentPadding = PaddingValues(bottom = COMMUNITY_NAV_CLEARANCE_DP.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -164,11 +167,13 @@ internal fun CommunityFeedContent(
             }
             item {
                 if (state.hasMore) {
-                    TextButton(onClick = {
+                    TextButton(colors = sensusTextButtonColors(), onClick = {
                         onIntent(CommunityViewIntent.LoadMore)
                     }, enabled = !state.isLoading) { Text(stringResource(R.string.community_more)) }
                 }
-                TextButton(onClick = { onIntent(CommunityViewIntent.Refresh) }, enabled = !state.isLoading) { Text(stringResource(R.string.community_refresh)) }
+                TextButton(colors = sensusTextButtonColors(), onClick = {
+                    onIntent(CommunityViewIntent.Refresh)
+                }, enabled = !state.isLoading) { Text(stringResource(R.string.community_refresh)) }
             }
         }
     }
@@ -198,7 +203,7 @@ private fun CommunityPostMerchantLabel(post: FeedPost, onMerchantClick: (String)
     if (merchantId != null) {
         Text(
             text = post.merchantName ?: stringResource(R.string.community_merchant_offers),
-            color = SensusPurple,
+            color = SensusVioletInk,
             modifier = Modifier.clickable { onMerchantClick(merchantId) }
         )
     } else {
@@ -209,11 +214,11 @@ private fun CommunityPostMerchantLabel(post: FeedPost, onMerchantClick: (String)
 @Composable
 private fun CommunityPostSavePill(isSaved: Boolean, onSaveClick: () -> Unit) {
     val containerColor = if (isSaved) SensusPurple else SensusVioletBg
-    val contentColor = if (isSaved) Color.White else SensusPurple
+    val contentColor = if (isSaved) Color.White else SensusVioletInk
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = containerColor,
-        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onSaveClick)
+        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onSaveClick)
     ) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -226,7 +231,7 @@ private fun CommunityPostSavePill(isSaved: Boolean, onSaveClick: () -> Unit) {
             Text(
                 text = stringResource(if (isSaved) R.string.saved_interests_post_saved else R.string.saved_interests_post_interest),
                 color = contentColor,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -240,8 +245,12 @@ private fun shouldLoadMore(index: Int?, state: CommunityViewState): Boolean {
 
 @Composable
 private fun CommunityFeedHeader(state: CommunityViewState, onIntent: (CommunityViewIntent) -> Unit) {
-    Text(stringResource(R.string.community_title), color = SensusPurple)
-    Button(onClick = { onIntent(CommunityViewIntent.NewPost) }, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
+    Text(stringResource(R.string.community_title), color = SensusVioletInk)
+    Button(
+        shape = SensusButtonShape,
+        onClick = { onIntent(CommunityViewIntent.NewPost) },
+        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)
+    ) {
         Text(stringResource(R.string.community_new_post))
     }
     state.feedError?.let {

@@ -19,3 +19,5 @@ Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisio
 - [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación.
 - [ ] Retirada automática de la unidad de bolsa tras confirmación (la bolsa se conserva; no se afirma vaciarla).
 - Suite remota de seguridad/CI no ejecutada sin push; paquete SAST p/mobile externo devuelve 404. No se cierran estas condiciones.
+
+- [ ] Añadir captura del folio con el lector QR existente y verificar el flujo de confirmación.

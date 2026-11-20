@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -47,11 +48,14 @@ import coil.compose.AsyncImage
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -98,7 +102,7 @@ internal fun EditProfileBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         EditProfileSheetBody(
@@ -130,28 +134,28 @@ private fun EditProfileSheetBody(form: EditSheetFormState, onNameChange: (String
             .padding(bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Editar Perfil", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(text = "Editar Perfil", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(20.dp))
         EditableAvatarPicker(photoUri = form.tempPhotoUri, onClick = onPickPhoto)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Toca para cambiar foto de perfil", fontSize = 12.sp, color = SensusPurple, fontWeight = FontWeight.SemiBold)
+        Text(text = "Toca para cambiar foto de perfil", fontSize = 13.sp, color = SensusVioletInk, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(20.dp))
         ProfileEditNameField(value = form.tempName, onValueChange = onNameChange)
         Spacer(modifier = Modifier.height(14.dp))
         ProfileReadOnlyEmailField(email = form.email)
         form.editError?.let { err ->
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = err, fontSize = 12.sp, color = SensusRed, modifier = Modifier.align(Alignment.Start))
+            Text(text = err, fontSize = 13.sp, color = SensusRed, modifier = Modifier.align(Alignment.Start))
         }
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onSaveClick,
             enabled = !form.isSaving,
-            shape = RoundedCornerShape(14.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
         ) {
             Text(text = if (form.isSaving) "Guardando..." else "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
@@ -178,7 +182,7 @@ private fun EditableAvatarPicker(photoUri: Uri?, onClick: () -> Unit) {
                     .clip(CircleShape)
             )
         } else {
-            Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(50.dp))
+            Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(50.dp))
         }
         Box(
             modifier = Modifier

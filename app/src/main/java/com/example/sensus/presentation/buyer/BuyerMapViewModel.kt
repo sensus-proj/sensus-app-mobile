@@ -5,6 +5,7 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.GuestRadiusPolicy
 import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.OffersRepository
@@ -18,6 +19,9 @@ import com.example.sensus.presentation.common.toDomain
 import com.example.sensus.presentation.common.toStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 private const val MAP_METERS_PER_KM = 1000
@@ -53,34 +57,52 @@ class BuyerMapViewModel @Inject constructor(
 
     @Volatile
     private var hasUserChangedLayer = false
+    private var nearbyRefresh: Job? = null
+    private var currentSearch: NearbySearch? = null
+    private var initialCacheLoad: Job? = null
 
     init {
-        val offers = offersRepository.getOffers().filter { it.isPubliclyVisible }
-        updateState { copy(offers = offers, selectedOffer = null) }
+        initialCacheLoad = viewModelScope.launch {
+            val offers = offersRepository.readCachedOffers().filter { it.isPubliclyVisible }
+            ensureActive()
+            updateState { copy(offers = offers) }
+        }
         loadSavedMapLayer()
         observeSession()
         checkInitialLocationPermission()
         refreshNearbyOffers(viewState.value.userLocation, viewState.value.selectedRadiusKm)
     }
 
-    private fun refreshNearbyOffers(location: com.example.sensus.domain.model.UserLocation, radiusKm: Float) {
-        viewModelScope.launch {
-            val res = offersRepository.fetchNearbyOffers(
-                latitude = location.latitude,
-                longitude = location.longitude,
-                radiusKm = radiusKm.toDouble()
-            )
-            if (res is Result.Success) {
-                updateState { copy(offers = res.data.filter { it.isPubliclyVisible }) }
-            }
+    private fun refreshNearbyOffers(location: UserLocation, radiusKm: Float, force: Boolean = false) {
+        val isGuest = sessionRepository.sessionState.value.isGuest
+        val search = NearbySearch(location, GuestRadiusPolicy.clampRadius(radiusKm, isGuest), isGuest)
+        if (!force && search == currentSearch && nearbyRefresh?.isActive == true) return
+        if (currentSearch != null && (force || search != currentSearch)) {
+            initialCacheLoad?.cancel()
         }
-        viewModelScope.launch {
-            val radiusMeters = (radiusKm * MAP_METERS_PER_KM).toInt()
-            val isGuest = viewState.value.isGuest || sessionRepository.sessionState.value.isGuest
-            val merchantsRes = getNearbyMerchantsUseCase(location.latitude, location.longitude, radiusMeters, isGuest)
-            if (merchantsRes is Result.Success) {
-                updateState { copy(nearbyMerchants = merchantsRes.data.filter { it.activo }) }
-            }
+        currentSearch = search
+        nearbyRefresh?.cancel()
+        nearbyRefresh = viewModelScope.launch {
+            launch { refreshOffers(search) }
+            launch { refreshMerchants(search) }
+        }
+    }
+
+    private suspend fun refreshOffers(search: NearbySearch) {
+        val result = offersRepository.fetchNearbyOffers(search.location.latitude, search.location.longitude, search.radiusKm.toDouble())
+        currentCoroutineContext().ensureActive()
+        if (result is Result.Success) {
+            initialCacheLoad?.cancel()
+            updateState { copy(offers = result.data.filter { it.isPubliclyVisible }) }
+        }
+    }
+
+    private suspend fun refreshMerchants(search: NearbySearch) {
+        val radiusMeters = (search.radiusKm * MAP_METERS_PER_KM).toInt()
+        val result = getNearbyMerchantsUseCase(search.location.latitude, search.location.longitude, radiusMeters, search.isGuest)
+        currentCoroutineContext().ensureActive()
+        if (result is Result.Success) {
+            updateState { copy(nearbyMerchants = result.data.filter { it.activo }) }
         }
     }
 
@@ -112,7 +134,7 @@ class BuyerMapViewModel @Inject constructor(
                     )
                 }
                 if (userChanged || storeVisibilityChanged) {
-                    refreshNearbyOffers(viewState.value.userLocation, viewState.value.selectedRadiusKm)
+                    refreshNearbyOffers(viewState.value.userLocation, viewState.value.selectedRadiusKm, force = true)
                 }
             }
         }
@@ -252,6 +274,8 @@ class BuyerMapViewModel @Inject constructor(
         }
     }
 }
+
+private data class NearbySearch(val location: UserLocation, val radiusKm: Float, val isGuest: Boolean)
 
 private object NoOpMapMerchantRepository : MerchantRepository {
     override suspend fun getMyMerchant(): Result<MerchantProfile> = Result.Success(MerchantProfile("", "", "", "", ""))

@@ -50,6 +50,18 @@ specs/FT-XX-<slug>/
 | `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |
 | `FT-29-merchant-location-activation` | Negocio | Activación comercio + mapa interactivo + persistencia perfil | FT-06, FT-08, FT-10 | En revision | `MerchantLocationPickerModal.kt`, `MerchantActivationUseCasesTest.kt`, `158` unit tests / `Kover 90.72%`, 5 `check_*.py` PASS (pendiente commit/PR en `movil_Beto`) |
 | `FT-30-feed-promociones-intereses` | Negocio (Ola 5) | Feed de promociones por intereses; selector de intereses | FT-12, FT-20 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md`; backend specs 042 v2.0.0, 054 y 055 (pendientes) |
+| `FT-31-sistema-visual-login` | Presentacion | — | FT-04 | En revision | `LoginScreen.kt`, `AuthFlowE2ETest.kt` |
+
+| `FT-32-linea-base-rendimiento` | Medición | RF-32-01 | FT-04, FT-06, FT-11 | En implementacion | [Spec](FT-32-linea-base-rendimiento/spec.md), resumidor CSV probado y captura en dispositivo pendiente |
+| `FT-33-visibilidad-cierre-comercio` | Rendimiento | RF-33-01 | FT-32, FT-06, FT-11 | En implementacion | [Spec](FT-33-visibilidad-cierre-comercio/spec.md), catálogo vacío autoritativo y lectura de perfil compartida |
+| `FT-34-rendimiento-mapa` | Rendimiento | RF-34-01 | FT-33, FT-11, FT-28 | En implementacion | [Spec](FT-34-rendimiento-mapa/spec.md), consultas duplicadas y respuestas obsoletas |
+| `FT-35-rendimiento-imagenes` | Rendimiento | RF-35-01 | FT-34, FT-12, FT-15 | En implementacion | [Spec](FT-35-rendimiento-imagenes/spec.md), miniaturas en vista previa y catálogo |
+| `FT-36-rendimiento-sesion-arranque` | Rendimiento | RF-36-01 | FT-35, FT-04, FT-31 | En implementacion | [Spec](FT-36-rendimiento-sesion-arranque/spec.md), intents simultáneos controlados |
+| `FT-37-rendimiento-pantallas` | Rendimiento | RF-37-01 | FT-36 | En implementacion | [Spec](FT-37-rendimiento-pantallas/spec.md), inventario inicial de recorridos |
+| `FT-38-experiencia-comercial` | Presentación | Acceso, Cliente y Comercio | FT-31 | En revision | [Spec](FT-38-experiencia-comercial/spec.md) |
+| `FT-39-push-recepcion-ubicacion` | Negocio / Push | RF-39-01..RF-39-10; continúa FT-21 | FT-21, FT-10, FT-12 | En implementacion | Receptor FCM, canal, `deviceId` por instalación, logout con `deviceId`, ubicación para ofertas cercanas; 413 unit tests PASS, Kover 80.46 %; E2E en teléfono pendiente |
+
+**Orden de rendimiento:** FT-32 → FT-33 → FT-34 → FT-35 → FT-36 → FT-37. Cada etapa conserva los flujos actuales y compara sus resultados con FT-32.
 
 Estados permitidos: `Borrador`, `Especificada, sin ejecutar`, `En implementacion`, `En revision`, `Cerrada`.
 Ninguna feature pasa a `Cerrada` sin `checklists/checklist.md` completo y evidencia en `Memoria.md` §6.

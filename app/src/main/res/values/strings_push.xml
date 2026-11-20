@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- FT-39: notificaciones push -->
+    <string name="push_channel_id" translatable="false">sensus_alerts</string>
+    <string name="push_channel_name">Avisos de Sensus</string>
+    <string name="push_channel_description">Ofertas cerca de ti, apartados y avisos de tus amigos.</string>
+
+    <string name="push_rationale_title">¿Activar notificaciones?</string>
+    <string name="push_rationale_body">
+        Te avisaremos cuando confirmes un apartado, cuando aparezca una oferta nueva cerca de ti y cuando tus amigos te compartan algo. El código QR de tus apartados solo se muestra dentro de la app.
+    </string>
+    <string name="push_rationale_accept">Activar</string>
+    <string name="push_rationale_later">Ahora no</string>
+
+    <string name="push_location_title">¿Avisarte de ofertas cerca de ti?</string>
+    <string name="push_location_body">
+        Para avisarte de ofertas nuevas cercanas, Sensus enviará tu ubicación aproximada al servidor solo mientras usas la app. El servidor la borra a las 24 horas. Puedes desactivarlo cuando quieras en Preferencias de notificaciones.
+    </string>
+    <string name="push_location_accept">Sí, compartir ubicación</string>
+    <string name="push_location_decline">No, gracias</string>
+
+    <string name="push_offer_unavailable">La oferta de la notificación ya no está disponible.</string>
+    <string name="push_guest_required">Inicia sesión con tu cuenta para ver este aviso.</string>
+
+    <string name="notification_preferences_location">Ofertas nuevas cerca de mí</string>
+    <string name="notification_preferences_location_note">
+        Comparte tu ubicación aproximada mientras usas la app. El servidor la borra a las 24 horas.
+    </string>
+    <string name="notification_preferences_location_permission">
+        Se necesita permiso de ubicación para avisarte de ofertas cercanas. Puedes concederlo en los ajustes de Android.
+    </string>
+    <string name="notification_preferences_location_unavailable">
+        No se pudo obtener tu ubicación. Activa el GPS e inténtalo de nuevo.
+    </string>
+</resources>

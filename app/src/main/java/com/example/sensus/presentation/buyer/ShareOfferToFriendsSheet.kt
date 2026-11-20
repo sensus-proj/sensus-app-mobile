@@ -41,11 +41,14 @@ import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.MAX_OFFER_SHARE_FRIENDS
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusTextButtonColors
 
 private const val FRIEND_LIST_MAX_HEIGHT_DP = 320
 private const val LIMIT_ALERT_BG_ALPHA = 0.1f
@@ -69,7 +72,7 @@ internal fun ShareOfferToFriendsDialog(offer: ProductOffer, friends: List<Connec
     AlertDialog(
         onDismissRequest = actions.onDismiss,
         title = {
-            Text(text = "Compartir con amigos", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Compartir con amigos", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         },
         text = {
             ShareOfferDialogContent(
@@ -96,7 +99,7 @@ internal fun ShareOfferToFriendsDialog(offer: ProductOffer, friends: List<Connec
                 onClick = { actions.onSendToFriends(selectedIds.toList()) },
                 enabled = selectedIds.isNotEmpty() && !isSharing,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                shape = RoundedCornerShape(10.dp)
+                shape = SensusButtonShape
             ) {
                 if (isSharing) {
                     CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
@@ -106,7 +109,7 @@ internal fun ShareOfferToFriendsDialog(offer: ProductOffer, friends: List<Connec
             }
         },
         dismissButton = {
-            TextButton(onClick = actions.onDismiss) { Text(text = "Cancelar", color = SensusTextSecondary) }
+            TextButton(colors = sensusTextButtonColors(), onClick = actions.onDismiss) { Text(text = "Cancelar", color = SensusTextSecondary) }
         }
     )
 }
@@ -124,7 +127,7 @@ private fun ShareOfferDialogContent(
             text = "${offer.name} • ${offer.storeName}",
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
-            color = SensusPurple,
+            color = SensusVioletInk,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -132,7 +135,7 @@ private fun ShareOfferDialogContent(
             Surface(color = SensusRed.copy(alpha = LIMIT_ALERT_BG_ALPHA), shape = RoundedCornerShape(8.dp)) {
                 Text(
                     text = "Solo puedes compartir esta oferta a un máximo de $MAX_OFFER_SHARE_FRIENDS amigos a la vez.",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = SensusRed,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)
@@ -148,7 +151,7 @@ private fun ShareOfferDialogContent(
         } else {
             Text(
                 text = "Elige con qué amigos quieres compartir esta oferta:",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextMuted
             )
             LazyColumn(
@@ -180,7 +183,7 @@ private fun ShareOfferFriendRow(friend: ConnectedFriend, checked: Boolean, onTog
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = friend.displayName,
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             color = SensusTextPrimary,
             maxLines = 1,
@@ -190,7 +193,7 @@ private fun ShareOfferFriendRow(friend: ConnectedFriend, checked: Boolean, onTog
         Checkbox(
             checked = checked,
             onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(checkedColor = SensusPurple)
+            colors = CheckboxDefaults.colors(checkedColor = SensusVioletInk)
         )
     }
 }

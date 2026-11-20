@@ -31,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,16 +50,24 @@ import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.OfferThumbnailSize
+import com.example.sensus.presentation.common.PublicOfferThumbnail
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusCardBorder
+import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import java.util.Locale
 
-private const val BORDER_LIGHT_HEX = 0xFFE2E8F0
 private const val STORE_CARD_ACTIVE_ALPHA = 0.14f
 private const val MATCHING_LIST_MAX_HEIGHT_DP = 172
 private const val OVERVIEW_CATEGORY_LIMIT = 3
@@ -80,7 +89,7 @@ internal fun SelectedStoreBottomCard(cluster: MapStoreCluster, actions: Selected
     val routeTarget = cluster.featuredOffer ?: buildStoreRouteTarget(cluster)
     Card(
         shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         modifier = modifier
             .fillMaxWidth()
@@ -93,7 +102,7 @@ internal fun SelectedStoreBottomCard(cluster: MapStoreCluster, actions: Selected
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(Color(BORDER_LIGHT_HEX)))
+                Box(modifier = Modifier.size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(SensusCardBorder))
                 IconButton(onClick = actions.onClose, modifier = Modifier.size(24.dp)) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Cerrar", tint = SensusTextMuted, modifier = Modifier.size(18.dp))
                 }
@@ -140,7 +149,7 @@ private fun SelectedStoreHeaderRow(cluster: MapStoreCluster) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${cluster.formattedDistance} • ${cluster.address}",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -181,7 +190,7 @@ internal fun StoreAvatarThumbnail(photoUrl: String?, storeName: String, sizeDp: 
                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
             )
         } else {
-            Icon(imageVector = Icons.Default.Storefront, contentDescription = "Tienda", tint = SensusPurple, modifier = Modifier.size(22.dp))
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = "Tienda", tint = SensusVioletInk, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -212,7 +221,7 @@ private fun SelectedStoreCatalogOverview(cluster: MapStoreCluster) {
                     .background(SensusVioletBg),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = Icons.Default.Storefront, contentDescription = cluster.storeName, tint = SensusPurple, modifier = Modifier.size(22.dp))
+                Icon(imageVector = Icons.Default.Storefront, contentDescription = cluster.storeName, tint = SensusVioletInk, modifier = Modifier.size(22.dp))
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -225,7 +234,7 @@ private fun SelectedStoreCatalogOverview(cluster: MapStoreCluster) {
                 )
                 Text(
                     text = subtitle,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -279,15 +288,15 @@ private fun SelectedStoreProductPreview(offer: ProductOffer, isSaved: Boolean, o
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = offer.category,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = SensusPurple,
+                    color = SensusVioletInk,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = offer.name,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = SensusTextPrimary,
                     maxLines = 1,
@@ -297,10 +306,10 @@ private fun SelectedStoreProductPreview(offer: ProductOffer, isSaved: Boolean, o
                     Text(
                         text = "$${String.format(Locale.US, "%.2f", offer.discountPrice)} MXN",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SensusPurple
+                        fontWeight = FontWeight.Bold,
+                        color = SensusVioletInk
                     )
-                    Text(text = "-${offer.discountPercent}%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SensusSuccess)
+                    StorePreviewDiscount(offer.discountPercent)
                 }
                 Text(text = "Quedan ${offer.unitsLeft} pzs", fontSize = 11.sp, color = SensusTextMuted)
             }
@@ -317,6 +326,18 @@ private fun SelectedStoreProductPreview(offer: ProductOffer, isSaved: Boolean, o
 }
 
 @Composable
+private fun StorePreviewDiscount(discountPercent: Int) {
+    Surface(color = SensusDiscountTag, shape = RoundedCornerShape(8.dp)) {
+        Text(
+            text = "-$discountPercent%",
+            color = Ink,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+        )
+    }
+}
+
+@Composable
 private fun StorePreviewThumbnail(offer: ProductOffer) {
     Box(
         modifier = Modifier
@@ -326,14 +347,14 @@ private fun StorePreviewThumbnail(offer: ProductOffer) {
         contentAlignment = Alignment.Center
     ) {
         if (!offer.imageUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = offer.imageUrl,
-                contentDescription = offer.name,
-                contentScale = ContentScale.Crop,
+            PublicOfferThumbnail(
+                url = offer.imageUrl,
+                size = OfferThumbnailSize.PREVIEW,
+                description = offer.name,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Icon(imageVector = Icons.Default.Storefront, contentDescription = offer.name, tint = SensusPurple, modifier = Modifier.size(30.dp))
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = offer.name, tint = SensusVioletInk, modifier = Modifier.size(30.dp))
         }
     }
 }
@@ -346,18 +367,23 @@ private fun SelectedStoreActionButtons(
     onViewMoreClick: (MapStoreCluster) -> Unit
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedButton(onClick = { onRouteClick(routeTarget) }, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
-            Icon(imageVector = Icons.Default.Navigation, contentDescription = "Cómo llegar", tint = SensusPurple, modifier = Modifier.size(16.dp))
+        OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
+            onClick = { onRouteClick(routeTarget) },
+            shape = SensusButtonShape,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(imageVector = Icons.Default.Navigation, contentDescription = "Cómo llegar", tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Cómo llegar", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+            Text(text = "Cómo llegar", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
         }
         Button(
             onClick = { onViewMoreClick(cluster) },
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             modifier = Modifier.weight(1f)
         ) {
-            Text(text = "Ver más", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(text = "Ver más", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
             Spacer(modifier = Modifier.width(6.dp))
             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Ver más", tint = Color.White, modifier = Modifier.size(16.dp))
         }

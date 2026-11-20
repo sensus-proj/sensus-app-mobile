@@ -21,7 +21,7 @@ Las tareas históricas de rutas no publicadas se sustituyen por este alcance rat
 ## Prerrequisitos / deuda posterior (sin cierre total)
 
 - [ ] Aprovisionar recursos Android oficiales de Firebase por equipo de despliegue; sin secretos/configuración fabricados.
-- [ ] Servicio receptor, canales, renovación y ciclo login/logout con contratos publicados.
+- [ ] Servicio receptor, canales, renovación y ciclo login/logout con contratos publicados. Se atiende en `FT-39-push-recepcion-ubicacion` (2026-11-19); RF-21-06 cambia: el `deviceId` ahora es un UUID por instalación, no el ID de Firebase Installations.
 - [ ] Bandeja local cifrada cuando exista alcance/contrato acordado; no inventar API inbox ni marcado remoto.
 - [ ] Main concilia memoria y documentación compartida; ejecuta CHECKLIST_PR, seguridad y cobertura antes de merge.
 ## Corrección posterior al gate inicial

@@ -47,6 +47,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -421,7 +422,18 @@ class MerchantViewModelsTest {
         coEvery { updateUseCase(any()) } returns Result.Success(profile)
 
         val vm = MerchantProfileViewModel(storeRepo, updateUseCase, getMyMerchantUseCase, null, null, sessionRepo)
+        val profileResponse = CompletableDeferred<Unit>()
+        coEvery { getMyMerchantUseCase() } coAnswers {
+            profileResponse.await()
+            Result.Success(profile.copy(activo = true))
+        }
+        testDispatcher.scheduler.runCurrent()
+        vm.dispatchIntent(MerchantProfileViewIntent.LoadMerchant)
         vm.dispatchIntent(MerchantProfileViewIntent.ToggleStoreOpen(false))
+        testDispatcher.scheduler.runCurrent()
+        assertFalse(vm.viewState.value.store.isOpen)
+        coVerify(exactly = 1) { getMyMerchantUseCase() }
+        profileResponse.complete(Unit)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(vm.viewState.value.store.isOpen)

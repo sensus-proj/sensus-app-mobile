@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import androidx.lifecycle.viewModelScope
+import com.example.sensus.common.Result
 import com.example.sensus.domain.model.GuestRadiusPolicy
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.OffersRepository
@@ -8,6 +9,8 @@ import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -16,6 +19,8 @@ class BuyerHomeViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val sessionRepository: SessionRepository
 ) : MviViewModel<BuyerHomeViewState, BuyerHomeViewIntent, BuyerHomeViewEffect>(BuyerHomeViewState()) {
+
+    private var offersRefresh: Job? = null
 
     init {
         loadOffers()
@@ -71,8 +76,9 @@ class BuyerHomeViewModel @Inject constructor(
     }
 
     private fun loadOffers() {
+        offersRefresh?.cancel()
         updateState { copy(isLoading = true) }
-        viewModelScope.launch {
+        offersRefresh = viewModelScope.launch {
             val loc = viewState.value.userLocation
             val radiusKm = viewState.value.selectedRadiusKm.toDouble()
             val remoteRes = offersRepository.fetchNearbyOffers(
@@ -81,10 +87,10 @@ class BuyerHomeViewModel @Inject constructor(
                 radiusKm = radiusKm
             )
             val offers = when (remoteRes) {
-                is com.example.sensus.common.Result.Success ->
-                    remoteRes.data.filter { it.isPubliclyVisible }.ifEmpty { offersRepository.getOffers().filter { it.isPubliclyVisible } }
-                is com.example.sensus.common.Result.Failure -> offersRepository.getOffers().filter { it.isPubliclyVisible }
+                is Result.Success -> remoteRes.data.filter { it.isPubliclyVisible }
+                is Result.Failure -> offersRepository.readCachedOffers().filter { it.isPubliclyVisible }
             }
+            ensureActive()
             updateState { copy(offers = offers, isLoading = false) }
         }
     }

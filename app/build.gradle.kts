@@ -15,6 +15,10 @@ plugins {
     kotlin("kapt")
 }
 
+if (file("google-services.json").isFile) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     compileOptions {
         isCoreLibraryDesugaringEnabled = true

@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -64,20 +66,26 @@ import com.example.sensus.R
 import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusDisabled
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRating
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
+import com.example.sensus.theme.sensusTextButtonColors
 import java.util.Locale
 
 private const val NOTICE_BG_ALPHA = 0.15f
 private const val STEPPER_ACTIVE_ALPHA = 0.12f
-private const val STEPPER_INACTIVE_HEX = 0xFFF1F5F9
 private const val STORE_AVATAR_ALPHA = 0.1f
 private const val IMPACT_BG_ALPHA = 0.1f
 
@@ -110,8 +118,8 @@ internal fun ProductDetailTopBar(onNavigateBack: () -> Unit, onShareClick: () ->
 
 @Composable
 private fun CirclePinIconButton(isSaved: Boolean, onClick: () -> Unit) {
-    val containerColor = if (isSaved) SensusPurple else Color.White
-    val iconTint = if (isSaved) Color.White else SensusPurple
+    val containerColor = if (isSaved) SensusPurple else SensusSurface
+    val iconTint = if (isSaved) Color.White else SensusVioletInk
     val iconVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin
     val desc = if (isSaved) {
         stringResource(R.string.saved_interests_pin_saved)
@@ -132,7 +140,7 @@ private fun CirclePinIconButton(isSaved: Boolean, onClick: () -> Unit) {
 @Composable
 internal fun ProductSaveInterestPill(isSaved: Boolean, onClick: () -> Unit) {
     val containerColor = if (isSaved) SensusPurple else SensusVioletBg
-    val contentColor = if (isSaved) Color.White else SensusPurple
+    val contentColor = if (isSaved) Color.White else SensusVioletInk
     val iconVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin
     val label = if (isSaved) {
         stringResource(R.string.saved_interests_pin_saved)
@@ -167,9 +175,9 @@ private fun CircleWhiteIconButton(icon: ImageVector, description: String, onClic
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(Color.White)
+            .background(SensusSurface)
     ) {
-        Icon(imageVector = icon, contentDescription = description, tint = SensusPurple)
+        Icon(imageVector = icon, contentDescription = description, tint = SensusVioletInk)
     }
 }
 
@@ -198,6 +206,7 @@ internal fun ProductAddedNoticeBanner(storeName: String) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ProductVisualHeroCard(offer: ProductOffer) {
     Box(
@@ -206,7 +215,7 @@ internal fun ProductVisualHeroCard(offer: ProductOffer) {
             .height(220.dp)
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White),
+            .background(SensusSurface),
         contentAlignment = Alignment.Center
     ) {
         if (!offer.imageUrl.isNullOrBlank()) {
@@ -218,22 +227,23 @@ internal fun ProductVisualHeroCard(offer: ProductOffer) {
             )
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(imageVector = Icons.Default.CleaningServices, contentDescription = offer.name, tint = SensusPurple, modifier = Modifier.size(80.dp))
+                Icon(imageVector = Icons.Default.CleaningServices, contentDescription = offer.name, tint = SensusVioletInk, modifier = Modifier.size(80.dp))
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = offer.category, fontSize = 13.sp, color = SensusTextMuted)
             }
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Surface(color = SensusDiscountTag, shape = RoundedCornerShape(8.dp)) {
                 Text(
                     text = "-${offer.discountPercent}%",
-                    color = Color.White,
-                    fontSize = 12.sp,
+                    color = Ink,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
@@ -242,7 +252,7 @@ internal fun ProductVisualHeroCard(offer: ProductOffer) {
                 Text(
                     text = "Stock: ${offer.unitsLeft} disponibles",
                     color = Color.White,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
@@ -251,6 +261,7 @@ internal fun ProductVisualHeroCard(offer: ProductOffer) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ProductTitleAndDatesSection(offer: ProductOffer) {
     Column(
@@ -260,20 +271,20 @@ internal fun ProductTitleAndDatesSection(offer: ProductOffer) {
     ) {
         Text(text = offer.name, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(8.dp))
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Caducidad", tint = SensusPurple, modifier = Modifier.size(15.dp))
+                Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Caducidad", tint = SensusVioletInk, modifier = Modifier.size(15.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Caduca: ${offer.expirationDate}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+                Text(text = "Caduca: ${offer.expirationDate}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Tiempo", tint = SensusTextSecondary, modifier = Modifier.size(15.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Límite: ${offer.timeToCollectMinutes} min", fontSize = 12.sp, color = SensusTextSecondary)
+                Text(text = "Límite: ${offer.timeToCollectMinutes} min", fontSize = 13.sp, color = SensusTextSecondary)
             }
         }
     }
@@ -283,7 +294,7 @@ internal fun ProductTitleAndDatesSection(offer: ProductOffer) {
 internal fun QuantitySelectorCard(quantity: Int, maxUnits: Int, onDecrease: () -> Unit, onIncrease: () -> Unit) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -296,12 +307,12 @@ internal fun QuantitySelectorCard(quantity: Int, maxUnits: Int, onDecrease: () -
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(text = "Selecciona cantidad a apartar", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-                Text(text = "$quantity de $maxUnits disponibles", fontSize = 12.sp, color = SensusTextMuted)
+                Text(text = "Selecciona cantidad a apartar", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = "$quantity de $maxUnits disponibles", fontSize = 13.sp, color = SensusTextMuted)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuantityCircleButton(Icons.Default.Remove, "Disminuir", quantity > 1, onDecrease)
-                Text(text = "$quantity", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = SensusPurple)
+                Text(text = "$quantity", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
                 QuantityCircleButton(Icons.Default.Add, "Aumentar", quantity < maxUnits, onIncrease)
             }
         }
@@ -312,7 +323,7 @@ internal fun QuantitySelectorCard(quantity: Int, maxUnits: Int, onDecrease: () -
 private fun QuantityCircleButton(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
     Surface(
         shape = CircleShape,
-        color = if (enabled) SensusPurple.copy(alpha = STEPPER_ACTIVE_ALPHA) else Color(STEPPER_INACTIVE_HEX),
+        color = if (enabled) SensusPurple.copy(alpha = STEPPER_ACTIVE_ALPHA) else SensusVioletBg,
         modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
@@ -322,7 +333,7 @@ private fun QuantityCircleButton(icon: ImageVector, description: String, enabled
             Icon(
                 imageVector = icon,
                 contentDescription = description,
-                tint = if (enabled) SensusPurple else Color.LightGray,
+                tint = if (enabled) SensusPurple else SensusDisabled,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -333,7 +344,7 @@ private fun QuantityCircleButton(icon: ImageVector, description: String, enabled
 internal fun ProductMerchantCard(offer: ProductOffer, hasRouteNavigation: Boolean, onGoogleMapsClick: () -> Unit, onRouteClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -344,11 +355,11 @@ internal fun ProductMerchantCard(offer: ProductOffer, hasRouteNavigation: Boolea
             HorizontalDivider(color = SensusBackground)
             Spacer(modifier = Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Dirección", tint = SensusPurple, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Dirección", tint = SensusVioletInk, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "${offer.address} • A ${offer.formattedDistance}",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = SensusTextPrimary
                 )
@@ -370,11 +381,11 @@ private fun MerchantCardHeaderRow(offer: ProductOffer) {
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(SensusPurple.copy(alpha = STORE_AVATAR_ALPHA)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = Icons.Default.Storefront, contentDescription = "Comercio", tint = SensusPurple, modifier = Modifier.size(24.dp))
+                Icon(imageVector = Icons.Default.Storefront, contentDescription = "Comercio", tint = SensusVioletInk, modifier = Modifier.size(24.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
@@ -404,7 +415,7 @@ private fun MerchantNavigationButtons(hasRouteNavigation: Boolean, onGoogleMapsC
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Button(
             onClick = onGoogleMapsClick,
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(vertical = 10.dp)
@@ -415,14 +426,15 @@ private fun MerchantNavigationButtons(hasRouteNavigation: Boolean, onGoogleMapsC
         }
         if (hasRouteNavigation) {
             OutlinedButton(
+                colors = sensusOutlinedButtonColors(),
                 onClick = onRouteClick,
-                shape = RoundedCornerShape(12.dp),
+                shape = SensusButtonShape,
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(vertical = 10.dp)
             ) {
-                Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp), tint = SensusPurple)
+                Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp), tint = SensusVioletInk)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Ruta Sensus", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                Text(text = "Ruta Sensus", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
             }
         }
     }
@@ -432,7 +444,7 @@ private fun MerchantNavigationButtons(hasRouteNavigation: Boolean, onGoogleMapsC
 internal fun ProductDescriptionCard(description: String, quantity: Int) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -445,7 +457,7 @@ internal fun ProductDescriptionCard(description: String, quantity: Int) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(SensusSuccess.copy(alpha = IMPACT_BG_ALPHA))
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -454,7 +466,7 @@ internal fun ProductDescriptionCard(description: String, quantity: Int) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Evitas el desperdicio de $quantity lote(s) en perfecto estado.",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = SensusSuccess
                 )
@@ -463,21 +475,20 @@ internal fun ProductDescriptionCard(description: String, quantity: Int) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ProductDetailBottomBar(offer: ProductOffer, quantity: Int, actions: ProductBottomBarActions, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding(),
-        shadowElevation = 12.dp,
-        color = Color.White
+        modifier = modifier.fillMaxWidth(),
+        shadowElevation = 2.dp,
+        color = SensusSurface
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ProductBottomPriceSummary(offer = offer, quantity = quantity)
             ProductBottomActionButtons(actions)
@@ -494,21 +505,21 @@ private fun ProductBottomPriceSummary(offer: ProductOffer, quantity: Int) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = "$${String.format(Locale.US, "%.2f", totalDiscount)}",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = SensusPurple
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = SensusVioletInk
             )
             Text(
                 text = " MXN",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = SensusPurple,
+                color = SensusVioletInk,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "$${String.format(Locale.US, "%.2f", totalOriginal)}",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextMuted,
                 textDecoration = TextDecoration.LineThrough,
                 modifier = Modifier.padding(bottom = 2.dp)
@@ -521,32 +532,31 @@ private fun ProductBottomPriceSummary(offer: ProductOffer, quantity: Int) {
 private fun ProductBottomActionButtons(actions: ProductBottomBarActions) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
             onClick = actions.onAddToCart,
             enabled = actions.enabled,
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.AddShoppingCart,
                 contentDescription = "Agregar a la bolsa",
-                tint = SensusPurple,
                 modifier = Modifier.size(18.dp)
             )
         }
         Button(
             onClick = actions.onApartarDirect,
             enabled = actions.enabled || actions.hasActiveClaim,
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = "Apartar ahora", tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = stringResource(if (actions.hasActiveClaim) R.string.detail_view_active_claim else R.string.detail_claim_one),
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -567,12 +577,12 @@ internal fun StoreConflictAlertDialog(conflict: AddToCartResult.StoreConflict, o
             )
         },
         confirmButton = {
-            Button(onClick = onConfirmReplace, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
+            Button(shape = SensusButtonShape, onClick = onConfirmReplace, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
                 Text("Vaciar y agregar")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) {
                 Text("Conservar bolsa", color = SensusTextSecondary)
             }
         }

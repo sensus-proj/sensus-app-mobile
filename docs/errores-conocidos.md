@@ -230,3 +230,7 @@ relanzar antes de tocar dependencias.
 - [ ] Ningún ViewModel salta a un `Dispatchers.IO` real sin dispatcher sustituible en tests (E-03).
 - [ ] Sin `HttpLoggingInterceptor` en `BODY`/`HEADERS`; se usa `buildLoggingInterceptor` (E-05).
 - [ ] `connectedDebugAndroidTest` ejecutado en emulador antes de publicar, no solo compilado (E-06).
+
+## E-08 — El aviso de ofertas cercanas vuelve al iniciar sesión
+
+El cierre de sesión borraba el consentimiento de ubicación y la marca de que el aviso ya se había respondido. El siguiente acceso volvía a mostrarlo. El almacén de instalación conserva ahora la marca del aviso y deja desactivado el envío de ubicación al salir. La activación voluntaria sigue disponible en Preferencias de notificaciones. La prueba de regresión comprueba la limpieza del consentimiento y la conservación de la marca en una nueva instancia del almacén.

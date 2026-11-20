@@ -18,6 +18,8 @@ import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.OffersRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import retrofit2.Response
 
 private const val HTTP_OK = 200
@@ -38,6 +40,8 @@ class OffersRepositoryImpl(
     private val offerDao: OfferDao? = null,
     private val offersApi: OffersApiService? = null
 ) : OffersRepository {
+
+    override suspend fun readCachedOffers(): List<ProductOffer> = withContext(Dispatchers.IO) { getOffers() }
 
     override fun getOffers(): List<ProductOffer> {
         val dao = offerDao ?: return emptyList()
@@ -62,7 +66,7 @@ class OffersRepositoryImpl(
         }
     }
 
-    override fun syncOffersFromServer(remoteOffers: List<ProductOffer>) {
+    internal fun syncOffersFromServer(remoteOffers: List<ProductOffer>) {
         val dao = offerDao ?: return
         try {
             dao.clearOffers()
@@ -75,7 +79,7 @@ class OffersRepositoryImpl(
     }
 
     override suspend fun fetchNearbyOffers(latitude: Double, longitude: Double, radiusKm: Double?, category: String?): Result<List<ProductOffer>> {
-        val api = offersApi ?: return Result.Success(getOffers())
+        val api = offersApi ?: return Result.Success(readCachedOffers())
         val networkResult = safeNetworkCall("Error al cargar ofertas cercanas.") {
             val response = api.getNearbyOffers(
                 lat = latitude,
@@ -92,11 +96,11 @@ class OffersRepositoryImpl(
                 mapCreateOfferError(response)
             }
         }
-        return if (networkResult is Result.Failure) Result.Success(getOffers()) else networkResult
+        return if (networkResult is Result.Failure) Result.Success(readCachedOffers()) else networkResult
     }
 
     override suspend fun fetchMerchantOffers(status: String?): Result<List<ProductOffer>> {
-        val api = offersApi ?: return Result.Success(getMerchantCachedOffers())
+        val api = offersApi ?: return Result.Success(readMerchantCachedOffers())
         val networkResult = safeNetworkCall("Error al cargar tus ofertas.") {
             val response = api.getMyMerchantOffers(status = status)
             val body = response.body()
@@ -108,8 +112,10 @@ class OffersRepositoryImpl(
                 mapCreateOfferError(response)
             }
         }
-        return if (networkResult is Result.Failure) Result.Success(getMerchantCachedOffers()) else networkResult
+        return if (networkResult is Result.Failure) Result.Success(readMerchantCachedOffers()) else networkResult
     }
+
+    private suspend fun readMerchantCachedOffers(): List<ProductOffer> = withContext(Dispatchers.IO) { getMerchantCachedOffers() }
 
     private fun getMerchantCachedOffers(): List<ProductOffer> {
         val dao = offerDao ?: return emptyList()

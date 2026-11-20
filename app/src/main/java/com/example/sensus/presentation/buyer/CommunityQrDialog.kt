@@ -37,9 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
@@ -55,7 +59,7 @@ internal fun QrInviteDialog(inviteCode: String, onDismiss: () -> Unit, onCopyCod
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+            color = SensusSurface,
             shadowElevation = 12.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -64,9 +68,9 @@ internal fun QrInviteDialog(inviteCode: String, onDismiss: () -> Unit, onCopyCod
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Muestra este código a tus amigos para que lo escaneen desde la app o cámara y se agreguen a tu red.",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary,
-                    lineHeight = 16.sp
+                    lineHeight = 18.sp
                 )
                 Spacer(modifier = Modifier.height(18.dp))
                 QrPreviewBox(payload = qrPayload)
@@ -75,24 +79,24 @@ internal fun QrInviteDialog(inviteCode: String, onDismiss: () -> Unit, onCopyCod
                     Text(
                         text = inviteCode,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SensusPurple,
+                        fontWeight = FontWeight.Bold,
+                        color = SensusVioletInk,
                         letterSpacing = 2.sp,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                     )
                 }
                 Spacer(modifier = Modifier.height(18.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = onCopyCode, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
-                        Text("Copiar código", fontSize = 12.sp, color = SensusPurple)
+                    OutlinedButton(colors = sensusOutlinedButtonColors(), onClick = onCopyCode, shape = SensusButtonShape, modifier = Modifier.weight(1f)) {
+                        Text("Copiar código", fontSize = 13.sp, color = SensusVioletInk)
                     }
                     Button(
                         onClick = onShareCode,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = SensusButtonShape,
                         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Compartir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Compartir", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -128,7 +132,7 @@ private fun QrPreviewBox(payload: String) {
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Icon(imageVector = Icons.Default.QrCode2, contentDescription = "QR", tint = SensusPurple, modifier = Modifier.size(96.dp))
+            Icon(imageVector = Icons.Default.QrCode2, contentDescription = "QR", tint = SensusVioletInk, modifier = Modifier.size(96.dp))
         }
     }
 }

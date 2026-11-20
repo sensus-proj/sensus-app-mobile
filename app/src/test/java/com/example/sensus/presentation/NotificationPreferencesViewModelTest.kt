@@ -61,7 +61,8 @@ class NotificationPreferencesViewModelTest {
     private fun viewModel() = NotificationsViewModel(
         NotificationsGetSettingsUseCase(repository, session),
         NotificationsUpdateSettingsUseCase(repository, session),
-        NotificationsRegisterDeviceUseCase(provider, repository, session)
+        NotificationsRegisterDeviceUseCase(provider, repository, session),
+        io.mockk.mockk<com.example.sensus.domain.usecase.NotificationsLocationUseCase>(relaxed = true)
     )
 
     @Test

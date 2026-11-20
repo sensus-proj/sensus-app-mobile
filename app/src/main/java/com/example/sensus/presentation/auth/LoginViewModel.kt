@@ -28,6 +28,7 @@ class LoginViewModel @Inject constructor(
 
     private fun performLogin() {
         val currentState = viewState.value
+        if (currentState.isLoading || currentState.isGuestLoading) return
         updateState { copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             when (val result = loginUseCase(currentState.email, currentState.password)) {
@@ -45,6 +46,8 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun performGuestLogin() {
+        val currentState = viewState.value
+        if (currentState.isLoading || currentState.isGuestLoading) return
         updateState { copy(isGuestLoading = true, errorMessage = null) }
         viewModelScope.launch {
             when (val result = startGuestSessionUseCase()) {

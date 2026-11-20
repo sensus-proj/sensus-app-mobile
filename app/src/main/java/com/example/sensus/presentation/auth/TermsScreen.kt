@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,12 +54,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusTheme
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 
 const val PRIVACY_POLICY_URL = "https://rodnix.com.mx/sensus/privacidad.html"
 
@@ -127,18 +132,18 @@ private fun TermsTopBar(onNavigateBack: (() -> Unit)?) {
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(SensusSurface)
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Regresar",
-                tint = SensusPurple
+                tint = SensusVioletInk
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Volver",
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             color = SensusTextSecondary
         )
@@ -156,7 +161,7 @@ private fun TermsHeader() {
             Icon(
                 imageVector = Icons.Default.VerifiedUser,
                 contentDescription = "Términos y Privacidad",
-                tint = SensusPurple,
+                tint = SensusVioletInk,
                 modifier = Modifier.size(38.dp)
             )
         }
@@ -166,7 +171,7 @@ private fun TermsHeader() {
         text = "Términos del Servicio",
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
-        color = SensusPurple
+        color = SensusVioletInk
     )
     Text(
         text = "Para comenzar a ahorrar, revisa los lineamientos de Sensus",
@@ -180,7 +185,7 @@ private fun TermsHeader() {
 private fun TermsGuidelinesCard() {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -213,7 +218,7 @@ private fun TermsGuidelinesCard() {
 private fun TermsConsentCheckbox(checked: Boolean, label: String, onCheckedChange: (Boolean) -> Unit) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -227,7 +232,7 @@ private fun TermsConsentCheckbox(checked: Boolean, label: String, onCheckedChang
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 colors = CheckboxDefaults.colors(
-                    checkedColor = SensusPurple,
+                    checkedColor = SensusVioletInk,
                     checkmarkColor = Color.White
                 )
             )
@@ -237,7 +242,7 @@ private fun TermsConsentCheckbox(checked: Boolean, label: String, onCheckedChang
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = SensusTextPrimary,
-                lineHeight = 17.sp
+                lineHeight = 18.sp
             )
         }
     }
@@ -246,24 +251,25 @@ private fun TermsConsentCheckbox(checked: Boolean, label: String, onCheckedChang
 @Composable
 private fun TermsActions(canProceed: Boolean, onPrivacyPolicyClick: () -> Unit, onAcceptClick: () -> Unit) {
     OutlinedButton(
+        colors = sensusOutlinedButtonColors(),
         onClick = onPrivacyPolicyClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .heightIn(min = 48.dp)
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = "Abrir Aviso de Privacidad",
-            tint = SensusPurple,
+            tint = SensusVioletInk,
             modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Consultar Aviso de Privacidad",
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = SensusPurple
+            color = SensusVioletInk
         )
     }
 
@@ -272,14 +278,14 @@ private fun TermsActions(canProceed: Boolean, onPrivacyPolicyClick: () -> Unit, 
     Button(
         onClick = onAcceptClick,
         enabled = canProceed,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = SensusPurple,
             disabledContainerColor = SensusTextMuted.copy(alpha = MUTED_BUTTON_ALPHA)
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .heightIn(min = 52.dp)
     ) {
         Icon(
             imageVector = Icons.Default.Check,
@@ -304,7 +310,7 @@ private fun TermItem(icon: ImageVector, title: String, description: String) {
         verticalAlignment = Alignment.Top
     ) {
         Surface(
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(12.dp),
             color = SensusPurple.copy(alpha = 0.08f),
             modifier = Modifier.size(38.dp)
         ) {
@@ -312,7 +318,7 @@ private fun TermItem(icon: ImageVector, title: String, description: String) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = SensusPurple,
+                    tint = SensusVioletInk,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -321,16 +327,16 @@ private fun TermItem(icon: ImageVector, title: String, description: String) {
         Column {
             Text(
                 text = title,
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary,
-                lineHeight = 16.sp
+                lineHeight = 18.sp
             )
         }
     }

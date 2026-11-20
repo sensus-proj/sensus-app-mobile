@@ -49,11 +49,13 @@ import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -84,9 +86,10 @@ class BuyerViewModelsTest {
         val locationRepo = mockk<LocationRepository>(relaxed = true)
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
-        coEvery { offersRepo.getOffers() } returns listOf(
+        coEvery { offersRepo.readCachedOffers() } returns listOf(
             ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
         )
+        coEvery { offersRepo.fetchNearbyOffers(any(), any(), any(), any()) } returns Result.Failure(AppError.Network("Sin conexión"))
         val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -99,6 +102,24 @@ class BuyerViewModelsTest {
         vm.dispatchIntent(BuyerHomeViewIntent.RefreshOffers)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.viewState.value.offers.size)
+    }
+
+    @Test
+    fun buyerHome_successfulEmptyCatalogDoesNotRestoreCachedOffers() = runTest {
+        val offers = mockk<OffersRepository>()
+        val location = mockk<LocationRepository>(relaxed = true)
+        val session = mockk<SessionRepository>()
+        val cachedOffer = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
+        every { session.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { offers.readCachedOffers() } returns listOf(cachedOffer)
+        coEvery { offers.fetchNearbyOffers(any(), any(), any(), any()) } returns Result.Success(emptyList())
+
+        val viewModel = BuyerHomeViewModel(offers, location, session)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(emptyList<ProductOffer>(), viewModel.viewState.value.offers)
+        assertFalse(viewModel.viewState.value.isLoading)
+        coVerify(exactly = 0) { offers.readCachedOffers() }
     }
 
     @Test
@@ -140,6 +161,38 @@ class BuyerViewModelsTest {
     }
 
     @Test
+    fun buyerMap_sharesMatchingRequestsAndIgnoresPreviousRadius() = runTest {
+        val offers = mockk<OffersRepository>(relaxed = true)
+        val location = mockk<LocationRepository>(relaxed = true)
+        val session = mockk<SessionRepository>()
+        val (getLayer, saveLayer) = createMapLayerUseCases()
+        val previousResponse = CompletableDeferred<Unit>()
+        val stale = ProductOffer("old", "Old", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
+        val visible = stale.copy(id = "current")
+        every { session.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { offers.readCachedOffers() } returns emptyList()
+        coEvery { offers.fetchNearbyOffers(any(), any(), 2.0, any()) } coAnswers {
+            withContext(NonCancellable) { previousResponse.await() }
+            Result.Success(listOf(stale))
+        }
+        coEvery { offers.fetchNearbyOffers(any(), any(), 5.0, any()) } returns Result.Success(listOf(visible))
+
+        val viewModel = BuyerMapViewModel(offers, location, session, getLayer, saveLayer)
+        testDispatcher.scheduler.runCurrent()
+        viewModel.dispatchIntent(BuyerMapViewIntent.RefreshNearby)
+        testDispatcher.scheduler.runCurrent()
+        coVerify(exactly = 1) { offers.fetchNearbyOffers(any(), any(), 2.0, any()) }
+
+        viewModel.dispatchIntent(BuyerMapViewIntent.RadiusSelected(5f))
+        testDispatcher.scheduler.runCurrent()
+        previousResponse.complete(Unit)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf(visible), viewModel.viewState.value.offers)
+        coVerify(exactly = 1) { offers.fetchNearbyOffers(any(), any(), 5.0, any()) }
+    }
+
+    @Test
     fun buyerMap_selection_and_permission() = runTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
         val locationRepo = mockk<LocationRepository>(relaxed = true)
@@ -148,7 +201,7 @@ class BuyerViewModelsTest {
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
 
         val offer = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
-        coEvery { offersRepo.getOffers() } returns listOf(offer)
+        coEvery { offersRepo.readCachedOffers() } returns listOf(offer)
 
         val vm = BuyerMapViewModel(offersRepo, locationRepo, sessionRepo, getMapLayerUseCase, saveMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -311,7 +364,7 @@ class BuyerViewModelsTest {
         val preferences = com.example.sensus.domain.model.NotificationsPreferences(true, true, false, 2)
         coEvery { get() } returns com.example.sensus.common.Result.Success(preferences)
         coEvery { get.sessionChanges } returns MutableStateFlow(Unit)
-        val vm = NotificationsViewModel(get, update, register)
+        val vm = NotificationsViewModel(get, update, register, mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(preferences, vm.viewState.value.preferences)
     }

@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -44,6 +43,7 @@ import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.OsmMapUtils
 import com.example.sensus.presentation.common.RadiusSelectorBottomSheet
+import com.example.sensus.theme.SensusBackground
 import kotlin.math.abs
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
@@ -51,7 +51,6 @@ import org.osmdroid.events.ZoomEvent
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
-private const val MAP_BG_HEX = 0xFFE5E7EB
 private const val FOCUS_ZOOM = 16.5
 private const val SHORT_RADIUS_ZOOM = 17.6
 private const val SHORT_RADIUS_THRESHOLD_KM = 0.25f
@@ -193,7 +192,7 @@ private fun BuyerMapScreenScaffold(hostInput: BuyerMapHostInput, deps: BuyerMapS
         label = "MapControlsBottomPadding"
     )
 
-    Box(modifier = modifier.fillMaxSize().background(Color(MAP_BG_HEX))) {
+    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         BuyerOsmMapView(
             userLocation = mapState.userLocation,
             renderConfig = MapRenderConfig(

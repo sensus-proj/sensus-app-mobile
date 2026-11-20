@@ -63,16 +63,19 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.MarkdownText
 import com.example.sensus.presentation.modals.GuestPromptDialog
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
 import java.util.Locale
 
 private const val PACKAGE_BUBBLE_WIDTH_FRACTION = 0.95f
 private const val TEXT_BUBBLE_WIDTH_FRACTION = 0.82f
-private const val DIVIDER_HEX = 0xFFE2E8F0
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -214,7 +217,7 @@ private fun ChatBubble(message: AiChatMessage, actions: SensiOfferActions) {
     ) {
         Surface(
             shape = bubbleShape(message.isFromUser),
-            color = if (message.isFromUser) SensusPurple else Color.White,
+            color = if (message.isFromUser) SensusPurple else SensusSurface,
             shadowElevation = 1.dp,
             modifier = Modifier.fillMaxWidth(
                 if (message.recommendedPackage != null) PACKAGE_BUBBLE_WIDTH_FRACTION else TEXT_BUBBLE_WIDTH_FRACTION
@@ -255,7 +258,7 @@ private fun bubbleShape(isFromUser: Boolean) = RoundedCornerShape(
 @Composable
 private fun BubbleText(message: AiChatMessage) {
     if (message.isFromUser) {
-        Text(text = message.content, fontSize = 14.sp, color = Color.White, lineHeight = 20.sp)
+        Text(text = message.content, fontSize = 15.sp, color = Color.White, lineHeight = 22.sp)
     } else {
         MarkdownText(text = message.content, color = SensusTextPrimary)
     }
@@ -271,7 +274,7 @@ private fun RecommendedPackageCard(pkg: RecommendedPackage, onApartarCombo: () -
         Column(modifier = Modifier.padding(12.dp)) {
             PackageHeader(pkg)
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = Color(DIVIDER_HEX))
+            HorizontalDivider(color = SensusCardBorder)
             Spacer(modifier = Modifier.height(8.dp))
 
             pkg.items.forEach { item ->
@@ -281,7 +284,7 @@ private fun RecommendedPackageCard(pkg: RecommendedPackage, onApartarCombo: () -
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = onApartarCombo,
-                shape = RoundedCornerShape(10.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 10.dp)
@@ -312,7 +315,7 @@ private fun PackageHeader(pkg: RecommendedPackage) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(text = "Paquete Sugerido", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+            Text(text = "Paquete Sugerido", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
             if (pkg.savingsMxn > 0) {
                 Text(
                     text = "Ahorras $${String.format(Locale.US, "%.2f", pkg.savingsMxn)} MXN",
@@ -325,8 +328,8 @@ private fun PackageHeader(pkg: RecommendedPackage) {
         Text(
             text = "$${String.format(Locale.US, "%.2f", pkg.totalPriceMxn)} MXN",
             fontSize = 15.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = SensusPurple
+            fontWeight = FontWeight.Bold,
+            color = SensusVioletInk
         )
     }
 }
@@ -350,7 +353,7 @@ private fun CitedOfferRow(item: CitedOffer, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.title,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = SensusTextPrimary
             )
@@ -373,14 +376,14 @@ private fun CitedOfferRow(item: CitedOffer, onClick: () -> Unit) {
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "$${String.format(Locale.US, "%.2f", item.offerPriceMxn)}",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = SensusPurple
+                color = SensusVioletInk
             )
             if (item.regularPriceMxn > item.offerPriceMxn) {
                 Text(
                     text = "$${String.format(Locale.US, "%.2f", item.regularPriceMxn)}",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     color = SensusTextMuted,
                     textDecoration = TextDecoration.LineThrough
                 )

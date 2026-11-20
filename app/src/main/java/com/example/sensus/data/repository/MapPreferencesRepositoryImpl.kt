@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
  * Persiste preferencias locales visuales dentro de la base Room cifrada con SQLCipher.
  */
 class MapPreferencesRepositoryImpl(
-    private val userPreferenceDao: UserPreferenceDao,
+    private val userPreferenceDao: () -> UserPreferenceDao,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : MapPreferencesRepository {
 
@@ -25,7 +25,7 @@ class MapPreferencesRepositoryImpl(
         cachedLayer?.let { return it }
         val resolved = runCatching {
             withContext(ioDispatcher) {
-                userPreferenceDao.getByKey(KEY_MAP_LAYER)?.prefValue
+                userPreferenceDao().getByKey(KEY_MAP_LAYER)?.prefValue
             }
         }.map(MapLayer::fromStorageKey).getOrDefault(MapLayer.STANDARD)
         cachedLayer = resolved
@@ -36,7 +36,7 @@ class MapPreferencesRepositoryImpl(
         cachedLayer = layer
         runCatching {
             withContext(ioDispatcher) {
-                userPreferenceDao.upsert(
+                userPreferenceDao().upsert(
                     UserPreferenceEntity(KEY_MAP_LAYER, layer.storageKey, System.currentTimeMillis())
                 )
             }
