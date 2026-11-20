@@ -25,7 +25,9 @@ data class MerchantProfile(
     val longitud: Double = DEFAULT_UTTT_LNG,
     val horarios: List<HorarioDia> = emptyList(),
     val fotoFachadaUrl: String? = null,
-    val activo: Boolean = true
+    val activo: Boolean = true,
+    val averageRating: Double = 0.0,
+    val reviewCount: Int = 0
 )
 
 data class MerchantActivationInput(

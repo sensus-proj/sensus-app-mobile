@@ -148,6 +148,7 @@ internal class MainAppState {
     var isFamOpen by mutableStateOf(false)
     var selectedProductForDetail by mutableStateOf<ProductOffer?>(null)
     var selectedStoreCatalog by mutableStateOf<MapStoreCluster?>(null)
+    var selectedStoreForReviews by mutableStateOf<MapStoreCluster?>(null)
     var selectedFriendForOffers by mutableStateOf<ConnectedFriend?>(null)
     var selectedOfferForEdit by mutableStateOf<ProductOffer?>(null)
     var activeApartadoOffer by mutableStateOf<ProductOffer?>(null)
@@ -261,6 +262,10 @@ private fun dismissPrimaryOverlay(state: MainAppState): Boolean = when {
 }
 
 private fun dismissSecondaryOverlay(state: MainAppState): Boolean = when {
+    state.selectedStoreForReviews != null -> {
+        state.selectedStoreForReviews = null
+        true
+    }
     state.selectedStoreCatalog != null -> {
         state.selectedStoreCatalog = null
         true

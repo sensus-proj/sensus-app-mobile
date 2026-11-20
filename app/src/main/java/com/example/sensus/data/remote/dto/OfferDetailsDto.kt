@@ -23,5 +23,14 @@ data class OfferDetailsDto(
     val startsAt: String,
     val endsAt: String,
     val viewCount: Int,
-    val hasActiveClaim: Boolean
+    val hasActiveClaim: Boolean,
+    val likesCount: Int = 0,
+    val isLikedByMe: Boolean = false
+)
+
+@Serializable
+data class OfferLikeStatusDto(
+    val offerId: String,
+    val likesCount: Int,
+    val isLikedByMe: Boolean
 )

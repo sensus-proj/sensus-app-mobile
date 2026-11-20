@@ -27,7 +27,9 @@ object OfferDetailsMapper {
             merchantName = merchantName,
             address = merchantAddress,
             latitude = latitude,
-            longitude = longitude
+            longitude = longitude,
+            likesCount = likesCount,
+            isLikedByMe = isLikedByMe
         ).toDomain()
         val publicOffer = offer.copy(
             couponCode = "",
@@ -37,8 +39,10 @@ object OfferDetailsMapper {
             latitude = latitude ?: Double.NaN,
             longitude = longitude ?: Double.NaN,
             expiresAtMillis = endsMillis,
-            expirationDate = RemoteOfferMapper.formatExpirationLabel(endsMillis)
+            expirationDate = RemoteOfferMapper.formatExpirationLabel(endsMillis),
+            likesCount = likesCount,
+            isLikedByMe = isLikedByMe
         )
-        return OfferDetails(publicOffer, viewCount, hasActiveClaim, startsMillis)
+        return OfferDetails(publicOffer, viewCount, hasActiveClaim, startsMillis, likesCount, isLikedByMe)
     }
 }

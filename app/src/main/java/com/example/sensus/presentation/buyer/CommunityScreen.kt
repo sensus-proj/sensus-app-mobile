@@ -77,18 +77,12 @@ data class CommunityCallbacks(
 
 @Composable
 fun CommunityScreen(
-    viewModel: CommunityViewModel = hiltViewModel(),
+    viewModel: FriendsActivityViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
     callbacks: CommunityCallbacks = CommunityCallbacks(),
     openFriendsSignal: Int = 0
 ) {
-    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
-    val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
-    LaunchedEffect(viewModel) {
-        viewModel.viewEffect.collect { if (it == CommunityViewEffect.RequireAuth) callbacks.onRequireAuth() }
-    }
-    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     var localShowFriends by rememberSaveable { mutableStateOf(callbacks.isFriendsSelected) }
     LaunchedEffect(callbacks.isFriendsSelected) { localShowFriends = callbacks.isFriendsSelected }
     LaunchedEffect(openFriendsSignal) {
@@ -111,19 +105,14 @@ fun CommunityScreen(
         if (localShowFriends) {
             FriendsCommunityTab(onRequireAuth = callbacks.onRequireAuth, onFriendClick = callbacks.onFriendClick, modifier = Modifier.weight(1f))
         } else {
-            CommunityFeedContent(
+            FriendsActivityFeedContent(
                 state = state,
-                onIntent = viewModel::dispatchIntent,
-                onMerchantClick = callbacks.onMerchantClick,
-                saveActions = CommunitySaveActions(
-                    savedPostIds = savedState.savedPostIds,
-                    onToggleSavePost = { savedViewModel.dispatchIntent(SavedInterestsViewIntent.TogglePost(it)) }
-                ),
+                onRefresh = { viewModel.dispatchIntent(FriendsActivityViewIntent.Refresh) },
+                onRequireAuth = callbacks.onRequireAuth,
                 modifier = Modifier.weight(1f)
             )
         }
     }
-    if (state.showComposer) CreateFeedPostSheet(state, viewModel::dispatchIntent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

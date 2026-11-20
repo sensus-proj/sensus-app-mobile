@@ -35,8 +35,6 @@ import com.example.sensus.presentation.buyer.ClaimOfferScreen
 import com.example.sensus.presentation.buyer.ClaimsScreenActions
 import com.example.sensus.presentation.buyer.CommunityScreen
 import com.example.sensus.presentation.buyer.FriendDeepLinkHandler
-import com.example.sensus.presentation.buyer.FriendSharedOffersActions
-import com.example.sensus.presentation.buyer.FriendSharedOffersScreen
 import com.example.sensus.presentation.buyer.NotificationsScreen
 import com.example.sensus.presentation.buyer.ProductDetailCallbacks
 import com.example.sensus.presentation.buyer.ProductDetailScreen
@@ -45,7 +43,6 @@ import com.example.sensus.presentation.buyer.SavedInterestsCallbacks
 import com.example.sensus.presentation.buyer.SavedInterestsScreen
 import com.example.sensus.presentation.buyer.SensiChatScreen
 import com.example.sensus.presentation.buyer.SensiOfferActions
-import com.example.sensus.presentation.buyer.StoreCatalogScreen
 import com.example.sensus.presentation.merchant.MerchantDashboardCallbacks
 import com.example.sensus.presentation.merchant.MerchantDashboardScreen
 import com.example.sensus.presentation.merchant.MerchantEditOfferScreen
@@ -125,23 +122,7 @@ private fun renderPrimaryOverlay(state: MainAppState, isGuest: Boolean): Boolean
 private fun renderSecondaryOverlay(state: MainAppState, isGuest: Boolean): Boolean {
     when {
         state.selectedProductForDetail != null -> RenderProductDetailOverlay(state, isGuest)
-        state.selectedStoreCatalog != null -> RenderStoreCatalogOverlay(state)
-        state.selectedFriendForOffers != null -> {
-            val friend = state.selectedFriendForOffers
-            if (friend != null) {
-                FriendSharedOffersScreen(
-                    friend = friend,
-                    actions = FriendSharedOffersActions(
-                        onNavigateBack = { state.selectedFriendForOffers = null },
-                        onOfferClick = { state.selectedProductForDetail = it },
-                        onExploreOffers = {
-                            state.selectedFriendForOffers = null
-                            state.buyerTabIndex = 1
-                        }
-                    )
-                )
-            }
-        }
+        renderStoreAndFriendOverlays(state) -> Unit
         state.showSavedInterests -> RenderSavedInterestsOverlay(state)
         state.selectedOfferForEdit != null -> RenderMerchantEditOfferOverlay(state)
         state.showMerchantRegister -> RenderMerchantRegisterOverlay(state)
@@ -208,17 +189,6 @@ private fun RenderProductDetailOverlay(state: MainAppState, isGuest: Boolean) {
             onViewActiveClaim = { offer -> openPublishedClaim(state, isGuest, offer, expectExisting = true) },
             onRequireAuth = { state.showGuestPrompt = true }
         )
-    )
-}
-
-@Composable
-private fun RenderStoreCatalogOverlay(state: MainAppState) {
-    val cluster = state.selectedStoreCatalog ?: return
-    StoreCatalogScreen(
-        cluster = cluster,
-        onNavigateBack = { state.selectedStoreCatalog = null },
-        onProductClick = { state.selectedProductForDetail = it },
-        onRequireAuth = { state.showGuestPrompt = true }
     )
 }
 

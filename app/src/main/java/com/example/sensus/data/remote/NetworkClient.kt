@@ -13,6 +13,7 @@ import com.example.sensus.data.remote.api.NotificationsApiService
 import com.example.sensus.data.remote.api.OfferDetailsApiService
 import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.api.ProfileApiService
+import com.example.sensus.data.remote.api.StoreReviewsApiService
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
@@ -87,6 +88,7 @@ class NetworkClient(
     val authApi: AuthApiService by lazy { retrofit.create(AuthApiService::class.java) }
     val profileApi: ProfileApiService by lazy { retrofit.create(ProfileApiService::class.java) }
     val merchantApi: MerchantApiService by lazy { retrofit.create(MerchantApiService::class.java) }
+    val storeReviewsApi: StoreReviewsApiService by lazy { retrofit.create(StoreReviewsApiService::class.java) }
     val mediaApi: MediaApiService by lazy { retrofit.create(MediaApiService::class.java) }
     val feedApi: FeedApiService by lazy { publishingService<FeedApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
     val friendsApi: FriendsApiService by lazy { retrofit.create(FriendsApiService::class.java) }
