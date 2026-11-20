@@ -172,6 +172,7 @@ private fun OfferValidationError?.toNewOfferErrors(): NewOfferErrors {
     return when (field) {
         OfferField.TITLE -> NewOfferErrors(productNameError = message)
         OfferField.DESCRIPTION -> NewOfferErrors(descriptionError = message)
+        OfferField.CATEGORY -> NewOfferErrors(categoryError = message)
         OfferField.PRICE -> NewOfferErrors(priceError = message)
         OfferField.STOCK -> NewOfferErrors(stockError = message)
         OfferField.EXPIRATION -> NewOfferErrors(expirationError = message)

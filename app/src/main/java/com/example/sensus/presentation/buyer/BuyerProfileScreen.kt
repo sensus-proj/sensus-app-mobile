@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -90,6 +91,8 @@ data class BuyerProfileCallbacks(
     val onDeleteAccountClick: () -> Unit = {},
     val onTermsClick: () -> Unit = {},
     val onHistoryClick: () -> Unit = {},
+    val onEditInterestsClick: () -> Unit = {},
+    val onHelpSupportClick: () -> Unit = {},
     val onGuestActionRequired: () -> Unit = {}
 )
 
@@ -193,9 +196,13 @@ private fun BuyerProfileListContent(
         item {
             BuyerSettingsOptionsCard(
                 isGuest = isGuest,
-                onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
-                onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
-                onTermsClick = callbacks.onTermsClick
+                actions = BuyerSettingsActions(
+                    onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
+                    onInterestsClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onEditInterestsClick() },
+                    onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
+                    onHelpClick = callbacks.onHelpSupportClick,
+                    onTermsClick = callbacks.onTermsClick
+                )
             )
         }
         item {
@@ -369,15 +376,25 @@ private fun MerchantToggleLabelContent(
     }
 }
 
+@ComposeUiModel
+private data class BuyerSettingsActions(
+    val onEditClick: () -> Unit,
+    val onInterestsClick: () -> Unit,
+    val onHistoryClick: () -> Unit,
+    val onHelpClick: () -> Unit,
+    val onTermsClick: () -> Unit
+)
+
 @Composable
-private fun BuyerSettingsOptionsCard(isGuest: Boolean, onEditClick: () -> Unit, onHistoryClick: () -> Unit, onTermsClick: () -> Unit) {
+private fun BuyerSettingsOptionsCard(isGuest: Boolean, actions: BuyerSettingsActions) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = onEditClick)
-            ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = onHistoryClick)
+            ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = actions.onEditClick)
+            ProfileMenuOption(icon = Icons.Default.Tune, title = "Mis intereses de promociones", isLocked = isGuest, onClick = actions.onInterestsClick)
+            ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = actions.onHistoryClick)
             ProfileMenuOption(icon = Icons.Default.NotificationsNone, title = "Preferencias de notificaciones", onClick = {})
-            ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = {})
-            ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = onTermsClick)
+            ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = actions.onHelpClick)
+            ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = actions.onTermsClick)
         }
     }
 }

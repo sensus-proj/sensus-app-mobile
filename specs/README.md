@@ -39,17 +39,17 @@ specs/FT-XX-<slug>/
 | `FT-17-favoritos` | Negocio (Ola 3) | SE-036; P-23 | FT-12 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-18-feed-comunidad` | Negocio (Ola 3) | SE-027..SE-029; P-24 | FT-11, FT-15 | En implementacion | 15/16 tareas; cliente de `/feed/posts` y `/feed/nearby` listo; bloqueada por specs backend 024/026 (auditoría 2026-11-15) |
 | `FT-19-interacciones-reportes` | Negocio (Ola 3) | SE-030..SE-033; P-22 | FT-18 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
-| `FT-20-busqueda-recomendaciones-ml` | Negocio (Ola 3) | SE-034, SE-035, SE-037, SE-038; P-12, P-13 | FT-12, FT-17 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-20-busqueda-recomendaciones-ml` | Negocio (Ola 3) | SE-034, SE-035, SE-037, SE-038; P-12, P-13 | FT-12, FT-17 | En revision | `SearchOffersUseCase`, `GetOfferAlternativesUseCase`, `SearchOffersScreen`, `SearchHistoryEntity` v8, tests y `MockWebServer`; pendiente PR/tag |
 | `FT-21-push-fcm-ajustes` | Negocio / Push (Ola 3) | SE-039..SE-041; P-04, P-26 | FT-10 | En implementacion | 8/12 tareas; `GET/PUT /users/settings`, `PUT /users/device-token`; falta `google-services.json` oficial y receptor FCM (auditoría 2026-11-15) |
 | `FT-22-ux-transversal-offline` | UX / Offline (Ola 4) | SE-042..SE-044; P-05, P-06 | FT-11 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
-| `FT-23-soporte-legal-faq` | Soporte / Legal (Ola 4) | SE-042..SE-044; P-35 | FT-10 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-23-soporte-legal-faq` | Soporte / Legal (Ola 4) | SE-042..SE-044; P-35 | FT-10 | En revision | `HelpFaqScreen`, `GuestModeBanner` (`C-49`), `TermsScreen` offline (`RF-23-04`), conectado en `BuyerProfileScreen` y `MainAppContainer`; pendiente PR/tag y actualización en landing |
 | `FT-24-sensi-ia` | Negocio (Ola 5) | P-25, C-39, Tesina | FT-12 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | En revision | `FriendModels.kt`, `FriendsApiService.kt`, `FriendsRepositoryImpl.kt`, `FriendsCommunityScreen.kt`, `QrScannerDialog.kt`, `FriendRequestNotifier.kt`, Spec `050` backend (pendiente despliegue AWS y landing) |
 | `FT-26-resenas-comercio` | Negocio (Ola 5) | P-15, C-28..C-31 | FT-14 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | En ejecución (T27.1 a T27.5 hechas; T27.6 parcial) | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |
 | `FT-29-merchant-location-activation` | Negocio | Activación comercio + mapa interactivo + persistencia perfil | FT-06, FT-08, FT-10 | En revision | `MerchantLocationPickerModal.kt`, `MerchantActivationUseCasesTest.kt`, `158` unit tests / `Kover 90.72%`, 5 `check_*.py` PASS (pendiente commit/PR en `movil_Beto`) |
-| `FT-30-feed-promociones-intereses` | Negocio (Ola 5) | Feed de promociones por intereses; selector de intereses | FT-12, FT-20 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md`; backend specs 042 v2.0.0, 054 y 055 (pendientes) |
+| `FT-30-feed-promociones-intereses` | Negocio (Ola 5) | Feed de promociones por intereses; selector de intereses | FT-12, FT-20 | En revision | `OfferFeedScreen`, `InterestsPickerScreen`, `FeedOfferEntity` v7, `OfferFeedRepositoryImpl`, `InterestsRepositoryImpl`, tests y `MockWebServer`; pendiente PR/tag |
 
 Estados permitidos: `Borrador`, `Especificada, sin ejecutar`, `En implementacion`, `En revision`, `Cerrada`.
 Ninguna feature pasa a `Cerrada` sin `checklists/checklist.md` completo y evidencia en `Memoria.md` §6.

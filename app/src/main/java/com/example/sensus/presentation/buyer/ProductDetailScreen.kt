@@ -23,7 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
@@ -32,6 +34,7 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusTextPrimary
 
 @Composable
 fun ProductDetailScreen(
@@ -192,6 +195,36 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
         )
         Spacer(modifier = Modifier.height(16.dp))
         ProductDescriptionCard(description = offer.description, quantity = quantity)
+        if (state.alternatives.isNotEmpty()) {
+            ProductDetailAlternativesSection(
+                alternatives = state.alternatives,
+                onSelectAlternative = { altOffer ->
+                    actions.onIntent(ProductDetailViewIntent.Load(altOffer.id))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailAlternativesSection(
+    alternatives: List<com.example.sensus.domain.model.OfferAlternativeItem>,
+    onSelectAlternative: (ProductOffer) -> Unit
+) {
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = "Ofertas similares cerca de ti",
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        color = SensusTextPrimary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
+    alternatives.forEach { alt ->
+        val altOffer = alt.toProductOffer()
+        ProductOfferCard(
+            offer = altOffer,
+            onClick = { onSelectAlternative(altOffer) }
+        )
     }
 }
 

@@ -2,6 +2,7 @@ package com.example.sensus.presentation.buyer
 
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.Result
+import com.example.sensus.domain.usecase.GetOfferAlternativesUseCase
 import com.example.sensus.domain.usecase.GetOfferDetailUseCase
 import com.example.sensus.domain.usecase.RegisterOfferViewUseCase
 import com.example.sensus.presentation.base.MviViewModel
@@ -13,7 +14,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(
     private val getDetail: GetOfferDetailUseCase,
-    private val registerView: RegisterOfferViewUseCase
+    private val registerView: RegisterOfferViewUseCase,
+    private val getAlternatives: GetOfferAlternativesUseCase? = null
 ) : MviViewModel<ProductDetailViewState, ProductDetailViewIntent, ProductDetailViewEffect>(ProductDetailViewState()) {
     private var loadJob: Job? = null
     private val viewedOffers = mutableSetOf<String>()
@@ -29,13 +31,19 @@ class ProductDetailViewModel @Inject constructor(
 
     private fun load(offerId: String) {
         loadJob?.cancel()
-        updateState { copy(isLoading = true, details = null, quantity = 1, error = null) }
+        updateState { copy(isLoading = true, details = null, alternatives = emptyList(), quantity = 1, error = null) }
         loadJob = viewModelScope.launch {
             when (val result = getDetail(offerId)) {
                 is Result.Success -> {
                     updateState { copy(isLoading = false, details = result.data) }
                     if (viewedOffers.add(offerId)) {
                         viewModelScope.launch { registerView(offerId) }
+                    }
+                    if (result.data.offer.unitsLeft <= 0 && getAlternatives != null) {
+                        val altRes = getAlternatives(offerId)
+                        if (altRes is Result.Success) {
+                            updateState { copy(alternatives = altRes.data) }
+                        }
                     }
                 }
                 is Result.Failure -> updateState { copy(isLoading = false, error = result.error) }

@@ -32,15 +32,24 @@ class AppViewModel @Inject constructor(
 
     override fun processIntent(intent: AppViewIntent) {
         when (intent) {
-            is AppViewIntent.DeepLinkReceived -> {
-                updateState { copy(activeResetToken = intent.token, currentScreen = AppScreen.FORGOT_PASSWORD) }
-            }
+            is AppViewIntent.DeepLinkReceived -> updateState { copy(activeResetToken = intent.token, currentScreen = AppScreen.FORGOT_PASSWORD) }
             is AppViewIntent.FriendInviteDeepLinkReceived -> handleFriendInviteDeepLink(intent.inviteUrl)
             is AppViewIntent.SplashFinished -> handleSplashFinished()
             is AppViewIntent.LocationPermissionSet -> handleLocationPermissionSet(intent.granted)
             is AppViewIntent.TermsAccepted -> handleTermsAccepted(intent.accepted)
             is AppViewIntent.Logout -> handleLogout()
+            else -> handleNavigationFlowIntent(intent)
+        }
+    }
+
+    private fun handleNavigationFlowIntent(intent: AppViewIntent) {
+        when (intent) {
+            AppViewIntent.RegistrationCompleted -> handleRegistrationCompleted()
+            AppViewIntent.InterestsOnboardingCompleted -> updateState {
+                copy(pendingInterestsOnboarding = false, currentScreen = AppScreen.MAIN)
+            }
             is AppViewIntent.NavigateTo -> updateState { copy(currentScreen = intent.screen) }
+            else -> Unit
         }
     }
 
@@ -63,8 +72,22 @@ class AppViewModel @Inject constructor(
     private fun handleTermsAccepted(accepted: Boolean) {
         viewModelScope.launch {
             sessionRepository.setTermsAccepted(accepted)
-            updateState { copy(currentScreen = AppScreen.MAIN) }
+            val target = if (viewState.value.pendingInterestsOnboarding) {
+                AppScreen.INTERESTS_ONBOARDING
+            } else {
+                AppScreen.MAIN
+            }
+            updateState { copy(currentScreen = target) }
         }
+    }
+
+    private fun handleRegistrationCompleted() {
+        val next = if (viewState.value.hasAcceptedTerms) {
+            AppScreen.INTERESTS_ONBOARDING
+        } else {
+            AppScreen.TERMS
+        }
+        updateState { copy(pendingInterestsOnboarding = true, currentScreen = next) }
     }
 
     private fun handleLogout() {

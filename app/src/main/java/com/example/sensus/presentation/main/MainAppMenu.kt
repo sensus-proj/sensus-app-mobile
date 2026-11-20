@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -94,18 +95,20 @@ private const val CLOSE_ROTATION_DEG = 45f
 
 private const val SLOT_FAR_LEFT = -2
 private const val SLOT_MID_LEFT = -1
-private const val SLOT_CENTER = 0
-private const val SLOT_MID_RIGHT = 1
-private const val SLOT_FAR_RIGHT = 2
+private const val SLOT_CENTER_LEFT = 0
+private const val SLOT_CENTER_RIGHT = 1
+private const val SLOT_MID_RIGHT = 2
+private const val SLOT_FAR_RIGHT = 3
 private const val MERCHANT_IDX_PROFILE = 3
 
-private const val BUYER_SLOT_LEFT_X = -136
-private const val BUYER_SLOT_LEFT_Y = -24
-private const val BUYER_SLOT_MID_X = -74
-private const val BUYER_SLOT_MID_Y = -78
-private const val BUYER_SLOT_TOP_Y = -104
+private const val BUYER_SLOT_OUTER_X = 144
+private const val BUYER_SLOT_OUTER_Y = -16
+private const val BUYER_SLOT_MID_X = 96
+private const val BUYER_SLOT_MID_Y = -62
+private const val BUYER_SLOT_INNER_X = 36
+private const val BUYER_SLOT_INNER_Y = -102
 private const val BUYER_SLOT_SHIFT = 2
-private const val BUYER_TAB_COUNT = 5
+private const val BUYER_TAB_COUNT = 6
 
 private const val MERCHANT_OUTER_X = 115
 private const val MERCHANT_OUTER_Y = -34
@@ -126,7 +129,8 @@ enum class BuyerNavTab(val title: String, val icon: ImageVector) {
     FEED("Ofertas", Icons.Default.Storefront),
     SENSI("Sensi IA", Icons.Default.AutoAwesome),
     COMMUNITY("Comunidad", Icons.Default.Group),
-    PROFILE("Perfil", Icons.Default.Person)
+    PROFILE("Perfil", Icons.Default.Person),
+    PROMOTIONS("Promociones", Icons.Default.LocalOffer)
 }
 
 enum class MerchantNavTab(val title: String, val icon: ImageVector) {
@@ -156,6 +160,9 @@ internal class MainAppState {
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
     var showSavedInterests by mutableStateOf(false)
+    var showInterestsPicker by mutableStateOf(false)
+    var showSearchOffers by mutableStateOf(false)
+    var showHelpCenter by mutableStateOf(false)
     var showMerchantRegister by mutableStateOf(false)
     var isMerchantRegistered by mutableStateOf(false)
     var showConfirmLogout by mutableStateOf(false)
@@ -273,6 +280,18 @@ private fun dismissSecondaryOverlay(state: MainAppState): Boolean = when {
         state.showSavedInterests = false
         true
     }
+    state.showInterestsPicker -> {
+        state.showInterestsPicker = false
+        true
+    }
+    state.showSearchOffers -> {
+        state.showSearchOffers = false
+        true
+    }
+    state.showHelpCenter -> {
+        state.showHelpCenter = false
+        true
+    }
     state.showMerchantRegister -> {
         state.showMerchantRegister = false
         true
@@ -368,15 +387,16 @@ private fun CatMenuButtonIcon() {
 @Composable
 private fun BuyerRainbowMenuItems(state: MainAppState, animProgress: Float, density: Density) {
     val slotOffsets = mapOf(
-        SLOT_FAR_LEFT to (BUYER_SLOT_LEFT_X.dp to BUYER_SLOT_LEFT_Y.dp),
-        SLOT_MID_LEFT to (BUYER_SLOT_MID_X.dp to BUYER_SLOT_MID_Y.dp),
-        SLOT_CENTER to (0.dp to BUYER_SLOT_TOP_Y.dp),
-        SLOT_MID_RIGHT to ((-BUYER_SLOT_MID_X).dp to BUYER_SLOT_MID_Y.dp),
-        SLOT_FAR_RIGHT to ((-BUYER_SLOT_LEFT_X).dp to BUYER_SLOT_LEFT_Y.dp)
+        SLOT_FAR_LEFT to ((-BUYER_SLOT_OUTER_X).dp to BUYER_SLOT_OUTER_Y.dp),
+        SLOT_MID_LEFT to ((-BUYER_SLOT_MID_X).dp to BUYER_SLOT_MID_Y.dp),
+        SLOT_CENTER_LEFT to ((-BUYER_SLOT_INNER_X).dp to BUYER_SLOT_INNER_Y.dp),
+        SLOT_CENTER_RIGHT to (BUYER_SLOT_INNER_X.dp to BUYER_SLOT_INNER_Y.dp),
+        SLOT_MID_RIGHT to (BUYER_SLOT_MID_X.dp to BUYER_SLOT_MID_Y.dp),
+        SLOT_FAR_RIGHT to (BUYER_SLOT_OUTER_X.dp to BUYER_SLOT_OUTER_Y.dp)
     )
     BuyerNavTab.entries.forEachIndexed { index, tab ->
         val slotIndex = (index - state.buyerTabIndex + BUYER_SLOT_SHIFT).mod(BUYER_TAB_COUNT) - BUYER_SLOT_SHIFT
-        val (targetX, targetY) = slotOffsets[slotIndex] ?: (0.dp to BUYER_SLOT_TOP_Y.dp)
+        val (targetX, targetY) = slotOffsets[slotIndex] ?: (0.dp to BUYER_SLOT_INNER_Y.dp)
         RainbowArcSubMenuItem(
             config = RainbowArcItemConfig(
                 title = tab.title,

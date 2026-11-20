@@ -236,4 +236,20 @@ class AiDtosTest {
         assertEquals("conv_01", domainConv.conversationId)
         assertEquals(2, domainConv.messageCount)
     }
+
+    @Test
+    fun citedOfferDto_mapsOfferCategoryApiCodeToDisplayName() {
+        val dto = com.example.sensus.data.remote.dto.CitedOfferDto(
+            offerId = "off_1",
+            title = "Croquetas",
+            merchantId = "m_1",
+            merchantName = "Pet Store",
+            offerPriceMxn = 80.0,
+            regularPriceMxn = 120.0,
+            availableStock = 5,
+            isOpenNow = true,
+            category = "Pets"
+        )
+        assertEquals("Mascotas", dto.toDomain().category)
+    }
 }
