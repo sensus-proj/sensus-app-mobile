@@ -1,6 +1,6 @@
-# PLAN — FT-30 Me gusta en publicaciones de producto (`OfferLike`)
+# PLAN — FT-31 Me gusta en publicaciones de producto (`OfferLike`)
 
-> Derivado de `spec.md` y alineado a `sensus-back/specs/055-me-gusta-ofertas`.
+> Derivado de `spec.md` y alineado a `sensus-back/specs/057-me-gusta-ofertas`.
 > Rector: `.specify/memory/constitution.md` §2, §4, §5, §6 y §10.
 
 ## 1. Diseño

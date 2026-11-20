@@ -75,12 +75,12 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `DELETE /api/v1/friends/{friendUserId}` | `FriendsRepository` -> `FriendsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
 | `GET /api/v1/friends/{friendUserId}/shared-offers` | `FriendsRepository` -> `FriendsApiService` | Bearer (amigos aceptados) | 30/min por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
 | `POST /api/v1/offers/{offerId}/share` | `FriendsRepository` -> `FriendsApiService` | Bearer (1..10 amigos) | 30/hora por usuario | Implementado móvil + backend (Spec 050 / FT-25, despliegue AWS pendiente) |
-| `GET /api/v1/merchants/{merchantId}/reviews` | `GetStoreReviewsUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (Invitado o Registrado) | 60/min por IP | Implementado cliente + backend (`FT-26`, `Spec 054`, 2026-11-19) |
-| `POST /api/v1/merchants/{merchantId}/reviews` | `CreateStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 054`, 2026-11-19) |
-| `POST /api/v1/merchants/reviews/{reviewId}/like` | `ToggleStoreReviewLikeUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 054`, 2026-11-19) |
-| `POST /api/v1/merchants/reviews/{reviewId}/replies` | `ReplyStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 30/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 054`, 2026-11-19) |
-| `POST /api/v1/offers/{id}/like` | `ToggleOfferLikeUseCase` -> `OffersRepository` -> `OfferDetailsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-30`, `Spec 055`, 2026-11-19) |
-| `GET /api/v1/community/friends-activity` | `FriendsActivityViewModel` -> `FriendsActivityRepository` -> `FriendsApiService` | Bearer (no invitado) | 30/min por usuario | Implementado cliente + backend (`FT-31`, `Spec 056`, 2026-11-19) |
+| `GET /api/v1/merchants/{merchantId}/reviews` | `GetStoreReviewsUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (Invitado o Registrado) | 60/min por IP | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
+| `POST /api/v1/merchants/{merchantId}/reviews` | `CreateStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
+| `POST /api/v1/merchants/reviews/{reviewId}/like` | `ToggleStoreReviewLikeUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
+| `POST /api/v1/merchants/reviews/{reviewId}/replies` | `ReplyStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 30/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
+| `POST /api/v1/offers/{id}/like` | `ToggleOfferLikeUseCase` -> `OffersRepository` -> `OfferDetailsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-31`, `Spec 057`, 2026-11-19) |
+| `GET /api/v1/community/friends-activity` | `FriendsActivityViewModel` -> `FriendsActivityRepository` -> `FriendsApiService` | Bearer (no invitado) | 30/min por usuario | Implementado cliente + backend (`FT-32`, `Spec 058`, 2026-11-19) |
 
 ## Contratos por feature
 
@@ -93,8 +93,8 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | FT-08 | `DELETE /api/users/account` | 204/404 exito; purga local y remota. |
 | FT-29 | `POST /api/v1/merchants/activate`, `GET /api/v1/merchants/me`, `PUT /api/v1/merchants/profile` | Coordenadas opcionales de mapa interactivo; JWT renovado y estado comercial persistidos. |
 | FT-26 | `GET /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/reviews/{reviewId}/like`, `POST /api/v1/merchants/reviews/{reviewId}/replies` | Calificación 1..5, comentarios/respuestas moderados (`ProfanityFilter` + IA), likes en reseñas y promedio real en `MerchantProfileScreen`. |
-| FT-30 | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/like` | Alternancia de Me gusta sobre ofertas de producto y conteo público (`LikesCount`). |
-| FT-31 | `GET /api/v1/community/friends-activity` | Solo comentarios y likes de ofertas de amigos conectados y del usuario actual. |
+| FT-31 | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/like` | Alternancia de Me gusta sobre ofertas de producto y conteo público (`LikesCount`). |
+| FT-32 | `GET /api/v1/community/friends-activity` | Solo comentarios y likes de ofertas de amigos conectados y del usuario actual. |
 
 ## Plantilla para nuevas filas
 

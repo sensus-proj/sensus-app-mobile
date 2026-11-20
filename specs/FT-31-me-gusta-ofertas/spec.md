@@ -1,11 +1,11 @@
-# FT-30 — Me gusta en publicaciones de producto (`OfferLike`)
+# FT-31 — Me gusta en publicaciones de producto (`OfferLike`)
 
 | Campo | Valor |
 |---|---|
-| Feature | `FT-30-me-gusta-ofertas` |
+| Feature | `FT-31-me-gusta-ofertas` |
 | Estado | `En revision` |
 | Depende de | `FT-12-detalle-filtros-ruteo`, `FT-15-oferta-creacion-comercio` |
-| Spec backend | [`055-me-gusta-ofertas`](../../../sensus-back/specs/055-me-gusta-ofertas/spec.md) |
+| Spec backend | [`057-me-gusta-ofertas`](../../../sensus-back/specs/057-me-gusta-ofertas/spec.md) |
 | Pantalla / Componentes | `ProductDetailScreen`, `ProductDetailComponents`, `StoreCatalogComponents` |
 
 ## 1. Contexto y objetivo
@@ -23,10 +23,10 @@ Permitir que los usuarios registrados reaccionen con «Me gusta» desde el detal
 
 ## 3. Requisitos funcionales
 
-- **`RF-30-01`:** Mostrar el botón interactivo «Me gusta» y el conteo público de reacciones (`1 persona dio me gusta` / `N personas dieron me gusta`) en `ProductDetailScreen`.
-- **`RF-30-02`:** Exponer `likesCount` e `isLikedByMe` en `Offer` / `ProductDetailViewState` poblados desde `GET /api/v1/offers/{id}` y listados de catálogo.
-- **`RF-30-03`:** Ejecutar `ToggleOfferLikeUseCase` contra `POST /api/v1/offers/{id}/like` con actualización optimista, bloqueo de doble clic (`isTogglingLike`) y reversión automática si falla.
-- **`RF-30-04`:** Mostrar el conteo de likes en tarjetas del catálogo de tienda (`StoreCatalogComponents`).
+- **`RF-31-01`:** Mostrar el botón interactivo «Me gusta» y el conteo público de reacciones (`1 persona dio me gusta` / `N personas dieron me gusta`) en `ProductDetailScreen`.
+- **`RF-31-02`:** Exponer `likesCount` e `isLikedByMe` en `Offer` / `ProductDetailViewState` poblados desde `GET /api/v1/offers/{id}` y listados de catálogo.
+- **`RF-31-03`:** Ejecutar `ToggleOfferLikeUseCase` contra `POST /api/v1/offers/{id}/like` con actualización optimista, bloqueo de doble clic (`isTogglingLike`) y reversión automática si falla.
+- **`RF-31-04`:** Mostrar el conteo de likes en tarjetas del catálogo de tienda (`StoreCatalogComponents`).
 
 ## 4. Requisitos no funcionales y arquitectura
 
@@ -53,5 +53,5 @@ Permitir que los usuarios registrados reaccionen con «Me gusta» desde el detal
 
 | Rol | Responsable | Estado | Fecha |
 |---|---|---|---|
-| Producto / SDD | Equipo Sensus | Aprobada (retro-spec `055-me-gusta-ofertas`) | 2026-11-19 |
+| Producto / SDD | Equipo Sensus | Aprobada (retro-spec `057-me-gusta-ofertas`) | 2026-11-19 |
 | Android Lead | Equipo Móvil | En revisión de cobertura | 2026-11-19 |

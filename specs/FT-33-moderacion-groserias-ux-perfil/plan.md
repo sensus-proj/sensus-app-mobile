@@ -1,6 +1,6 @@
-# PLAN — FT-32 Filtro local de groserías y ajustes de UX
+# PLAN — FT-33 Filtro local de groserías y ajustes de UX
 
-> Derivado de `spec.md` y alineado a `sensus-back/specs/057-moderacion-texto-filtro-groserias`.
+> Derivado de `spec.md` y alineado a `sensus-back/specs/059-moderacion-texto-filtro-groserias`.
 > Rector: `.specify/memory/constitution.md` §2, §4, §5 y §10.
 
 ## 1. Diseño

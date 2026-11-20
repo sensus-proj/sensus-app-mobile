@@ -3,7 +3,7 @@
 ## Spec y alcance
 
 - [x] `spec.md` con las 7 secciones canónicas + tabla `## Aprobación`
-- [x] Endpoints alineados con `054-resenas-comercios` y `docs/endpoints-internos.md`
+- [x] Endpoints alineados con `056-resenas-comercios` y `docs/endpoints-internos.md`
 - [x] `plan.md` y `tasks.md` actualizados
 
 ## Funcionalidad y reglas de negocio

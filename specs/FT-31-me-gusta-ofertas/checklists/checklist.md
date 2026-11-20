@@ -1,4 +1,4 @@
-# CHECKLIST — FT-30 Me gusta en publicaciones de producto
+# CHECKLIST — FT-31 Me gusta en publicaciones de producto
 
 ## Spec y alcance
 

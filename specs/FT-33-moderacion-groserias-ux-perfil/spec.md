@@ -1,11 +1,11 @@
-# FT-32 — Filtro local de groserías y ajustes de UX (Splash y Perfiles)
+# FT-33 — Filtro local de groserías y ajustes de UX (Splash y Perfiles)
 
 | Campo | Valor |
 |---|---|
-| Feature | `FT-32-moderacion-groserias-ux-perfil` |
+| Feature | `FT-33-moderacion-groserias-ux-perfil` |
 | Estado | `En revision` |
 | Depende de | `FT-04-auth-roles`, `FT-06-profiles-spatial`, `FT-15-oferta-creacion-comercio`, `FT-26-resenas-comercio` |
-| Spec backend | [`057-moderacion-texto-filtro-groserias`](../../../sensus-back/specs/057-moderacion-texto-filtro-groserias/spec.md) |
+| Spec backend | [`059-moderacion-texto-filtro-groserias`](../../../sensus-back/specs/059-moderacion-texto-filtro-groserias/spec.md) |
 | Pantalla / Componentes | `ProfanityFilter`, `SplashScreen`, `BuyerProfileScreen`, `MerchantProfileScreen` |
 
 ## 1. Contexto y objetivo
@@ -16,15 +16,15 @@ Complementar la moderación fail-closed del servidor con un filtro determinísti
 
 1. Al iniciar la app, `SplashScreen` reproduce el video introductorio (`R.raw.splash_animation`) en silencio sobre `TextureView`/`MediaPlayer` con escalado `center-crop` y transición inmediata al finalizar o al cumplirse `SPLASH_SAFETY_TIMEOUT_MS`.
 2. Al capturar o actualizar texto en registro/perfil de usuario, activación/edición de comercio, creación/edición de oferta o reseñas/respuestas, el caso de uso correspondiente valida mediante `ProfanityFilter.containsProfanity(text)` antes de invocar red.
-3. Si detecta lenguaje ofensivo, rechaza inmediatamente con `DEFAULT_REJECTION_MESSAGE`; en cualquier otro caso, el backend aplica su doble barrera fail-closed (`Spec 057`).
+3. Si detecta lenguaje ofensivo, rechaza inmediatamente con `DEFAULT_REJECTION_MESSAGE`; en cualquier otro caso, el backend aplica su doble barrera fail-closed (`Spec 059`).
 4. Las cabeceras de `BuyerProfileScreen` y `MerchantProfileScreen` aplican `statusBarsPadding()` para evitar solapamiento bajo el *notch* o barra superior del sistema.
 
 ## 3. Requisitos funcionales
 
-- **`RF-32-01`:** Proveer `ProfanityFilter` puro en `domain/moderation/` con normalización Unicode, decodificación *leetspeak*, compresión de letras repetidas y frases prohibidas en español e inglés.
-- **`RF-32-02`:** Aplicar `ProfanityFilter` en casos de uso de registro/perfil de usuario, activación/perfil de comercio, reseñas/respuestas y creación/edición de ofertas.
-- **`RF-32-03`:** Reproducir `SplashScreen` mediante `TextureView` + `MediaPlayer` en silencio (`volume = 0f`) con cierre automático al terminar y respaldo `SPLASH_SAFETY_TIMEOUT_MS` sin bloqueos.
-- **`RF-32-04`:** Respetar los *insets* del sistema (`statusBarsPadding`) en cabeceras de `BuyerProfileScreen` y `MerchantProfileScreen`.
+- **`RF-33-01`:** Proveer `ProfanityFilter` puro en `domain/moderation/` con normalización Unicode, decodificación *leetspeak*, compresión de letras repetidas y frases prohibidas en español e inglés.
+- **`RF-33-02`:** Aplicar `ProfanityFilter` en casos de uso de registro/perfil de usuario, activación/perfil de comercio, reseñas/respuestas y creación/edición de ofertas.
+- **`RF-33-03`:** Reproducir `SplashScreen` mediante `TextureView` + `MediaPlayer` en silencio (`volume = 0f`) con cierre automático al terminar y respaldo `SPLASH_SAFETY_TIMEOUT_MS` sin bloqueos.
+- **`RF-33-04`:** Respetar los *insets* del sistema (`statusBarsPadding`) en cabeceras de `BuyerProfileScreen` y `MerchantProfileScreen`.
 
 ## 4. Requisitos no funcionales y arquitectura
 
@@ -50,5 +50,5 @@ Esta feature refuerza la validación previa del cliente sobre las rutas existent
 
 | Rol | Responsable | Estado | Fecha |
 |---|---|---|---|
-| Producto / SDD | Equipo Sensus | Aprobada (alineación `Spec 057`) | 2026-11-19 |
+| Producto / SDD | Equipo Sensus | Aprobada (alineación `Spec 059`) | 2026-11-19 |
 | Android Lead | Equipo Móvil | En revisión de cobertura y gates | 2026-11-19 |

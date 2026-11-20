@@ -1,6 +1,6 @@
 # PLAN — FT-26 Reseñas de comercio estilo Play Store y calificación real
 
-> Derivado de `spec.md` y alineado a `sensus-back/specs/054-resenas-comercios`.
+> Derivado de `spec.md` y alineado a `sensus-back/specs/056-resenas-comercios`.
 > Rector: `.specify/memory/constitution.md` §2, §4, §5, §6, §9.2, §10 y §11.
 
 ## 1. Diseño

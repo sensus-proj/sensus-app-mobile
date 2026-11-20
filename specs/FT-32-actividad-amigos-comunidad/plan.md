@@ -1,6 +1,6 @@
-# PLAN — FT-31 Actividad de amigos en Comunidad (`FriendsActivity`)
+# PLAN — FT-32 Actividad de amigos en Comunidad (`FriendsActivity`)
 
-> Derivado de `spec.md` y alineado a `sensus-back/specs/056-actividad-amigos-comunidad`.
+> Derivado de `spec.md` y alineado a `sensus-back/specs/058-actividad-amigos-comunidad`.
 > Rector: `.specify/memory/constitution.md` §2, §4, §5, §6, §9.2 y §10.
 
 ## 1. Diseño

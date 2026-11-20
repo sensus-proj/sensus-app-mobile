@@ -1,4 +1,4 @@
-# CHECKLIST — FT-31 Actividad de amigos en Comunidad
+# CHECKLIST — FT-32 Actividad de amigos en Comunidad
 
 ## Spec y alcance
 

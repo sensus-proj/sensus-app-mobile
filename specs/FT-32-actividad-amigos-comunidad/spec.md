@@ -1,11 +1,11 @@
-# FT-31 — Actividad de amigos en Comunidad (`FriendsActivity`)
+# FT-32 — Actividad de amigos en Comunidad (`FriendsActivity`)
 
 | Campo | Valor |
 |---|---|
-| Feature | `FT-31-actividad-amigos-comunidad` |
+| Feature | `FT-32-actividad-amigos-comunidad` |
 | Estado | `En revision` |
-| Depende de | `FT-25-amigos-qr`, `FT-26-resenas-comercio`, `FT-30-me-gusta-ofertas` |
-| Spec backend | [`056-actividad-amigos-comunidad`](../../../sensus-back/specs/056-actividad-amigos-comunidad/spec.md) |
+| Depende de | `FT-25-amigos-qr`, `FT-26-resenas-comercio`, `FT-31-me-gusta-ofertas` |
+| Spec backend | [`058-actividad-amigos-comunidad`](../../../sensus-back/specs/058-actividad-amigos-comunidad/spec.md) |
 | Pantalla / Componentes | `CommunityScreen`, `FriendsActivityContent`, `FriendsActivityViewModel` |
 
 ## 1. Contexto y objetivo
@@ -24,10 +24,10 @@ Mostrar en la pestaña **Comunidad** únicamente las interacciones sociales rele
 
 ## 3. Requisitos funcionales
 
-- **`RF-31-01`:** Consumir `GET /api/v1/community/friends-activity` desde `FriendsApiService` -> `FriendsActivityRepositoryImpl` -> `FriendsActivityViewModel` (MVI).
-- **`RF-31-02`:** Mostrar exclusivamente comentarios/reseñas/respuestas y likes en publicaciones de producto de amigos conectados y del usuario actual.
-- **`RF-31-03`:** Soportar recarga manual y estados `Loading`, `Loaded`, `Empty` y `Error` sin romper la pestaña de Amigos/QR (`FT-25`).
-- **`RF-31-04`:** Respetar Constitución §9.2 en badges de calificación dentro de las tarjetas (color `SensusPurple`, nunca amarillo ni ámbar).
+- **`RF-32-01`:** Consumir `GET /api/v1/community/friends-activity` desde `FriendsApiService` -> `FriendsActivityRepositoryImpl` -> `FriendsActivityViewModel` (MVI).
+- **`RF-32-02`:** Mostrar exclusivamente comentarios/reseñas/respuestas y likes en publicaciones de producto de amigos conectados y del usuario actual.
+- **`RF-32-03`:** Soportar recarga manual y estados `Loading`, `Loaded`, `Empty` y `Error` sin romper la pestaña de Amigos/QR (`FT-25`).
+- **`RF-32-04`:** Respetar Constitución §9.2 en badges de calificación dentro de las tarjetas (color `SensusPurple`, nunca amarillo ni ámbar).
 
 ## 4. Requisitos no funcionales y arquitectura
 
@@ -54,5 +54,5 @@ Mostrar en la pestaña **Comunidad** únicamente las interacciones sociales rele
 
 | Rol | Responsable | Estado | Fecha |
 |---|---|---|---|
-| Producto / SDD | Equipo Sensus | Aprobada (retro-spec `056-actividad-amigos-comunidad`) | 2026-11-19 |
+| Producto / SDD | Equipo Sensus | Aprobada (retro-spec `058-actividad-amigos-comunidad`) | 2026-11-19 |
 | Android Lead | Equipo Móvil | En revisión de cobertura y paleta UI | 2026-11-19 |

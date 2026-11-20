@@ -5,7 +5,7 @@
 | Feature | `FT-26-resenas-comercio` |
 | Estado | `En revision` |
 | Depende de | `FT-12-detalle-filtros-ruteo`, `FT-14-canje-qr-comercio`, `FT-29-merchant-location-activation` |
-| Spec backend | [`054-resenas-comercios`](../../../sensus-back/specs/054-resenas-comercios/spec.md) |
+| Spec backend | [`056-resenas-comercios`](../../../sensus-back/specs/056-resenas-comercios/spec.md) |
 | Pantalla / Componentes | `StoreCatalogScreen` (tarjeta cabecera), `StoreReviewsScreen`, `StoreReviewsComponents`, `MerchantProfileScreen` |
 
 ## 1. Contexto y objetivo
@@ -61,5 +61,5 @@ Al pulsar la tarjeta superior del comercio dentro del catálogo (`StoreCatalogHe
 
 | Rol | Responsable | Estado | Fecha |
 |---|---|---|---|
-| Producto / SDD | Equipo Sensus | Aprobada (retro-alineación a Spec 054) | 2026-11-19 |
+| Producto / SDD | Equipo Sensus | Aprobada (retro-alineación a Spec 056) | 2026-11-19 |
 | Android Lead | Equipo Móvil | En revisión de cobertura y gates | 2026-11-19 |
