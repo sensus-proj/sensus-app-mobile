@@ -37,7 +37,7 @@ data class UploadedMedia(
     val url: String
 )
 
-enum class OfferField { TITLE, DESCRIPTION, PRICE, STOCK, EXPIRATION, PHOTO }
+enum class OfferField { TITLE, DESCRIPTION, CATEGORY, PRICE, STOCK, EXPIRATION, PHOTO }
 
 data class OfferValidationError(
     val field: OfferField,
@@ -48,7 +48,7 @@ data class OfferValidationError(
 object OfferPublishingPolicy {
     const val MAX_STOCK: Int = MAX_STOCK_UNITS
 
-    fun validate(input: CreateOfferInput, nowMillis: Long): OfferValidationError? {
+    fun validate(input: CreateOfferInput, nowMillis: Long, requireCategory: Boolean = true): OfferValidationError? {
         val title = input.title.trim()
         val description = input.description.trim()
         return when {
@@ -58,6 +58,8 @@ object OfferPublishingPolicy {
                 OfferValidationError(OfferField.DESCRIPTION, "Ingresa una descripción del producto")
             description.length > MAX_DESCRIPTION_LENGTH ->
                 OfferValidationError(OfferField.DESCRIPTION, "La descripción no puede superar $MAX_DESCRIPTION_LENGTH caracteres")
+            requireCategory && input.category.apiCode == null ->
+                OfferValidationError(OfferField.CATEGORY, "Selecciona una categoría válida")
             else -> validatePrices(input) ?: validateStockAndExpiration(input, nowMillis)
         }
     }
@@ -72,7 +74,8 @@ object OfferPublishingPolicy {
             stock = input.stock,
             expiresAtMillis = input.expiresAtMillis
         ),
-        nowMillis
+        nowMillis,
+        requireCategory = false
     )
 
     fun discountPercent(originalPrice: Double, discountPrice: Double): Int = if (originalPrice > 0.0 && discountPrice > 0.0 && discountPrice < originalPrice) {

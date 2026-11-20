@@ -5,12 +5,15 @@ import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.ClaimsApiService
+import com.example.sensus.data.remote.api.DiscoveryApiService
 import com.example.sensus.data.remote.api.FeedApiService
 import com.example.sensus.data.remote.api.FriendsApiService
+import com.example.sensus.data.remote.api.InterestsApiService
 import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.NotificationsApiService
 import com.example.sensus.data.remote.api.OfferDetailsApiService
+import com.example.sensus.data.remote.api.OfferFeedApiService
 import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
@@ -89,6 +92,9 @@ class NetworkClient(
     val merchantApi: MerchantApiService by lazy { retrofit.create(MerchantApiService::class.java) }
     val mediaApi: MediaApiService by lazy { retrofit.create(MediaApiService::class.java) }
     val feedApi: FeedApiService by lazy { publishingService<FeedApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
+    val offerFeedApi: OfferFeedApiService by lazy { publishingService<OfferFeedApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
+    val interestsApi: InterestsApiService by lazy { publishingService<InterestsApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
+    val discoveryApi: DiscoveryApiService by lazy { publishingService<DiscoveryApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
     val friendsApi: FriendsApiService by lazy { retrofit.create(FriendsApiService::class.java) }
     val claimsApi: ClaimsApiService by lazy { publishingService<ClaimsApiService>(offersHttpClient) }
     val notificationsApi: NotificationsApiService by lazy { publishingService<NotificationsApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }

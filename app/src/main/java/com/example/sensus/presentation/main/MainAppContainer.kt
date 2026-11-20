@@ -38,14 +38,15 @@ import com.example.sensus.presentation.buyer.FriendDeepLinkHandler
 import com.example.sensus.presentation.buyer.FriendSharedOffersActions
 import com.example.sensus.presentation.buyer.FriendSharedOffersScreen
 import com.example.sensus.presentation.buyer.NotificationsScreen
+import com.example.sensus.presentation.buyer.OfferFeedCallbacks
+import com.example.sensus.presentation.buyer.OfferFeedScreen
 import com.example.sensus.presentation.buyer.ProductDetailCallbacks
 import com.example.sensus.presentation.buyer.ProductDetailScreen
 import com.example.sensus.presentation.buyer.RouteMapScreen
-import com.example.sensus.presentation.buyer.SavedInterestsCallbacks
-import com.example.sensus.presentation.buyer.SavedInterestsScreen
 import com.example.sensus.presentation.buyer.SensiChatScreen
 import com.example.sensus.presentation.buyer.SensiOfferActions
 import com.example.sensus.presentation.buyer.StoreCatalogScreen
+import com.example.sensus.presentation.common.GuestModeBanner
 import com.example.sensus.presentation.merchant.MerchantDashboardCallbacks
 import com.example.sensus.presentation.merchant.MerchantDashboardScreen
 import com.example.sensus.presentation.merchant.MerchantEditOfferScreen
@@ -58,8 +59,10 @@ import com.example.sensus.theme.SensusBackground
 private const val TAB_SENSI = 2
 private const val TAB_COMMUNITY = 3
 private const val TAB_PROFILE = 4
+private const val TAB_PROMOTIONS = 5
 private const val MERCHANT_TAB_SALES = 2
 private const val MERCHANT_TAB_PROFILE = 3
+private const val GUEST_BANNER_BOTTOM_PADDING_DP = 82
 
 @Composable
 fun MainAppContainer(
@@ -142,7 +145,7 @@ private fun renderSecondaryOverlay(state: MainAppState, isGuest: Boolean): Boole
                 )
             }
         }
-        state.showSavedInterests -> RenderSavedInterestsOverlay(state)
+        RenderBuyerUtilityOverlay(state) -> Unit
         state.selectedOfferForEdit != null -> RenderMerchantEditOfferOverlay(state)
         state.showMerchantRegister -> RenderMerchantRegisterOverlay(state)
         else -> return false
@@ -223,25 +226,6 @@ private fun RenderStoreCatalogOverlay(state: MainAppState) {
 }
 
 @Composable
-private fun RenderSavedInterestsOverlay(state: MainAppState) {
-    SavedInterestsScreen(
-        callbacks = SavedInterestsCallbacks(
-            onNavigateBack = { state.showSavedInterests = false },
-            onOfferClick = { offer -> state.selectedProductForDetail = offer },
-            onMerchantClick = { merchantId ->
-                state.showSavedInterests = false
-                state.communityMerchantId = merchantId
-                state.buyerTabIndex = 1
-            },
-            onExploreOffers = {
-                state.showSavedInterests = false
-                state.buyerTabIndex = 1
-            }
-        )
-    )
-}
-
-@Composable
 private fun RenderMerchantEditOfferOverlay(state: MainAppState) {
     val offer = state.selectedOfferForEdit ?: return
     MerchantEditOfferScreen(
@@ -290,6 +274,15 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
                 MerchantTabContent(state = state)
             }
             FamBackdropScrim(state.isFamOpen, animProgress) { state.isFamOpen = false }
+            if (isGuest && !state.isMerchantMode && !isKeyboardOpen) {
+                GuestModeBanner(
+                    onRegisterClick = onLogout,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = GUEST_BANNER_BOTTOM_PADDING_DP.dp)
+                )
+            }
             if (!isKeyboardOpen) {
                 Box(
                     modifier = Modifier
@@ -323,6 +316,36 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
     val openCartGuarded = { runWhenAuthenticated(state, isGuest) { state.showCartSheet = true } }
     val context = LocalContext.current
     when (state.buyerTabIndex) {
+        0, 1, TAB_PROMOTIONS -> RenderBuyerDiscoveryTab(state, isGuest, openCartGuarded)
+        TAB_SENSI -> SensiChatScreen(
+            actions = sensiOfferActions(state, isGuest, context),
+            onRequireAuth = { state.showGuestPrompt = true }
+        )
+        TAB_COMMUNITY -> CommunityScreen(
+            callbacks = buildCommunityCallbacks(state),
+            openFriendsSignal = state.openFriendsTabSignal
+        )
+        TAB_PROFILE -> BuyerProfileScreen(
+            callbacks = BuyerProfileCallbacks(
+                isMerchantMode = state.isMerchantMode,
+                hasActiveMerchant = state.isMerchantRegistered,
+                onMerchantStatusSynced = { if (it) state.isMerchantRegistered = true },
+                onToggleMerchantMode = { toggleMerchantMode(state, isGuest, it) },
+                onLogoutClick = { state.showConfirmLogout = true },
+                onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
+                onTermsClick = onNavigateToTerms,
+                onHistoryClick = { runWhenAuthenticated(state, isGuest) { state.showSavedInterests = true } },
+                onEditInterestsClick = { runWhenAuthenticated(state, isGuest) { state.showInterestsPicker = true } },
+                onHelpSupportClick = { state.showHelpCenter = true },
+                onGuestActionRequired = { state.showGuestPrompt = true }
+            )
+        )
+    }
+}
+
+@Composable
+private fun RenderBuyerDiscoveryTab(state: MainAppState, isGuest: Boolean, openCartGuarded: () -> Unit) {
+    when (state.buyerTabIndex) {
         0 -> BuyerMapScreen(
             callbacks = BuyerMapCallbacks(
                 isGuest = isGuest,
@@ -343,28 +366,16 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
                 onProductClick = { state.selectedProductForDetail = it },
                 onMapToggle = { state.buyerTabIndex = 0 },
                 onNotificationsClick = { state.showNotifications = true },
-                onOpenCart = openCartGuarded
+                onOpenCart = openCartGuarded,
+                onOpenSearch = { state.showSearchOffers = true }
             )
         )
-        TAB_SENSI -> SensiChatScreen(
-            actions = sensiOfferActions(state, isGuest, context),
-            onRequireAuth = { state.showGuestPrompt = true }
-        )
-        TAB_COMMUNITY -> CommunityScreen(
-            callbacks = buildCommunityCallbacks(state),
-            openFriendsSignal = state.openFriendsTabSignal
-        )
-        TAB_PROFILE -> BuyerProfileScreen(
-            callbacks = BuyerProfileCallbacks(
-                isMerchantMode = state.isMerchantMode,
-                hasActiveMerchant = state.isMerchantRegistered,
-                onMerchantStatusSynced = { if (it) state.isMerchantRegistered = true },
-                onToggleMerchantMode = { toggleMerchantMode(state, isGuest, it) },
-                onLogoutClick = { state.showConfirmLogout = true },
-                onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
-                onTermsClick = onNavigateToTerms,
-                onHistoryClick = { runWhenAuthenticated(state, isGuest) { state.showSavedInterests = true } },
-                onGuestActionRequired = { state.showGuestPrompt = true }
+        TAB_PROMOTIONS -> OfferFeedScreen(
+            callbacks = OfferFeedCallbacks(
+                isGuest = isGuest,
+                onProductClick = { state.selectedProductForDetail = it },
+                onOpenInterests = { runWhenAuthenticated(state, isGuest) { state.showInterestsPicker = true } },
+                onRequireAuth = { state.showGuestPrompt = true }
             )
         )
     }

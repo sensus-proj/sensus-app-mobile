@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.LocationOn
@@ -201,9 +202,17 @@ private fun TermsGuidelinesCard() {
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
             TermItem(
                 icon = Icons.Default.Security,
-                title = "Seguridad y Datos",
-                description = "No compartimos tu información personal ni tus coordenadas con " +
-                    "redes de publicidad externa. Tus datos están seguros con nosotros."
+                title = "Seguridad, Cancelación y ARCO",
+                description = "No compartimos tus datos personales ni coordenadas con publicidad externa. Puedes cancelar " +
+                    "un apartado en la vista activa o eliminar tu cuenta en Perfil para purgar tus datos personales."
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.AutoAwesome,
+                title = "Personalización e Interacciones del Feed (LFPDPPP)",
+                description = "Tus intereses elegidos y tus interacciones con ofertas (vistas en el feed, aperturas y apartados, " +
+                    "seudonimizadas y conservadas 180 días) se usan para ordenar el feed de promociones y medir su calidad. " +
+                    "Al aceptar informamos este tratamiento y ejerces la cancelación eliminando tu cuenta."
             )
         }
     }

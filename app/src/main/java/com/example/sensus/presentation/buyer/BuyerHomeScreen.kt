@@ -103,7 +103,8 @@ data class BuyerHomeCallbacks(
     val onProductClick: (ProductOffer) -> Unit = {},
     val onMapToggle: () -> Unit = {},
     val onNotificationsClick: () -> Unit = {},
-    val onOpenCart: (() -> Unit)? = null
+    val onOpenCart: (() -> Unit)? = null,
+    val onOpenSearch: (() -> Unit)? = null
 )
 
 @ComposeUiModel
@@ -231,7 +232,8 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
                 searchState = data.searchState,
                 onSearchChange = actions.onSearchChange,
                 onRadiusClick = { actions.onToggleRadiusSheet(true) },
-                onMapToggle = callbacks.onMapToggle
+                onMapToggle = callbacks.onMapToggle,
+                onOpenSearch = callbacks.onOpenSearch
             )
         }
         item { BuyerCategoryChipsRow(selectedCategory = data.searchState.selectedCategory, onCategoryToggle = actions.onCategoryToggle) }
@@ -294,13 +296,26 @@ private fun BuyerHomeHeroTitle() {
 }
 
 @Composable
-private fun BuyerHomeSearchSection(searchState: HomeSearchProps, onSearchChange: (String) -> Unit, onRadiusClick: () -> Unit, onMapToggle: () -> Unit) {
+private fun BuyerHomeSearchSection(
+    searchState: HomeSearchProps,
+    onSearchChange: (String) -> Unit,
+    onRadiusClick: () -> Unit,
+    onMapToggle: () -> Unit,
+    onOpenSearch: (() -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         OutlinedTextField(
             value = searchState.query,
             onValueChange = onSearchChange,
             placeholder = { Text(text = "Buscar productos o comercios...", fontSize = 14.sp, color = SensusTextMuted) },
             leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Buscar", tint = SensusTextSecondary) },
+            trailingIcon = {
+                if (onOpenSearch != null) {
+                    IconButton(onClick = onOpenSearch, modifier = Modifier.size(48.dp)) {
+                        Icon(imageVector = Icons.Default.Tune, contentDescription = "Búsqueda avanzada", tint = SensusPurple)
+                    }
+                }
+            },
             shape = RoundedCornerShape(14.dp),
             colors = sensusOutlinedTextFieldColors(containerColor = Color.White),
             modifier = Modifier.fillMaxWidth(),
@@ -535,6 +550,7 @@ private fun matchesHomeSearch(offer: ProductOffer, query: String): Boolean = que
     offer.storeName.contains(query, ignoreCase = true)
 
 private fun matchesCategoryKeyword(offer: ProductOffer, category: StoreCategory): Boolean {
+    if (StoreCategory.fromApiCode(offer.category) == category) return true
     val keyword = categoryKeywords[category] ?: return true
     return offer.category.contains(keyword, ignoreCase = true)
 }

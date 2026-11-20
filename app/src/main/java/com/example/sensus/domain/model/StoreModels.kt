@@ -17,17 +17,30 @@ private const val DEFAULT_ACTIVE_OFFERS = 0
 private const val DEFAULT_RECOVERED_TODAY = 0.0
 private const val DEFAULT_REDEEMED_TODAY = 0
 
-enum class StoreCategory(val displayName: String) {
-    ALL("Todo"),
-    GROCERY("Abarrotes"),
-    CLEANING("Limpieza y Hogar"),
-    PERISHABLES("Perecederos"),
-    DAIRY("Lácteos"),
-    FOOD("Comida"),
-    BAKERY("Panadería"),
-    BEVERAGES("Bebidas"),
-    PETS("Mascotas"),
-    PHARMACY("Farmacia")
+enum class StoreCategory(val displayName: String, val apiCode: String?) {
+    ALL("Todo", null),
+    GROCERY("Abarrotes", "Grocery"),
+    CLEANING("Limpieza y Hogar", "CleaningHome"),
+    PERISHABLES("Perecederos", "Perishables"),
+    DAIRY("Lácteos", "Dairy"),
+    FOOD("Comida", "Food"),
+    BAKERY("Panadería", "Bakery"),
+    BEVERAGES("Bebidas", "Beverages"),
+    PETS("Mascotas", "Pets"),
+    PHARMACY("Farmacia", "Pharmacy");
+
+    companion object {
+        private val byCode = entries.mapNotNull { entry ->
+            entry.apiCode?.lowercase(Locale.ROOT)?.let { it to entry }
+        }.toMap()
+
+        fun fromApiCode(raw: String?): StoreCategory? = raw?.trim()?.takeIf { it.isNotEmpty() }?.lowercase(Locale.ROOT)?.let { byCode[it] }
+
+        fun displayNameFor(raw: String?, fallback: String = "Todo"): String {
+            val trimmed = raw?.trim().orEmpty()
+            return if (trimmed.isEmpty()) fallback else fromApiCode(trimmed)?.displayName ?: trimmed
+        }
+    }
 }
 
 data class ProductOffer(

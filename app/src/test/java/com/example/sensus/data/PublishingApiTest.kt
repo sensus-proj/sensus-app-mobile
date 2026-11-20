@@ -8,11 +8,14 @@ import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.entity.FeedPostEntity
 import com.example.sensus.data.mapper.OfferMapper.toDomain
 import com.example.sensus.data.mapper.OfferMapper.toEntity
+import com.example.sensus.data.mapper.RemoteOfferMapper.toDomain as remoteToDomain
+import com.example.sensus.data.mapper.RemoteOfferMapper.toRequest
 import com.example.sensus.data.media.compressToLimit
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.remote.api.FeedApiService
 import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.OffersApiService
+import com.example.sensus.data.remote.dto.OfferDto
 import com.example.sensus.data.remote.dto.UploadMediaResponse
 import com.example.sensus.data.repository.CloudinarySignedUploader
 import com.example.sensus.data.repository.FeedRepositoryImpl
@@ -155,10 +158,46 @@ class PublishingApiTest {
         verify { offerDao.insertOffer(match { it.unitsLeft == 17 && it.merchantId == "shop-1" }) }
         val request = server.takeRequest()
         assertEquals("/api/v1/offers", request.path)
-        assertTrue(request.body.readUtf8().contains("1970-01-01T00:33:20Z"))
+        val rawBody = request.body.readUtf8()
+        assertTrue(rawBody.contains("1970-01-01T00:33:20Z"))
+        assertTrue(rawBody.contains("\"category\":\"Bakery\""))
+        assertFalse(rawBody.contains("\"category\":\"Panadería\""))
         val created = (result as Result.Success).data
+        assertEquals("Panadería", created.category)
         assertEquals(17, created.toEntity().toDomain().unitsLeft)
         assertEquals(created.expirationDate, created.toEntity().toDomain().expirationDate)
+    }
+
+    @Test
+    fun offerCategory_sendsApiCodeAndMapsCodeBackToDisplayNameOnRead() = runTest {
+        StoreCategory.entries.filter { it != StoreCategory.ALL }.forEach { category ->
+            val req = CreateOfferInput("Item", "Desc", category, 50.0, 25.0, 3, 2_000_000L).toRequest(null)
+            assertEquals(category.apiCode, req.category)
+            val dto = OfferDto(
+                id = "o_cat",
+                title = "Item",
+                category = category.apiCode,
+                originalPrice = 50.0,
+                discountedPrice = 25.0,
+                stock = 3
+            )
+            assertEquals(category.displayName, dto.remoteToDomain().category)
+        }
+        val legacyDto = OfferDto(id = "o_leg", title = "Legacy", category = "Panadería", originalPrice = 50.0, discountedPrice = 25.0)
+        assertEquals("Panadería", legacyDto.remoteToDomain().category)
+
+        val offerDao = mockk<OfferDao>(relaxed = true)
+        val repo = OffersRepositoryImpl(offerDao, client.offersApi)
+        val nearbyJson = "{\"items\":[{\"id\":\"o_clean\",\"title\":\"Jabon\",\"category\":\"CleaningHome\"," +
+            "\"originalPrice\":40.0,\"discountedPrice\":20.0,\"stock\":4}],\"totalCount\":1,\"page\":1,\"pageSize\":20}"
+        server.enqueue(MockResponse().setResponseCode(200).setBody(nearbyJson))
+        val nearby = repo.fetchNearbyOffers(20.0, -99.0, 2.0) as Result.Success
+        assertEquals("Limpieza y Hogar", nearby.data.single().category)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun createOfferRequest_rejectsStoreCategoryAll() {
+        CreateOfferInput("Pan", "Desc", StoreCategory.ALL, 100.0, 60.0, 2, 2_000_000L).toRequest(null)
     }
 
     @Test
