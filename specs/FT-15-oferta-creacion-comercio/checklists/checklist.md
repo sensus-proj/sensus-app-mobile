@@ -57,3 +57,9 @@ La app y las pruebas instrumentadas compilan; detekt, ktlint, lint y los scripts
 Las pruebas instrumentadas están pendientes de ejecución, al igual que la validación con el backend desplegado.
 No se declara cierre formal de la slice, aprobación, merge ni tag. El alcance ejecutado corresponde a las HU solicitadas;
 las condiciones globales sobre eliminación de mocks legacy y otras HU no se modifican ni se declaran cumplidas.
+
+### Evidencia T15.15 — 2026-11-20
+
+- `StoreCategory.apiCode`, `fromApiCode`, `displayNameFor` añadidos en `StoreModels.kt`; `OfferPublishingPolicy.validate` rechaza `StoreCategory.ALL` al crear oferta (`OfferField.CATEGORY`), conservando `validateUpdate` compatible.
+- `RemoteOfferMapper`, `OfferMapper`, `AiDtos` y `FriendModels` envían el código `OfferCategory` en `CreateOfferRequest.category` y mapean de vuelta código → `displayName` al leer ofertas; `MapStoreClusterBuilder` y `BuyerHomeScreen` reconocen ambos.
+- Verificado: `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt`, `ktlintCheck`, `lint`, `testDebugUnitTest` (364 pruebas, 0 fallos/omisiones), `koverVerifyDebug` (80.90 %) y los 5 scripts `scripts/check_*.py` en PASS.

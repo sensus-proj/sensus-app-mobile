@@ -5,15 +5,13 @@
 
 ## 1. Diseño
 
-1. **Búsqueda con debounce (`GET /api/v1/ml/search`).** `SearchOffersUseCase` aplica `debounce(350ms)`, cancelación de `Job` previo y guarda las últimas 10 consultas en `SearchHistoryDao` (SQLCipher).
-2. **Carrusel Para Ti (`GET /api/v1/ml/recommendations`).** `GetRecommendationsUseCase` obtiene recomendaciones personalizadas con fallback a ofertas populares cercanas para invitados o cold-start.
-3. **Telemetría en lotes (`POST /api/v1/ml/interactions`).** `TrackInteractionUseCase` encola eventos (`VIEW`, `CLICK`, `FAVORITE`, `CLAIM`, `SHARE`) sin PII en `TelemetryEventDao` y los despacha en lotes.
+1. **Búsqueda con debounce (`GET /api/v1/offers/search`).** `SearchOffersUseCase` aplica `debounce(350ms)`, cancelación de `Job` previo y guarda las últimas 10 consultas en `SearchHistoryDao` (SQLCipher).
+2. **Retirado (2026-11-20):** el carrusel Para Ti y la telemetría en lotes salen de FT-20. Las recomendaciones son el feed de promociones de FT-30 y las interacciones las registra el backend (spec 055), sin envío desde el cliente.
 
 ## 2. UI y navegación
 
 - `SearchOffersScreen` (`P-12`) con barra activa, chips de búsquedas recientes y tendencias.
 - `SearchEmptyState` (`P-13`) con sugerencias cuando no hay coincidencias.
-- Carrusel `Para ti` integrado en `BuyerHomeScreen` (`P-07`).
 - Previews: `SearchRecent`, `SearchResults`, `SearchEmpty`, `RecommendationsRow`.
 
 ## 3. DI
@@ -22,7 +20,6 @@
 |---|---|
 | `MlApiService` | Retrofit `/api/v1/ml/*` en `NetworkModule` |
 | `SearchHistoryDao` | Provisión en `DatabaseModule` |
-| `TelemetryEventDao` | Provisión en `DatabaseModule` |
 
 ## 4. Gates
 
@@ -37,15 +34,14 @@
 
 ## 5. Orden de implementación
 
-1. Crear `InteractionType`, `TelemetryEvent`, `SearchOffersUseCase`, `GetRecommendationsUseCase` y `TrackInteractionUseCase`.
-2. Crear `MlApiService`, `SearchHistoryDao` y `TelemetryEventDao`.
+1. Crear `SearchOffersUseCase` y `GetOfferAlternativesUseCase`.
+2. Crear `MlApiService` y `SearchHistoryDao`.
 3. Implementar `SearchOffersScreen` (`P-12`/`P-13`) y `SearchViewModel` con `debounce(350ms)`.
-4. Integrar carrusel `Para ti` en `BuyerHomeScreen`.
-5. Añadir tests de debounce, cancelación y loteo de telemetría.
+4. Añadir tests de debounce, cancelación y alternativas.
 
 ## 6. Prohibiciones
 
-- Prohibido enviar PII (correo, teléfono, nombre) en payloads de `/api/v1/ml/interactions`.
+- Prohibido enviar telemetría desde el cliente: las interacciones las registra el backend (spec 055).
 - Prohibido disparar una llamada HTTP por cada tecla sin debounce.
 
 ## Tareas

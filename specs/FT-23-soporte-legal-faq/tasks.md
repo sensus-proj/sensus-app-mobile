@@ -13,3 +13,4 @@
 
 - [ ] T23.5 Añadir pruebas Compose UI (`HelpFaqScreenTest`, `TermsScreenTest`, `GuestModeBannerTest`) verificando expansión de acordeones y visibilidad condicionada — verif: `./gradlew.bat compileDebugAndroidTestSources`
 - [ ] T23.6 Ejecutar suite unitaria, Kover `>= 80%`, análisis estático y actualizar `Memoria.md` §6 — verif: `python scripts/check_coverage.py --min 80`
+- [ ] T23.7 Añadir al Aviso de Privacidad (recurso embebido y landing) la finalidad de personalización del feed y el registro seudonimizado de interacciones (RF-23-04) — verif: revisión de texto en `TermsScreen`
