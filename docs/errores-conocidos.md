@@ -181,6 +181,45 @@ pruebas con Hilt usan `@HiltAndroidTest` y `HiltAndroidRule`; los permisos se co
 
 ---
 
+## E-07 — CI: `Could not find tink-android-1.8.0.jar` y «Configuration cache entry discarded»
+
+| Campo | Valor |
+|---|---|
+| Síntoma | `unit-test` falla en 17 s, antes de ejecutar pruebas: `hiltAggregateDepsDebug` no puede serializarse porque falta `com.google.crypto.tink:tink-android:1.8.0` (dependencia transitiva de `security-crypto`) |
+| Detectado | 2026-11-19, PR #23 (solo cambios de documentación) |
+| Estado | Corregido |
+
+**Causa raíz.** La caché de Gradle tenía varios dueños. Los seis jobs de `ci.yml` usaban `setup-java` con
+`cache: gradle` y la **misma clave**: el primero en terminar guardaba solo lo que había resuelto (p. ej. el
+`.pom` de Tink sin el `.jar`). Además, `static-analysis` y `release-playstore.yml` añadían `actions/cache` sobre
+`~/.gradle/caches` con `restore-keys` genérico, que restaura cachés parciales de otras versiones. Con la
+metadata en caché, Gradle solo buscó el JAR en Maven Central y un fallo de descarga tumbó el build. El JAR sí
+existe en Central (HTTP 200).
+
+**Corrección.** Todos los jobs usan `actions/setup-java@v5` sin caché y `gradle/actions/setup-gradle@v4`, que
+guarda entradas por job y solo escribe desde la rama por defecto (en PR solo lee). Se eliminaron los
+`actions/cache` manuales.
+
+**Segunda iteración (2026-11-20).** Con la caché ya limpia, `instrumentation-compile` falló al resolver el plugin
+`com.google.dagger.hilt.android:2.58` (existe en Maven Central y en el Plugin Portal: HTTP 200). Confirma que el
+fondo es **inestabilidad de descargas desde Maven Central** en los runners, agravada porque cada job descargaba
+todo de cero (en PR la caché era de solo lectura y nadie la escribía). Corrección: `GRADLE_OPTS` con 5
+reintentos, *backoff* de 2 s y timeouts de 60 s, y `cache-read-only` en `false` para `main` y `develop`, de modo
+que los PR lean la caché de su rama base.
+
+**Tercera iteración (2026-11-20).** El push a `develop` (run #117) volvió a fallar con `tink-android-1.8.0.jar`
+pese a los reintentos: Central respondió **404**, y Gradle no reintenta un 404 (solo errores de red, 5xx y 429).
+Corrección: en `settings.gradle.kts` se antepone el mirror oficial de Maven Central operado por Google
+(`maven-central.storage-download.googleapis.com/maven2/`) en `pluginManagement` y `dependencyResolutionManagement`;
+`mavenCentral()` queda como respaldo. Verificado con `dependencyInsight --refresh-dependencies`: Tink se resuelve
+desde el mirror.
+
+**Regla preventiva.** Un solo mecanismo de caché para `~/.gradle`. No combinar `setup-java cache: gradle` con
+`actions/cache` ni usar `restore-keys` genéricos. Si reaparece, borrar las cachés en *Actions → Caches* y
+relanzar antes de tocar dependencias.
+
+---
+
 ## Lista de verificación antes de entregar un cambio de persistencia o sesión
 
 - [ ] Los accesos a Room corren en `Dispatchers.IO` (E-01).

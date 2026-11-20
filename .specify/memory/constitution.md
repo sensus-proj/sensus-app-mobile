@@ -1,7 +1,7 @@
 ---
-version: 1.2.2
+version: 1.3.0
 ratified: 2026-10-29
-last_amended: 2026-11-08
+last_amended: 2026-11-19
 status: active
 source_of_truth: .specify/memory/constitution.md
 mirror: ./constitution.md
@@ -64,10 +64,21 @@ methodology: SDD
 1. **Almacenamiento cifrado obligatorio.** Prohibido guardar tokens, perfiles o catálogo en texto plano. SQLite nativo debe estar protegido con SQLCipher (AES-256). Tokens JWT en EncryptedSharedPreferences respaldado por Android Keystore.
 2. **Sesión persistente** hasta Logout explícito o Eliminación Definitiva de Cuenta. Logout invalida el token en Redis (backend) y destruye credenciales/estado local.
 3. **Permisos en tiempo de ejecución:** cámara, almacenamiento/galería, notificaciones (Android 13+). Solicitar solo cuando se necesiten.
-4. **TLS 1.3** para todo tráfico en tránsito; certificate pinning recomendado para endpoints críticos.
+4. **TLS 1.3** para todo tráfico en tránsito; **certificate pinning obligatorio** hacia la API de Sensus, con al menos un pin de respaldo (enmienda 1.3.0; brecha G-07 del backend, plazo 2026-12-18).
 5. **Moderación previa al guardado:** textos vía OpenAI `omni-moderation-latest`, imágenes vía Sightengine. Bloqueo inmediato en UI si hay infracción.
 6. **No generar APKs** salvo instrucción explícita del usuario; verificar integridad con `compileDebugKotlin`.
 7. **Cumplimiento estricto de DevSecOps (Prohibición absoluta de elusión):** Ningún proceso de validación de seguridad de la aplicación, ni de escaneo de código (SAST, DAST, dependencias, detección de secretos, linters, cobertura Kover ni gates de calidad) se debe saltar, skipear, ignorar, falsear, brincar o burlar bajo ninguna circunstancia. Toda excepción o bypass está terminantemente prohibido, garantizando trazabilidad y seguridad continua. La suite completa de CI y DevSecOps (compuertas SDD, escaneo de secretos, SAST, linters, pruebas unitarias con Kover >= 80% y validación de compilación) es mandatoria y debe ejecutarse en todas las ramas y pull requests sin excepción.
+8. **Seguridad de nivel fintech (enmienda 1.3.0, alineada al Principio VIII de `constitution.md` v2.3.0 del backend).** Todo lo que se cree o modifique en la app MUST cumplir **OWASP MASVS 2.x nivel L2 con perfil de resistencia (MASVS-RESILIENCE)** y las mejores prácticas de DevSecOps, aunque la app no procese pagos. Ante cualquier diferencia entre este documento y el backend, aplica el control más estricto. Reglas:
+   - **Integridad del dispositivo y de la app:** verificación con Play Integrity API; las acciones sensibles (canje, eliminación de cuenta, cambio de credenciales) se deniegan en dispositivos comprometidos.
+   - **Secretos y claves:** solo en Android Keystore; ningún secreto, clave de API ni token en el paquete, en `BuildConfig` ni en logs.
+   - **Pantallas sensibles:** `FLAG_SECURE` en QR de reserva, canje, datos de cuenta y credenciales; sin vista previa en recientes.
+   - **Acciones sensibles:** exigen biometría o reautenticación (`BiometricPrompt`) y se registran sin PII.
+   - **Build de release:** sin depuración, ofuscado con R8, sin logs ni `HttpLoggingInterceptor` con cuerpo, con respaldos deshabilitados y firmado con Play App Signing.
+   - **Datos locales:** base cifrada con SQLCipher; la frase de paso nunca se borra con el cierre de sesión (ver `docs/errores-conocidos.md`, E-02); datos clasificados y con retención declarada.
+   - **Entradas y red:** validación de lista de permitidos en cada entrada; errores uniformes que no revelen detalles del servidor; tiempos de espera y reintentos acotados.
+   - **Cadena de suministro:** dependencias fijadas por versión, SBOM CycloneDX, escaneo SCA y de secretos bloqueantes, y procedencia verificable del AAB.
+   - **Vulnerabilidades:** crítica ≤ 7 días, alta ≤ 30, media ≤ 90. Cada release revisa la tabla MASVS.
+   - **Régimen de transición:** las brechas conocidas (pinning, Play Integrity, `FLAG_SECURE`, biometría, SBOM, clave de Figma local) se registran en el Apéndice F de la constitución del backend (G-04, G-07, G-08, G-09, G-12) y vencen en las fechas allí indicadas. Todo cambio nuevo cumple desde su primer commit.
 
 ---
 
