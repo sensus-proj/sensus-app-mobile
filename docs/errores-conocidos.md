@@ -207,6 +207,13 @@ todo de cero (en PR la caché era de solo lectura y nadie la escribía). Correcc
 reintentos, *backoff* de 2 s y timeouts de 60 s, y `cache-read-only` en `false` para `main` y `develop`, de modo
 que los PR lean la caché de su rama base.
 
+**Tercera iteración (2026-11-20).** El push a `develop` (run #117) volvió a fallar con `tink-android-1.8.0.jar`
+pese a los reintentos: Central respondió **404**, y Gradle no reintenta un 404 (solo errores de red, 5xx y 429).
+Corrección: en `settings.gradle.kts` se antepone el mirror oficial de Maven Central operado por Google
+(`maven-central.storage-download.googleapis.com/maven2/`) en `pluginManagement` y `dependencyResolutionManagement`;
+`mavenCentral()` queda como respaldo. Verificado con `dependencyInsight --refresh-dependencies`: Tink se resuelve
+desde el mirror.
+
 **Regla preventiva.** Un solo mecanismo de caché para `~/.gradle`. No combinar `setup-java cache: gradle` con
 `actions/cache` ni usar `restore-keys` genéricos. Si reaparece, borrar las cachés en *Actions → Caches* y
 relanzar antes de tocar dependencias.
