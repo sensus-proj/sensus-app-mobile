@@ -4,8 +4,10 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.OfferDetails
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.ToggleOfferLikeResult
 import com.example.sensus.domain.usecase.GetOfferDetailUseCase
 import com.example.sensus.domain.usecase.RegisterOfferViewUseCase
+import com.example.sensus.domain.usecase.ToggleOfferLikeUseCase
 import com.example.sensus.presentation.buyer.ProductDetailViewIntent
 import com.example.sensus.presentation.buyer.ProductDetailViewModel
 import io.mockk.coEvery
@@ -89,5 +91,25 @@ class ProductDetailViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertNull(vm.viewState.value.error)
         assertEquals(details, vm.viewState.value.details)
+    }
+
+    @Test
+    fun toggleLike_updatesPublicCountOptimisticallyAndRollsBackOnFailure() = runTest(dispatcher) {
+        val toggleLike = mockk<ToggleOfferLikeUseCase>()
+        val vm = ProductDetailViewModel(getDetail, registerView, toggleLikeUseCase = toggleLike)
+        vm.dispatchIntent(ProductDetailViewIntent.Load(offer.id))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coEvery { toggleLike(offer.id) } returns Result.Success(ToggleOfferLikeResult(offer.id, 3, true))
+        vm.dispatchIntent(ProductDetailViewIntent.ToggleLike(offer.id))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(3, vm.viewState.value.likesCount)
+        assertTrue(vm.viewState.value.isLiked)
+
+        coEvery { toggleLike(offer.id) } returns Result.Failure(AppError.Network())
+        vm.dispatchIntent(ProductDetailViewIntent.ToggleLike(offer.id))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(3, vm.viewState.value.likesCount)
+        assertTrue(vm.viewState.value.isLiked)
     }
 }

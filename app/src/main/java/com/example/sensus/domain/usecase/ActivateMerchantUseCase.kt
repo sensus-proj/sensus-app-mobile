@@ -6,6 +6,7 @@ import com.example.sensus.domain.model.GeoCoordinatePolicy
 import com.example.sensus.domain.model.MerchantActivationInput
 import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.moderation.ProfanityFilter
 import com.example.sensus.domain.repository.MerchantRepository
 
 private const val MIN_STORE_NAME_LENGTH = 2
@@ -72,8 +73,12 @@ class ActivateMerchantUseCase(private val merchantRepository: MerchantRepository
         val fieldError = when {
             name.length !in MIN_STORE_NAME_LENGTH..MAX_STORE_NAME_LENGTH ->
                 "El nombre comercial debe tener entre $MIN_STORE_NAME_LENGTH y $MAX_STORE_NAME_LENGTH caracteres."
+            ProfanityFilter.containsProfanity(name) ->
+                "El nombre del comercio contiene lenguaje ofensivo o inapropiado."
             address.length !in MIN_ADDRESS_LENGTH..MAX_ADDRESS_LENGTH ->
                 "La dirección debe contener entre $MIN_ADDRESS_LENGTH y $MAX_ADDRESS_LENGTH caracteres."
+            ProfanityFilter.containsProfanity(address) ->
+                "La dirección contiene lenguaje ofensivo o inapropiado."
             !POSTAL_CODE_REGEX.matches(postalCode) ->
                 "El código postal debe tener entre 4 y 10 caracteres alfanuméricos."
             else -> null

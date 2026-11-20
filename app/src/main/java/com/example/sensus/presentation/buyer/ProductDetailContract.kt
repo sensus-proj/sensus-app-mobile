@@ -12,12 +12,19 @@ data class ProductDetailViewState(
     val alternatives: List<OfferAlternativeItem> = emptyList(),
     val isLoading: Boolean = false,
     val quantity: Int = 1,
+    val likesCount: Int = 0,
+    val isLiked: Boolean = false,
+    val isTogglingLike: Boolean = false,
     val error: AppError? = null
 ) : ViewState
 
 sealed interface ProductDetailViewIntent : ViewIntent {
-    data class Load(val offerId: String) : ProductDetailViewIntent
+    data class Load(val offerId: String, val initialLikesCount: Int = 0, val initialLiked: Boolean = false) : ProductDetailViewIntent
     data class ChangeQuantity(val quantity: Int) : ProductDetailViewIntent
+    data class ToggleLike(val offerId: String) : ProductDetailViewIntent
 }
 
-sealed interface ProductDetailViewEffect : ViewEffect
+sealed interface ProductDetailViewEffect : ViewEffect {
+    data object RequireAuth : ProductDetailViewEffect
+    data class ShowMessage(val message: String) : ProductDetailViewEffect
+}

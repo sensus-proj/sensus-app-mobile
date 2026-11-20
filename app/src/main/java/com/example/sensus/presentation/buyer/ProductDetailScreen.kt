@@ -51,7 +51,7 @@ fun ProductDetailScreen(
     val friendsState by friendsViewModel.viewState.collectAsStateWithLifecycle()
     var showShareSheet by remember(offer.id) { mutableStateOf(false) }
 
-    LaunchedEffect(offer.id) { viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id)) }
+    ProductDetailEffects(offer = offer, viewModel = viewModel, onRequireAuth = callbacks.onRequireAuth)
     SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     ShareOfferEffectsHandler(
         friendsViewModel = friendsViewModel,
@@ -94,6 +94,22 @@ fun ProductDetailScreen(
                 }
             )
         )
+    }
+}
+
+@Composable
+private fun ProductDetailEffects(offer: ProductOffer, viewModel: ProductDetailViewModel, onRequireAuth: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(offer.id) {
+        viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id, offer.likesCount, offer.isLikedByMe))
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect ->
+            when (effect) {
+                ProductDetailViewEffect.RequireAuth -> onRequireAuth()
+                is ProductDetailViewEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }
 
@@ -176,8 +192,7 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
         Spacer(modifier = Modifier.height(16.dp))
         ProductTitleAndDatesSection(offer = offer)
         Spacer(modifier = Modifier.height(12.dp))
-        ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
-        Spacer(modifier = Modifier.height(16.dp))
+        ProductDetailSocialSection(offer = offer, state = state, actions = actions)
         QuantitySelectorCard(
             quantity = quantity,
             maxUnits = offer.unitsLeft,
@@ -204,6 +219,19 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
             )
         }
     }
+}
+
+@Composable
+private fun ProductDetailSocialSection(offer: ProductOffer, state: ProductDetailViewState, actions: ProductDetailActions) {
+    ProductSocialLikeRow(
+        likesCount = state.likesCount,
+        isLiked = state.isLiked,
+        isBusy = state.isTogglingLike,
+        onToggleLike = { actions.onIntent(ProductDetailViewIntent.ToggleLike(offer.id)) }
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
+    Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
