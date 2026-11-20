@@ -904,3 +904,12 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **T27.6 (parcial):** gates locales en verde; los escáneres en la nube corren en CI al subir. Tag propuesto `v1.4.0-ft27`, sin crear.
 - **Cuidado en producción:** el teléfono de pruebas tiene instalada la versión de Play (1.3.0, versionCode 9). No se instaló ni se ejecutó nada en él; las pruebas se corrieron solo en el emulador con `ANDROID_SERIAL`.
 - **Pendiente:** `release-playstore.yml` se dispara con cada push a `main` y publica en `production` al 100 % si no recibe pista; se recomienda que el push publique en `internal`.
+
+## Bitácora - CI: caché de Gradle corrupta rompe `unit-test` (E-07) (2026-11-19)
+
+- **Síntoma:** en el PR #23 (solo documentación), `unit-test` falló con `Could not find tink-android-1.8.0.jar` y `Configuration cache entry discarded` en `hiltAggregateDepsDebug`. El JAR existe en Maven Central.
+- **Causa:** varios dueños de la caché de `~/.gradle`: `setup-java cache: gradle` con la misma clave en seis jobs, más `actions/cache` con `restore-keys` genérico en `static-analysis` y en `release-playstore.yml`. Se restauraba metadata sin el JAR.
+- **Corrección (T09.29):** `setup-java@v5` sin caché + `gradle/actions/setup-gradle@v4` en todos los jobs de `ci.yml` y `release-playstore.yml`; eliminados los `actions/cache` manuales. Documentado como E-07 en `docs/errores-conocidos.md`.
+- **Commit `cf5abdf`** en `movil_Rodrigo`. En el CI siguiente `unit-test` pasó, pero `instrumentation-compile` falló al resolver el plugin de Hilt 2.58 (disponible en Central, HTTP 200): descargas inestables desde Maven Central con caché vacía.
+- **Segunda corrección (2026-11-20):** `GRADLE_OPTS` con reintentos (5, backoff 2 s) y timeouts de 60 s en `ci.yml` y `release-playstore.yml`; `setup-gradle` escribe caché en `main` y `develop`.
+- **Pendiente:** confirmar `ci` en verde y que el push a `develop` genere la caché.

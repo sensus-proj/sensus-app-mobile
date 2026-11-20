@@ -38,7 +38,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  # Reintentos y timeouts HTTP de Gradle ante fallos transitorios de Maven Central (E-07).
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.internal.repository.max.retries=5 -Dorg.gradle.internal.repository.initial.backoff=2000 -Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000"
 
 jobs:
   # =========================================================================
@@ -79,19 +80,14 @@ jobs:
           python scripts/check_secrets.py
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Cache de dependencias Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml') }}
-          restore-keys: gradle-${{ runner.os }}-
+      # Cache de Gradle gestionada por setup-gradle (E-07).
+      - name: Configurar Gradle y su cache
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Dar permisos de ejecución a gradlew
         run: chmod +x ./gradlew
@@ -143,19 +139,14 @@ jobs:
           fi
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Cache de dependencias Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/libs.versions.toml') }}
-          restore-keys: gradle-${{ runner.os }}-
+      # Cache de Gradle gestionada por setup-gradle (E-07).
+      - name: Configurar Gradle y su cache
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Dar permisos de ejecución a gradlew
         run: chmod +x ./gradlew

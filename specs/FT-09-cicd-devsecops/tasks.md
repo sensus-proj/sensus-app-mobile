@@ -45,3 +45,7 @@
 - [x] T09.26 Registrar `FT-09-cicd-devsecops` en `specs/README.md` — verif: `check_sdd.py`
 - [x] T09.27 Ejecutar compuertas SDD completas sobre el repositorio — verif: `python scripts/check_sdd.py` PASS
 - [x] T09.28 Desplegar commits y fusionar con avance rápido a la rama `main` — verif: `git status` clean
+
+## Fase F — Mantenimiento
+
+- [x] T09.29 Unificar la caché de Gradle con `gradle/actions/setup-gradle@v4` en `ci.yml` y `release-playstore.yml` y subir `setup-java` a v5 (E-07) — verif: YAML válido; CI del PR en verde
