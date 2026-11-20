@@ -13,7 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  # Reintentos y timeouts HTTP de Gradle ante fallos transitorios de Maven Central (E-07).
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.internal.repository.max.retries=5 -Dorg.gradle.internal.repository.initial.backoff=2000 -Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000"
 
 # Orden: wrapper -> gates SDD -> SAST -> analisis -> tests -> integracion -> build -> cicd-summary.
 # Sin generacion de APK/AAB: el build solo valida compilacion.
@@ -79,9 +80,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle,
-      # entradas por job y escritura solo desde la rama por defecto.
+      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle y
+      # entradas por job. Escriben solo main y develop; los PR la leen de su rama base.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
       - run: chmod +x ./gradlew
       # CodeQL necesita trazar la compilacion. Se compila sin generar APK (regla del proyecto).
       - run: ./gradlew compileDebugKotlin --no-daemon
@@ -97,9 +100,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle,
-      # entradas por job y escritura solo desde la rama por defecto.
+      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle y
+      # entradas por job. Escriben solo main y develop; los PR la leen de su rama base.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
       - run: chmod +x ./gradlew
       - run: ./gradlew lint detekt ktlintCheck --no-daemon
 
@@ -113,9 +118,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle,
-      # entradas por job y escritura solo desde la rama por defecto.
+      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle y
+      # entradas por job. Escriben solo main y develop; los PR la leen de su rama base.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -141,9 +148,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle,
-      # entradas por job y escritura solo desde la rama por defecto.
+      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle y
+      # entradas por job. Escriben solo main y develop; los PR la leen de su rama base.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
       - run: chmod +x ./gradlew
       - run: ./gradlew pitestDebug --no-daemon --no-configuration-cache
       - name: Subir reporte de mutacion
@@ -165,9 +174,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle,
-      # entradas por job y escritura solo desde la rama por defecto.
+      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle y
+      # entradas por job. Escriben solo main y develop; los PR la leen de su rama base.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
       - run: chmod +x ./gradlew
       - run: ./gradlew compileDebugAndroidTestSources --no-daemon
 
@@ -181,9 +192,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle,
-      # entradas por job y escritura solo desde la rama por defecto.
+      # Cache de Gradle gestionada por setup-gradle (E-07): un solo dueno de ~/.gradle y
+      # entradas por job. Escriben solo main y develop; los PR la leen de su rama base.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
       - run: chmod +x ./gradlew
       # Sin APK: solo se valida la compilacion. El AAB firmado se genera en el release manual.
       - run: ./gradlew compileDebugKotlin --no-daemon

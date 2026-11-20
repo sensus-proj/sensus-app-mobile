@@ -200,6 +200,13 @@ existe en Central (HTTP 200).
 guarda entradas por job y solo escribe desde la rama por defecto (en PR solo lee). Se eliminaron los
 `actions/cache` manuales.
 
+**Segunda iteración (2026-11-20).** Con la caché ya limpia, `instrumentation-compile` falló al resolver el plugin
+`com.google.dagger.hilt.android:2.58` (existe en Maven Central y en el Plugin Portal: HTTP 200). Confirma que el
+fondo es **inestabilidad de descargas desde Maven Central** en los runners, agravada porque cada job descargaba
+todo de cero (en PR la caché era de solo lectura y nadie la escribía). Corrección: `GRADLE_OPTS` con 5
+reintentos, *backoff* de 2 s y timeouts de 60 s, y `cache-read-only` en `false` para `main` y `develop`, de modo
+que los PR lean la caché de su rama base.
+
 **Regla preventiva.** Un solo mecanismo de caché para `~/.gradle`. No combinar `setup-java cache: gradle` con
 `actions/cache` ni usar `restore-keys` genéricos. Si reaparece, borrar las cachés en *Actions → Caches* y
 relanzar antes de tocar dependencias.

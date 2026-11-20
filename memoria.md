@@ -910,4 +910,6 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Síntoma:** en el PR #23 (solo documentación), `unit-test` falló con `Could not find tink-android-1.8.0.jar` y `Configuration cache entry discarded` en `hiltAggregateDepsDebug`. El JAR existe en Maven Central.
 - **Causa:** varios dueños de la caché de `~/.gradle`: `setup-java cache: gradle` con la misma clave en seis jobs, más `actions/cache` con `restore-keys` genérico en `static-analysis` y en `release-playstore.yml`. Se restauraba metadata sin el JAR.
 - **Corrección (T09.29):** `setup-java@v5` sin caché + `gradle/actions/setup-gradle@v4` en todos los jobs de `ci.yml` y `release-playstore.yml`; eliminados los `actions/cache` manuales. Documentado como E-07 en `docs/errores-conocidos.md`.
-- **Pendiente:** confirmar `ci` en verde tras el push. Sin commit ni push.
+- **Commit `cf5abdf`** en `movil_Rodrigo`. En el CI siguiente `unit-test` pasó, pero `instrumentation-compile` falló al resolver el plugin de Hilt 2.58 (disponible en Central, HTTP 200): descargas inestables desde Maven Central con caché vacía.
+- **Segunda corrección (2026-11-20):** `GRADLE_OPTS` con reintentos (5, backoff 2 s) y timeouts de 60 s en `ci.yml` y `release-playstore.yml`; `setup-gradle` escribe caché en `main` y `develop`.
+- **Pendiente:** confirmar `ci` en verde y que el push a `develop` genere la caché.
