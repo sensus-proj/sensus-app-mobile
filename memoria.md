@@ -904,3 +904,10 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **T27.6 (parcial):** gates locales en verde; los escáneres en la nube corren en CI al subir. Tag propuesto `v1.4.0-ft27`, sin crear.
 - **Cuidado en producción:** el teléfono de pruebas tiene instalada la versión de Play (1.3.0, versionCode 9). No se instaló ni se ejecutó nada en él; las pruebas se corrieron solo en el emulador con `ANDROID_SERIAL`.
 - **Pendiente:** `release-playstore.yml` se dispara con cada push a `main` y publica en `production` al 100 % si no recibe pista; se recomienda que el push publique en `internal`.
+
+## Bitácora - CI: caché de Gradle corrupta rompe `unit-test` (E-07) (2026-11-19)
+
+- **Síntoma:** en el PR #23 (solo documentación), `unit-test` falló con `Could not find tink-android-1.8.0.jar` y `Configuration cache entry discarded` en `hiltAggregateDepsDebug`. El JAR existe en Maven Central.
+- **Causa:** varios dueños de la caché de `~/.gradle`: `setup-java cache: gradle` con la misma clave en seis jobs, más `actions/cache` con `restore-keys` genérico en `static-analysis` y en `release-playstore.yml`. Se restauraba metadata sin el JAR.
+- **Corrección (T09.29):** `setup-java@v5` sin caché + `gradle/actions/setup-gradle@v4` en todos los jobs de `ci.yml` y `release-playstore.yml`; eliminados los `actions/cache` manuales. Documentado como E-07 en `docs/errores-conocidos.md`.
+- **Pendiente:** confirmar `ci` en verde tras el push. Sin commit ni push.

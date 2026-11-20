@@ -50,3 +50,7 @@
 - [x] Todos los gates de `python scripts/check_*.py` en PASS.
 - [x] Workflows validados y sin errores sintácticos.
 - [x] Código y configuraciones integradas y desplegadas en la rama `main`.
+
+## Mantenimiento
+
+- [x] T09.29: caché de Gradle con un solo dueño (`setup-gradle`), sin `actions/cache` manual (E-07). YAML validado localmente.

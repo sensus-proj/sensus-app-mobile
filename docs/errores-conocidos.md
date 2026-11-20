@@ -181,6 +181,31 @@ pruebas con Hilt usan `@HiltAndroidTest` y `HiltAndroidRule`; los permisos se co
 
 ---
 
+## E-07 — CI: `Could not find tink-android-1.8.0.jar` y «Configuration cache entry discarded»
+
+| Campo | Valor |
+|---|---|
+| Síntoma | `unit-test` falla en 17 s, antes de ejecutar pruebas: `hiltAggregateDepsDebug` no puede serializarse porque falta `com.google.crypto.tink:tink-android:1.8.0` (dependencia transitiva de `security-crypto`) |
+| Detectado | 2026-11-19, PR #23 (solo cambios de documentación) |
+| Estado | Corregido |
+
+**Causa raíz.** La caché de Gradle tenía varios dueños. Los seis jobs de `ci.yml` usaban `setup-java` con
+`cache: gradle` y la **misma clave**: el primero en terminar guardaba solo lo que había resuelto (p. ej. el
+`.pom` de Tink sin el `.jar`). Además, `static-analysis` y `release-playstore.yml` añadían `actions/cache` sobre
+`~/.gradle/caches` con `restore-keys` genérico, que restaura cachés parciales de otras versiones. Con la
+metadata en caché, Gradle solo buscó el JAR en Maven Central y un fallo de descarga tumbó el build. El JAR sí
+existe en Central (HTTP 200).
+
+**Corrección.** Todos los jobs usan `actions/setup-java@v5` sin caché y `gradle/actions/setup-gradle@v4`, que
+guarda entradas por job y solo escribe desde la rama por defecto (en PR solo lee). Se eliminaron los
+`actions/cache` manuales.
+
+**Regla preventiva.** Un solo mecanismo de caché para `~/.gradle`. No combinar `setup-java cache: gradle` con
+`actions/cache` ni usar `restore-keys` genéricos. Si reaparece, borrar las cachés en *Actions → Caches* y
+relanzar antes de tocar dependencias.
+
+---
+
 ## Lista de verificación antes de entregar un cambio de persistencia o sesión
 
 - [ ] Los accesos a Room corren en `Dispatchers.IO` (E-01).
