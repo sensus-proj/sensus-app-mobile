@@ -4,8 +4,9 @@ import java.util.Locale
 
 private const val DEFAULT_COLLECT_MINUTES = 45
 private const val DEFAULT_RATING = 4.8
-private const val DEFAULT_MERCHANT_RATING = 4.9
-private const val DEFAULT_REVIEW_COUNT = 120
+private const val DEFAULT_MERCHANT_RATING = 0.0
+private const val DEFAULT_REVIEW_COUNT = 0
+private const val DEFAULT_MERCHANT_REVIEW_COUNT = 0
 private const val DEFAULT_LAT = 20.0536
 private const val DEFAULT_LNG = -99.3436
 private const val METERS_PER_KM = 1000
@@ -17,17 +18,30 @@ private const val DEFAULT_ACTIVE_OFFERS = 0
 private const val DEFAULT_RECOVERED_TODAY = 0.0
 private const val DEFAULT_REDEEMED_TODAY = 0
 
-enum class StoreCategory(val displayName: String) {
-    ALL("Todo"),
-    GROCERY("Abarrotes"),
-    CLEANING("Limpieza y Hogar"),
-    PERISHABLES("Perecederos"),
-    DAIRY("Lácteos"),
-    FOOD("Comida"),
-    BAKERY("Panadería"),
-    BEVERAGES("Bebidas"),
-    PETS("Mascotas"),
-    PHARMACY("Farmacia")
+enum class StoreCategory(val displayName: String, val apiCode: String?) {
+    ALL("Todo", null),
+    GROCERY("Abarrotes", "Grocery"),
+    CLEANING("Limpieza y Hogar", "CleaningHome"),
+    PERISHABLES("Perecederos", "Perishables"),
+    DAIRY("Lácteos", "Dairy"),
+    FOOD("Comida", "Food"),
+    BAKERY("Panadería", "Bakery"),
+    BEVERAGES("Bebidas", "Beverages"),
+    PETS("Mascotas", "Pets"),
+    PHARMACY("Farmacia", "Pharmacy");
+
+    companion object {
+        private val byCode = entries.mapNotNull { entry ->
+            entry.apiCode?.lowercase(Locale.ROOT)?.let { it to entry }
+        }.toMap()
+
+        fun fromApiCode(raw: String?): StoreCategory? = raw?.trim()?.takeIf { it.isNotEmpty() }?.lowercase(Locale.ROOT)?.let { byCode[it] }
+
+        fun displayNameFor(raw: String?, fallback: String = "Todo"): String {
+            val trimmed = raw?.trim().orEmpty()
+            return if (trimmed.isEmpty()) fallback else fromApiCode(trimmed)?.displayName ?: trimmed
+        }
+    }
 }
 
 data class ProductOffer(
@@ -56,7 +70,9 @@ data class ProductOffer(
     val merchantId: String? = null,
     val status: OfferLifecycleStatus = OfferLifecycleStatus.ACTIVE,
     val version: Int = 1,
-    val expiresAtMillis: Long? = null
+    val expiresAtMillis: Long? = null,
+    val likesCount: Int = 0,
+    val isLikedByMe: Boolean = false
 ) {
     val isPubliclyVisible: Boolean
         get() = status == OfferLifecycleStatus.ACTIVE && unitsLeft > 0
@@ -171,7 +187,7 @@ data class MerchantStore(
     val category: String = "Comercio Local",
     val isOpen: Boolean = true,
     val rating: Double = DEFAULT_MERCHANT_RATING,
-    val reviewCount: Int = DEFAULT_REVIEW_COUNT,
+    val reviewCount: Int = DEFAULT_MERCHANT_REVIEW_COUNT,
     val activeOffersCount: Int = DEFAULT_ACTIVE_OFFERS,
     val recoveredMoneyToday: Double = DEFAULT_RECOVERED_TODAY,
     val redeemedTodayCount: Int = DEFAULT_REDEEMED_TODAY,

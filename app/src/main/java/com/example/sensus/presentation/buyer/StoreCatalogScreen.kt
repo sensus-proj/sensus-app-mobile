@@ -33,23 +33,26 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 
 private const val CATALOG_GRID_COLUMNS = 2
 
+@ComposeUiModel
+data class StoreCatalogCallbacks(
+    val onNavigateBack: () -> Unit = {},
+    val onProductClick: (ProductOffer) -> Unit = {},
+    val onRequireAuth: () -> Unit = {},
+    val onStoreHeaderClick: (MapStoreCluster) -> Unit = {}
+)
+
 @Composable
-fun StoreCatalogScreen(
-    cluster: MapStoreCluster,
-    onNavigateBack: () -> Unit,
-    onProductClick: (ProductOffer) -> Unit,
-    modifier: Modifier = Modifier,
-    onRequireAuth: () -> Unit = {}
-) {
+fun StoreCatalogScreen(cluster: MapStoreCluster, callbacks: StoreCatalogCallbacks, modifier: Modifier = Modifier) {
     val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
-    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = onRequireAuth)
+    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
 
     val availableCategories = remember(cluster.allStoreOffers) {
         cluster.allStoreOffers.map { it.category.trim() }.filter { it.isNotBlank() }.distinct()
@@ -63,10 +66,14 @@ fun StoreCatalogScreen(
     Scaffold(
         modifier = modifier.fillMaxSize().navigationBarsPadding(),
         containerColor = SensusBackground,
-        topBar = { StoreCatalogTopBar(storeName = cluster.storeName, offersCount = visibleOffers.size, onNavigateBack = onNavigateBack) }
+        topBar = { StoreCatalogTopBar(storeName = cluster.storeName, offersCount = visibleOffers.size, onNavigateBack = callbacks.onNavigateBack) }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            StoreCatalogHeaderCard(cluster = cluster, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+            StoreCatalogHeaderCard(
+                cluster = cluster,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                onHeaderClick = { callbacks.onStoreHeaderClick(cluster) }
+            )
             if (availableCategories.isNotEmpty()) {
                 StoreCatalogCategoryRow(categories = availableCategories, selectedCategory = selectedCategory, onSelectCategory = { selectedCategory = it })
                 Spacer(modifier = Modifier.height(8.dp))
@@ -74,7 +81,7 @@ fun StoreCatalogScreen(
             StoreCatalogGridBody(
                 offers = visibleOffers,
                 savedOfferIds = savedState.savedOfferIds,
-                onProductClick = onProductClick,
+                onProductClick = callbacks.onProductClick,
                 onSaveClick = { savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(it)) }
             )
         }

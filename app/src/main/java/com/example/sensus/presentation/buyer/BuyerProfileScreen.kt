@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -90,6 +93,8 @@ data class BuyerProfileCallbacks(
     val onDeleteAccountClick: () -> Unit = {},
     val onTermsClick: () -> Unit = {},
     val onHistoryClick: () -> Unit = {},
+    val onEditInterestsClick: () -> Unit = {},
+    val onHelpSupportClick: () -> Unit = {},
     val onGuestActionRequired: () -> Unit = {}
 )
 
@@ -171,7 +176,8 @@ private fun BuyerProfileListContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(SensusBackground),
+            .background(SensusBackground)
+            .statusBarsPadding(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -193,9 +199,13 @@ private fun BuyerProfileListContent(
         item {
             BuyerSettingsOptionsCard(
                 isGuest = isGuest,
-                onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
-                onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
-                onTermsClick = callbacks.onTermsClick
+                actions = BuyerSettingsActions(
+                    onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
+                    onInterestsClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onEditInterestsClick() },
+                    onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
+                    onHelpClick = callbacks.onHelpSupportClick,
+                    onTermsClick = callbacks.onTermsClick
+                )
             )
         }
         item {
@@ -238,10 +248,24 @@ private fun BuyerProfileHeaderCard(summary: ProfileDisplaySummary, isGuest: Bool
             ProfileAvatarCircle(photoUri = summary.photoUri)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = summary.name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(
+                    text = summary.name,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusTextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = summary.email, fontSize = 13.sp, color = SensusTextSecondary)
+                Text(
+                    text = summary.email,
+                    fontSize = 13.sp,
+                    color = SensusTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
+            Spacer(modifier = Modifier.width(8.dp))
             ProfileHeaderActionControl(isGuest = isGuest, onClick = onClick)
         }
     }
@@ -369,15 +393,25 @@ private fun MerchantToggleLabelContent(
     }
 }
 
+@ComposeUiModel
+private data class BuyerSettingsActions(
+    val onEditClick: () -> Unit,
+    val onInterestsClick: () -> Unit,
+    val onHistoryClick: () -> Unit,
+    val onHelpClick: () -> Unit,
+    val onTermsClick: () -> Unit
+)
+
 @Composable
-private fun BuyerSettingsOptionsCard(isGuest: Boolean, onEditClick: () -> Unit, onHistoryClick: () -> Unit, onTermsClick: () -> Unit) {
+private fun BuyerSettingsOptionsCard(isGuest: Boolean, actions: BuyerSettingsActions) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = onEditClick)
-            ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = onHistoryClick)
+            ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = actions.onEditClick)
+            ProfileMenuOption(icon = Icons.Default.Tune, title = "Mis intereses de promociones", isLocked = isGuest, onClick = actions.onInterestsClick)
+            ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = actions.onHistoryClick)
             ProfileMenuOption(icon = Icons.Default.NotificationsNone, title = "Preferencias de notificaciones", onClick = {})
-            ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = {})
-            ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = onTermsClick)
+            ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = actions.onHelpClick)
+            ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = actions.onTermsClick)
         }
     }
 }

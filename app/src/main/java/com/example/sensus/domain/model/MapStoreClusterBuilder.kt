@@ -97,10 +97,9 @@ object MapStoreClusterBuilder {
     }
 
     fun matchesCategory(rawCategory: String, category: StoreCategory): Boolean {
-        if (category == StoreCategory.ALL) return true
+        if (category == StoreCategory.ALL || StoreCategory.fromApiCode(rawCategory) == category) return true
         val keyword = categoryFilterKeywords[category] ?: return true
-        val normalized = normalizeText(rawCategory)
-        return normalized.contains(keyword)
+        return normalizeText(rawCategory).contains(keyword)
     }
 
     private data class StoreClusterInput(

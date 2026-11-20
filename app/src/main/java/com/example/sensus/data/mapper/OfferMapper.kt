@@ -3,6 +3,7 @@ package com.example.sensus.data.mapper
 import com.example.sensus.data.local.db.entity.OfferEntity
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.StoreCategory
 import kotlin.math.roundToInt
 
 object OfferMapper {
@@ -17,7 +18,7 @@ object OfferMapper {
             id = id,
             name = title ?: "",
             storeName = merchantName ?: "",
-            category = category ?: "",
+            category = StoreCategory.displayNameFor(category, fallback = ""),
             originalPrice = originalPrice,
             discountPrice = price,
             discountPercent = computedDiscountPercent,

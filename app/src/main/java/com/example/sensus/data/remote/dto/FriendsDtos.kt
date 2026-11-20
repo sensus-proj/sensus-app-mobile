@@ -86,3 +86,19 @@ data class FriendSharedOffersThreadDto(
     val friend: FriendItemDto = FriendItemDto(),
     val offers: List<SharedOfferItemDto> = emptyList()
 )
+
+@Serializable
+data class CommunityActivityItemDto(
+    val id: String = "",
+    val activityType: String = "",
+    val actorUserId: String = "",
+    val actorName: String = "",
+    val actorPhotoUrl: String? = null,
+    val offerId: String? = null,
+    val merchantId: String? = null,
+    val targetTitle: String = "",
+    val targetSubtitle: String? = null,
+    val commentText: String? = null,
+    val rating: Int? = null,
+    val createdAtUtc: String = ""
+)

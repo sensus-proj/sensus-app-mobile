@@ -1,5 +1,7 @@
 package com.example.sensus.domain.model
 
+import com.example.sensus.domain.moderation.ProfanityFilter
+
 private const val PERCENT_SCALE = 100
 private const val MIN_TITLE_LENGTH = 3
 private const val MAX_TITLE_LENGTH = 100
@@ -37,7 +39,7 @@ data class UploadedMedia(
     val url: String
 )
 
-enum class OfferField { TITLE, DESCRIPTION, PRICE, STOCK, EXPIRATION, PHOTO }
+enum class OfferField { TITLE, DESCRIPTION, CATEGORY, PRICE, STOCK, EXPIRATION, PHOTO }
 
 data class OfferValidationError(
     val field: OfferField,
@@ -48,18 +50,29 @@ data class OfferValidationError(
 object OfferPublishingPolicy {
     const val MAX_STOCK: Int = MAX_STOCK_UNITS
 
-    fun validate(input: CreateOfferInput, nowMillis: Long): OfferValidationError? {
+    fun validate(input: CreateOfferInput, nowMillis: Long, requireCategory: Boolean = true): OfferValidationError? {
         val title = input.title.trim()
         val description = input.description.trim()
-        return when {
-            title.length !in MIN_TITLE_LENGTH..MAX_TITLE_LENGTH ->
-                OfferValidationError(OfferField.TITLE, "El título debe tener entre $MIN_TITLE_LENGTH y $MAX_TITLE_LENGTH caracteres")
-            description.isEmpty() ->
-                OfferValidationError(OfferField.DESCRIPTION, "Ingresa una descripción del producto")
-            description.length > MAX_DESCRIPTION_LENGTH ->
-                OfferValidationError(OfferField.DESCRIPTION, "La descripción no puede superar $MAX_DESCRIPTION_LENGTH caracteres")
-            else -> validatePrices(input) ?: validateStockAndExpiration(input, nowMillis)
-        }
+        return validateTexts(title, description)
+            ?: if (requireCategory && input.category.apiCode == null) {
+                OfferValidationError(OfferField.CATEGORY, "Selecciona una categoría válida")
+            } else {
+                validatePrices(input) ?: validateStockAndExpiration(input, nowMillis)
+            }
+    }
+
+    private fun validateTexts(title: String, description: String): OfferValidationError? = when {
+        title.length !in MIN_TITLE_LENGTH..MAX_TITLE_LENGTH ->
+            OfferValidationError(OfferField.TITLE, "El título debe tener entre $MIN_TITLE_LENGTH y $MAX_TITLE_LENGTH caracteres")
+        ProfanityFilter.containsProfanity(title) ->
+            OfferValidationError(OfferField.TITLE, "El título de la oferta contiene lenguaje ofensivo o inapropiado.")
+        description.isEmpty() ->
+            OfferValidationError(OfferField.DESCRIPTION, "Ingresa una descripción del producto")
+        description.length > MAX_DESCRIPTION_LENGTH ->
+            OfferValidationError(OfferField.DESCRIPTION, "La descripción no puede superar $MAX_DESCRIPTION_LENGTH caracteres")
+        ProfanityFilter.containsProfanity(description) ->
+            OfferValidationError(OfferField.DESCRIPTION, "La descripción de la oferta contiene lenguaje ofensivo o inapropiado.")
+        else -> null
     }
 
     fun validateUpdate(input: UpdateOfferInput, nowMillis: Long): OfferValidationError? = validate(
@@ -72,7 +85,8 @@ object OfferPublishingPolicy {
             stock = input.stock,
             expiresAtMillis = input.expiresAtMillis
         ),
-        nowMillis
+        nowMillis,
+        requireCategory = false
     )
 
     fun discountPercent(originalPrice: Double, discountPrice: Double): Int = if (originalPrice > 0.0 && discountPrice > 0.0 && discountPrice < originalPrice) {

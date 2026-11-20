@@ -7,6 +7,7 @@ import com.example.sensus.domain.model.AiTurn
 import com.example.sensus.domain.model.CitedOffer
 import com.example.sensus.domain.model.RecommendedPackage
 import com.example.sensus.domain.model.ScreenContext
+import com.example.sensus.domain.model.StoreCategory
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -132,7 +133,7 @@ fun CitedOfferDto.toDomain(): CitedOffer = CitedOffer(
     description = description,
     discountPercent = discountPercentage,
     imageUrl = imageUrl,
-    category = category,
+    category = category?.takeIf { it.isNotBlank() }?.let { StoreCategory.displayNameFor(it, fallback = it) },
     endsAtMillis = RemoteOfferMapper.parseIsoMillis(endsAtUtc),
     merchantAddress = merchantAddress,
     latitude = latitude,

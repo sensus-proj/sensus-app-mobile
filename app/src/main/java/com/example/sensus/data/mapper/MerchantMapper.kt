@@ -27,7 +27,9 @@ object MerchantMapper {
             longitud = longitud,
             horarios = mappedHorarios,
             fotoFachadaUrl = fotoFachadaUrl,
-            activo = activo
+            activo = activo,
+            averageRating = averageRating,
+            reviewCount = reviewCount
         )
     }
 

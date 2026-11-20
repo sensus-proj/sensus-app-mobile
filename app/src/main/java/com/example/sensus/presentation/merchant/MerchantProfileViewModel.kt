@@ -183,7 +183,9 @@ class MerchantProfileViewModel @Inject constructor(
                     longitude = profile.longitud,
                     schedule = formattedSchedule,
                     isOpen = profile.activo,
-                    photoUrl = profile.fotoFachadaUrl ?: store.photoUrl
+                    photoUrl = profile.fotoFachadaUrl ?: store.photoUrl,
+                    rating = profile.averageRating,
+                    reviewCount = profile.reviewCount
                 ),
                 schedules = profile.horarios
             )

@@ -23,7 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
@@ -32,6 +34,7 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusTextPrimary
 
 @Composable
 fun ProductDetailScreen(
@@ -48,7 +51,7 @@ fun ProductDetailScreen(
     val friendsState by friendsViewModel.viewState.collectAsStateWithLifecycle()
     var showShareSheet by remember(offer.id) { mutableStateOf(false) }
 
-    LaunchedEffect(offer.id) { viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id)) }
+    ProductDetailEffects(offer = offer, viewModel = viewModel, onRequireAuth = callbacks.onRequireAuth)
     SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     ShareOfferEffectsHandler(
         friendsViewModel = friendsViewModel,
@@ -91,6 +94,22 @@ fun ProductDetailScreen(
                 }
             )
         )
+    }
+}
+
+@Composable
+private fun ProductDetailEffects(offer: ProductOffer, viewModel: ProductDetailViewModel, onRequireAuth: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(offer.id) {
+        viewModel.dispatchIntent(ProductDetailViewIntent.Load(offer.id, offer.likesCount, offer.isLikedByMe))
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.viewEffect.collect { effect ->
+            when (effect) {
+                ProductDetailViewEffect.RequireAuth -> onRequireAuth()
+                is ProductDetailViewEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }
 
@@ -173,8 +192,7 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
         Spacer(modifier = Modifier.height(16.dp))
         ProductTitleAndDatesSection(offer = offer)
         Spacer(modifier = Modifier.height(12.dp))
-        ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
-        Spacer(modifier = Modifier.height(16.dp))
+        ProductDetailSocialSection(offer = offer, state = state, actions = actions)
         QuantitySelectorCard(
             quantity = quantity,
             maxUnits = offer.unitsLeft,
@@ -192,6 +210,49 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
         )
         Spacer(modifier = Modifier.height(16.dp))
         ProductDescriptionCard(description = offer.description, quantity = quantity)
+        if (state.alternatives.isNotEmpty()) {
+            ProductDetailAlternativesSection(
+                alternatives = state.alternatives,
+                onSelectAlternative = { altOffer ->
+                    actions.onIntent(ProductDetailViewIntent.Load(altOffer.id))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailSocialSection(offer: ProductOffer, state: ProductDetailViewState, actions: ProductDetailActions) {
+    ProductSocialLikeRow(
+        likesCount = state.likesCount,
+        isLiked = state.isLiked,
+        isBusy = state.isTogglingLike,
+        onToggleLike = { actions.onIntent(ProductDetailViewIntent.ToggleLike(offer.id)) }
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+private fun ProductDetailAlternativesSection(
+    alternatives: List<com.example.sensus.domain.model.OfferAlternativeItem>,
+    onSelectAlternative: (ProductOffer) -> Unit
+) {
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = "Ofertas similares cerca de ti",
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        color = SensusTextPrimary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
+    alternatives.forEach { alt ->
+        val altOffer = alt.toProductOffer()
+        ProductOfferCard(
+            offer = altOffer,
+            onClick = { onSelectAlternative(altOffer) }
+        )
     }
 }
 

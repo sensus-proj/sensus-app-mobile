@@ -37,3 +37,4 @@
 - Las pruebas instrumentadas de UI y SQLCipher están escritas y compiladas; su ejecución en dispositivo sigue pendiente.
 - La integración con los contratos desplegados del backend y la revisión formal de la slice siguen pendientes.
 - Cambios únicamente locales, sin commit, push, tag ni modificación de configuración de escáneres.
+- [x] T15.15 Añadir `apiCode` a `StoreCategory` y enviarlo en `CreateOfferRequest.category` (RF-15-07, spec backend 034 FR-034-08); mapear de vuelta código → texto visible al leer ofertas — verif: `./gradlew.bat testDebugUnitTest` (364/364 PASS, Kover 80.90%, `detekt`/`ktlintCheck`/`lint` PASS)

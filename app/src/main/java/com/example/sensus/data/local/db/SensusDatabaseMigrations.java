@@ -70,4 +70,33 @@ public final class SensusDatabaseMigrations {
             db.execSQL("ALTER TABLE `ai_messages` ADD COLUMN `offersJson` TEXT");
         }
     };
+
+    private static final String MIGRATION_6_7_DDL =
+        "CREATE TABLE IF NOT EXISTS `feed_offers` ("
+            + "`offerId` TEXT NOT NULL, "
+            + "`position` INTEGER NOT NULL, "
+            + "`payloadJson` TEXT NOT NULL, "
+            + "`rankingVersion` TEXT NOT NULL, "
+            + "`cachedAtMillis` INTEGER NOT NULL, "
+            + "PRIMARY KEY(`offerId`))";
+
+    public static final Migration MIGRATION_6_7 = new Migration(6, 7) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(MIGRATION_6_7_DDL);
+        }
+    };
+
+    private static final String MIGRATION_7_8_DDL =
+        "CREATE TABLE IF NOT EXISTS `search_history` ("
+            + "`query` TEXT NOT NULL, "
+            + "`searchedAtMillis` INTEGER NOT NULL, "
+            + "PRIMARY KEY(`query`))";
+
+    public static final Migration MIGRATION_7_8 = new Migration(7, 8) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(MIGRATION_7_8_DDL);
+        }
+    };
 }

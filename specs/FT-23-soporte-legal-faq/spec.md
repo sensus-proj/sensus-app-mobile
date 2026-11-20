@@ -19,6 +19,7 @@ En `BuyerProfileScreen.kt` la opción `"Centro de ayuda y soporte"` tiene un `on
 | RF-23-01 | Conectar `"Centro de ayuda y soporte"` en `BuyerProfileScreen` a `HelpFaqScreen` con acordeones expandibles sobre radio 1–5 km, activación comercial sin INE, reservas QR y privacidad/ARCO. |
 | RF-23-02 | Garantizar que el texto completo de Términos, Políticas de Cancelación y Aviso de Privacidad en `TermsScreen` sea legible 100 % sin conexión (recursos embebidos) e incluya enlace externo a `https://rodnix.com.mx/sensus/privacidad.html`. |
 | RF-23-03 | En modo invitado, mostrar la barra/banner no intrusivo (`C-49`) destacando beneficios (ampliar radio hasta 5 km, usar buscador ML y comunidad) con CTA directo hacia Registro / Inicio de sesión. |
+| RF-23-04 | El Aviso de Privacidad embebido y el de la landing informan que los intereses elegidos y las interacciones con ofertas (vistas en el feed, aperturas y apartados, seudonimizadas y conservadas 180 días) se usan para ordenar el feed de promociones y medir su calidad, y que el titular ejerce la cancelación eliminando su cuenta (backend specs 042, 054 y 055). Decisión del 2026-11-20: solo aviso, sin ajuste para desactivarlo. |
 
 ## 3. Requisitos no funcionales
 

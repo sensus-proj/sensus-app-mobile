@@ -1,67 +1,65 @@
-# SPEC — FT-26 Detalle Público del Comercio y Reseñas Post-Canje [BORRADOR]
+# FT-26 — Reseñas de comercio estilo Play Store y calificación real
 
-> Rector: `.specify/memory/constitution.md` §2, §6 y §9. Plantilla: `.specify/templates/spec-template.md`.
-> Drive: **Sensus_Movil_Componentes_y_CRUD.xlsx** (hoja *Reseñas* y *Comercios*, Pantalla **P-15**, Componentes **C-28..C-31**).
-> Backend ref: **Sin spec aún en `sensus-back` (bloqueada hasta abrir spec equivalente en backend, decisión D-6)**.
+| Campo | Valor |
+|---|---|
+| Feature | `FT-26-resenas-comercio` |
+| Estado | `En revision` |
+| Depende de | `FT-12-detalle-filtros-ruteo`, `FT-14-canje-qr-comercio`, `FT-29-merchant-location-activation` |
+| Spec backend | [`056-resenas-comercios`](../../../sensus-back/specs/056-resenas-comercios/spec.md) |
+| Pantalla / Componentes | `StoreCatalogScreen` (tarjeta cabecera), `StoreReviewsScreen`, `StoreReviewsComponents`, `MerchantProfileScreen` |
 
 ## 1. Contexto y objetivo
 
-En `Sensus_Movil_Componentes_y_CRUD.xlsx` existe la pantalla **Detalle del comercio (`P-15`)** con insignia Verificado, calificación promedio, total de canjes, formas de pago aceptadas, ofertas activas del local y reseñas de clientes que ya canjearon una reserva (`1–5` estrellas y comentario opcional). Actualmente en móvil no existe `MerchantPublicDetailScreen` ni flujo para emitir reseñas tras un canje.
+Al pulsar la tarjeta superior del comercio dentro del catálogo (`StoreCatalogHeaderCard`, con foto de perfil, dirección y calificación), el usuario abre la pantalla de reseñas estilo Play Store (`StoreReviewsScreen`) para consultar el promedio real con estrellas, el total de reseñas, el desglose de 5 a 1 estrellas y los comentarios de otros usuarios con nombre, foto de perfil y fecha/año. Cualquier usuario registrado puede calificar (1..5 estrellas) con comentario moderado, dar «Me gusta» a una reseña y responder en hilo. Además, el perfil del comerciante (`MerchantProfileScreen`) reemplaza cualquier calificación ficticia por el promedio real (`rating`) y total de reseñas (`reviewCount`) devueltos por `GET /api/v1/merchants/me`.
 
-**Objetivo:** implementar la pantalla pública de detalle de comercio (`P-15`) conectada a `GET /api/v1/merchants/{id}` y `GET /api/v1/merchants/{id}/reviews`, y habilitar el diálogo de reseña post-canje enviado vía `POST /api/v1/reviews` únicamente sobre reservas en estado `REDEEMED`.
+## 2. Usuarios y flujo principal
 
-**Alcance:** `MerchantPublicDetailScreen`, `MerchantPublicDetailViewModel`, `ReviewsRepository`, `SubmitReviewUseCase`, componentes `C-28..C-31` y diálogo de calificación 1–5 estrellas desde `MyClaimsScreen`.
-**Fuera de alcance:** edición de reseñas pasados 7 días si el backend no lo contempla; respuesta de comercios a reseñas.
+1. **Consumidor / Invitado** abre el catálogo del comercio desde el mapa y pulsa la tarjeta superior (`StoreCatalogHeaderCard`).
+2. Se navega a `StoreReviewsScreen`, que invoca `GET /api/v1/merchants/{merchantId}/reviews` mediante `StoreReviewsViewModel`.
+3. Se muestra el promedio numérico (ej. `4.4`), ícono de estrella en color de marca (`SensusPurple`, Constitución §9.2), barras de desglose de 5 a 1 estrellas y tarjetas de reseña con foto, nombre, fecha/año (`dd MMM yyyy`), calificación, comentario, botón de «Me gusta» y respuestas anidadas.
+4. Si el usuario está registrado (no invitado), puede enviar una nueva calificación + comentario (`POST /api/v1/merchants/{merchantId}/reviews`), dar/quitar «Me gusta» (`POST /api/v1/merchants/reviews/{reviewId}/like`) o abrir el diálogo de respuesta (`POST /api/v1/merchants/reviews/{reviewId}/replies`), validando groserías en cliente antes de enviar.
+5. El **Comerciante** consulta su perfil (`MerchantProfileScreen`) y ve su calificación real y conteo real provenientes de `GET /api/v1/merchants/me`.
 
-## 2. Requisitos funcionales
+## 3. Requisitos funcionales
 
-| ID | Requisito |
-|---|---|
-| RF-26-01 | Al tocar el nombre o fila del comercio en `ProductDetailScreen` o en la vista previa del mapa (`P-09`), navegar a `MerchantPublicDetailScreen` (`P-15`). |
-| RF-26-02 | `GET /api/v1/merchants/{id}` devuelve datos públicos, dirección, estado `Abierto ahora` con hora de cierre, insignia `Verificado`, calificación promedio, total de canjes, métodos de pago (`C-31`) y ofertas activas. |
-| RF-26-03 | `GET /api/v1/merchants/{id}/reviews` carga reseñas paginadas (20 por página) con filtro opcional de destacadas (`>= 4` estrellas). |
-| RF-26-04 | En reservas con estado `REDEEMED`, habilitar acción `'Calificar comercio'` que valida calificación entera en `[1, 5]` y comentario `<= 300` caracteres enviando `POST /api/v1/reviews` (una sola reseña por `claimId`). |
+- **`RF-26-01`:** Hacer clicable la tarjeta superior del catálogo (`StoreCatalogHeaderCard`) para abrir `StoreReviewsScreen` de ese comercio.
+- **`RF-26-02`:** Consultar y mostrar resumen estilo Play Store (`averageRating`, `totalReviews`, desglose `5..1` estrellas y lista de reseñas) mediante `GET /api/v1/merchants/{merchantId}/reviews`.
+- **`RF-26-03`:** Permitir a usuarios registrados publicar reseñas de `1..5` estrellas con comentario de `1..600` caracteres vía `POST /api/v1/merchants/{merchantId}/reviews`, pasando primero por `ProfanityFilter`.
+- **`RF-26-04`:** Permitir a usuarios registrados alternar «Me gusta» sobre reseñas (`POST /api/v1/merchants/reviews/{reviewId}/like`) y responder comentarios (`POST /api/v1/merchants/reviews/{reviewId}/replies`, `1..500` caracteres moderados).
+- **`RF-26-05`:** Mostrar en `MerchantProfileScreen` la calificación y conteo real (`averageRating` / `reviewCount`) del perfil comercial obtenido de `GET /api/v1/merchants/me` (si es `0`, indicar estado inicial real sin datos falsos).
+- **`RF-26-06`:** Bloquear acciones de escritura para usuarios invitados con mensaje claro y usar paleta morada de marca (`SensusPurple`, sin amarillo/ámbar per Constitución §9.2).
 
-## 3. Requisitos no funcionales
+## 4. Requisitos no funcionales y arquitectura
 
-- **Integridad:** nunca permitir enviar reseña si la reserva no está en estado canjeado (`REDEEMED`) o si es invitado.
-- **Moderación:** el comentario de la reseña pasa por moderación previa en el servidor.
+- Clean Architecture estricta: `domain/` (`StoreReviewModels`, `StoreReviewRepository`, `StoreReviewUseCases`) sin dependencias Android/Retrofit; `data/` (`StoreReviewsApiService`, `StoreReviewRepositoryImpl`); `presentation/` (`StoreReviewsViewModel` heredando de `MviViewModel<StoreReviewsViewState, StoreReviewsViewIntent, StoreReviewsViewEffect>`).
+- Cumplimiento de diseño Sensus (§9.2): íconos de estrella en `SensusPurple` / `SensusTextMuted`, cero amarillo/ámbar en UI interna.
+- Cobertura de pruebas unitarias Kover `>= 80%`.
 
-## 4. Arquitectura y contratos internos
+## 5. Contratos y navegación
 
-```text
-domain/
-  model/MerchantPublicModels.kt # MerchantPublicProfile, MerchantReview, PaymentMethodType
-  repository/ReviewsRepository.kt
-  usecase/GetMerchantPublicProfileUseCase.kt, GetMerchantReviewsUseCase.kt, SubmitReviewUseCase.kt
-data/
-  remote/api/ReviewsApiService.kt # GET /api/v1/merchants/{id}, /reviews, POST /api/v1/reviews
-  repository/ReviewsRepositoryImpl.kt
-presentation/buyer/
-  MerchantPublicDetailContract.kt, MerchantPublicDetailViewModel.kt, MerchantPublicDetailScreen.kt # P-15
-presentation/modals/
-  SubmitReviewDialog.kt
-```
+| Endpoint | Origen -> Destino | Uso |
+|---|---|---|
+| `GET /api/v1/merchants/{merchantId}/reviews` | `GetStoreReviewsUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Cargar promedio y reseñas del comercio |
+| `POST /api/v1/merchants/{merchantId}/reviews` | `CreateStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Enviar calificación y comentario |
+| `POST /api/v1/merchants/reviews/{reviewId}/like` | `ToggleStoreReviewLikeUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Alternar «Me gusta» en reseña |
+| `POST /api/v1/merchants/reviews/{reviewId}/replies` | `ReplyStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Publicar respuesta en hilo |
+| `GET /api/v1/merchants/me` | `MerchantProfileViewModel` -> `MerchantRepository` -> `MerchantApiService` | Calificación real del comerciante |
 
-## 5. Criterios de aceptacion
+## 6. Criterios de aceptación
 
-- **Given** un usuario toca un comercio en `ProductDetailScreen` **When** abre `P-15` **Then** visualiza métricas (`calificación`, `canjes`), formas de pago, horario y lista paginada de reseñas.
-- **Given** un comprador tiene una reserva en estado `REDEEMED` sin reseña **When** selecciona 5 estrellas y escribe comentario **Then** envía `POST /api/v1/reviews` y recalcula el promedio mostrado.
-- **Given** el usuario intenta enviar calificación `0` o `6` **When** valida `SubmitReviewUseCase` **Then** bloquea antes de enviar.
+- Pulsar la tarjeta del comercio en el catálogo navega a `StoreReviewsScreen` del comercio seleccionado.
+- Se muestran foto de perfil, nombre completo, fecha con año (`yyyy`), calificación, botón de «Me gusta» con conteo y respuestas.
+- Comentarios o respuestas con groserías son rechazados inmediatamente antes o durante el envío.
+- El perfil del comerciante nunca muestra promedios simulados hardcodeados (`4.9` falso).
 
-## 6. Plan de pruebas
+## 7. Pruebas requeridas
 
-- **Unitarias:** `SubmitReviewUseCaseTest` (rango `1..5`, longitud comentario, reserva debe estar `REDEEMED`), `GetMerchantReviewsUseCaseTest`.
-- **ViewModel:** `MerchantPublicDetailViewModelTest` con Turbine.
-- **Integración (`MockWebServer`):** endpoints públicos de comercio y reseñas (`200`, `201`, `409` reseña duplicada).
-- **UI (Compose Test Rule):** `MerchantPublicDetailScreen` (`C-28..C-31`) y `SubmitReviewDialog`.
-
-## 7. Riesgos, limites y deuda
-
-- **BLOQUEANTE:** `GET /api/v1/merchants/{id}`, `GET /api/v1/merchants/{id}/reviews` y `POST /api/v1/reviews` aún no existen en `sensus-back` (decisión D-6). Queda en `Borrador` hasta definir contrato en backend.
+- `StoreReviewsViewModelTest` (carga, validación local con `ProfanityFilter`, creación de reseña, toggle de like optimista/revertido, respuesta y errores).
+- `MerchantProfileViewModelTest` (mapeo de calificación y conteo real en perfil comercial).
 
 ## Aprobación
 
-| Estado | Revisor | Fecha | Evidencia |
+| Rol | Responsable | Estado | Fecha |
 |---|---|---|---|
-| Borrador | — | — | Bloqueada por falta de spec/contrato en backend (D-6) |
+| Producto / SDD | Equipo Sensus | Aprobada (retro-alineación a Spec 056) | 2026-11-19 |
+| Android Lead | Equipo Móvil | En revisión de cobertura y gates | 2026-11-19 |

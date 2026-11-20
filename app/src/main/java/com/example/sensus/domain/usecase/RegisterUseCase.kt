@@ -4,6 +4,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.PasswordPolicy
 import com.example.sensus.domain.model.UserProfile
+import com.example.sensus.domain.moderation.ProfanityFilter
 import com.example.sensus.domain.repository.AuthRepository
 
 private const val MIN_NAME_LENGTH = 2
@@ -16,6 +17,8 @@ class RegisterUseCase(private val authRepository: AuthRepository) {
         val validationMessage = when {
             trimmedNombre.length !in MIN_NAME_LENGTH..MAX_NAME_LENGTH ->
                 "El nombre debe tener entre $MIN_NAME_LENGTH y $MAX_NAME_LENGTH caracteres."
+            ProfanityFilter.containsProfanity(trimmedNombre) ->
+                "El nombre contiene lenguaje ofensivo o inapropiado."
             trimmedCorreo.isBlank() || !trimmedCorreo.contains("@") ->
                 "Ingresa un correo electrónico válido."
             !PasswordPolicy.isValid(password) ->
