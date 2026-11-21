@@ -3,6 +3,7 @@ package com.example.sensus.presentation.buyer
 import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.OfferAlternativeItem
 import com.example.sensus.domain.model.OfferDetails
+import com.example.sensus.domain.model.ReportReason
 import com.example.sensus.presentation.base.ViewEffect
 import com.example.sensus.presentation.base.ViewIntent
 import com.example.sensus.presentation.base.ViewState
@@ -15,6 +16,9 @@ data class ProductDetailViewState(
     val likesCount: Int = 0,
     val isLiked: Boolean = false,
     val isTogglingLike: Boolean = false,
+    val showReportDialog: Boolean = false,
+    val isSubmittingReport: Boolean = false,
+    val reportError: String? = null,
     val error: AppError? = null
 ) : ViewState
 
@@ -22,6 +26,9 @@ sealed interface ProductDetailViewIntent : ViewIntent {
     data class Load(val offerId: String, val initialLikesCount: Int = 0, val initialLiked: Boolean = false) : ProductDetailViewIntent
     data class ChangeQuantity(val quantity: Int) : ProductDetailViewIntent
     data class ToggleLike(val offerId: String) : ProductDetailViewIntent
+    data object OpenReport : ProductDetailViewIntent
+    data object CloseReport : ProductDetailViewIntent
+    data class SubmitReport(val offerId: String, val reason: ReportReason, val details: String) : ProductDetailViewIntent
 }
 
 sealed interface ProductDetailViewEffect : ViewEffect {
