@@ -19,6 +19,7 @@ sealed class AppError(open val message: String) {
     data class Forbidden(override val message: String = "Acceso denegado.") : AppError(message)
     data class NotFound(override val message: String = "Elemento no encontrado.") : AppError(message)
     data class Unprocessable(override val message: String = "No fue posible procesar la solicitud.") : AppError(message)
+    data class Conflict(override val message: String = "El elemento ya fue registrado recientemente.") : AppError(message)
     data class Validation(override val message: String = "Datos de entrada inválidos.") : AppError(message)
     data class ContentRejected(override val message: String = "El contenido no cumple las políticas de seguridad.") : AppError(message)
     data class Generic(override val message: String = "Ha ocurrido un error inesperado.") : AppError(message)

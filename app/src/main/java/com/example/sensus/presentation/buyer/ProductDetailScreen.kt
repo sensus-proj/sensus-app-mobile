@@ -6,11 +6,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,8 +40,10 @@ import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextPrimary
+import com.example.sensus.theme.SensusTextSecondary
 
 @Composable
 fun ProductDetailScreen(
@@ -162,6 +171,19 @@ internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewS
             ),
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+        if (state.showReportDialog) {
+            ReportContentDialog(
+                model = ReportDialogModel(
+                    targetLabel = current.name,
+                    isSubmitting = state.isSubmittingReport,
+                    errorMessage = state.reportError
+                ),
+                onDismiss = { actions.onIntent(ProductDetailViewIntent.CloseReport) },
+                onSubmit = { reason, details ->
+                    actions.onIntent(ProductDetailViewIntent.SubmitReport(current.id, reason, details))
+                }
+            )
+        }
     }
 }
 
@@ -231,6 +253,26 @@ private fun ProductDetailSocialSection(offer: ProductOffer, state: ProductDetail
     )
     Spacer(modifier = Modifier.height(8.dp))
     ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
+    Spacer(modifier = Modifier.height(8.dp))
+    OutlinedButton(
+        onClick = { actions.onIntent(ProductDetailViewIntent.OpenReport) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Flag,
+            contentDescription = null,
+            tint = SensusPurple,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.ft19_report_product),
+            color = SensusTextSecondary,
+            fontWeight = FontWeight.Medium
+        )
+    }
     Spacer(modifier = Modifier.height(16.dp))
 }
 
