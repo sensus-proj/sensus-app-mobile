@@ -37,6 +37,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -68,7 +69,9 @@ import com.example.sensus.presentation.common.OsmMapUtils
 import com.example.sensus.presentation.common.RadiusSelectorBottomSheet
 import com.example.sensus.presentation.common.formatRadiusText
 import com.example.sensus.presentation.common.getCategoryIcon
-import com.example.sensus.theme.SensusBackground
+import com.example.sensus.presentation.components.states.LocationDisabledState
+import com.example.sensus.presentation.components.states.OfflineErrorState
+import com.example.sensus.presentation.components.states.ShimmerOfferList
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusTextMuted
@@ -122,12 +125,16 @@ private data class HomeContentData(
     val filteredOffers: List<ProductOffer>,
     val cart: StoreCart,
     val showRadiusSheet: Boolean,
-    val savedOfferIds: Set<String> = emptySet()
+    val savedOfferIds: Set<String> = emptySet(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val isLocationDisabled: Boolean = false
 )
 
 @ComposeUiModel
 private data class HomeHostActions(
     val onRefreshLocation: () -> Unit,
+    val onRefreshOffers: () -> Unit = {},
     val onSearchChange: (String) -> Unit,
     val onCategoryToggle: (StoreCategory) -> Unit,
     val onToggleRadiusSheet: (Boolean) -> Unit,
@@ -176,11 +183,15 @@ fun BuyerHomeScreen(
                 filteredOffers = filteredOffers,
                 cart = cartState.storeCart,
                 showRadiusSheet = showRadiusSheet,
-                savedOfferIds = savedState.savedOfferIds
+                savedOfferIds = savedState.savedOfferIds,
+                isLoading = homeState.isLoading,
+                errorMessage = homeState.errorMessage,
+                isLocationDisabled = homeState.isLocationDisabled
             ),
             callbacks = callbacks,
             actions = HomeHostActions(
                 onRefreshLocation = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshLocation) },
+                onRefreshOffers = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshOffers) },
                 onSearchChange = { searchQuery = it },
                 onCategoryToggle = { clicked -> selectedCategory = if (selectedCategory == clicked) StoreCategory.ALL else clicked },
                 onToggleRadiusSheet = { showRadiusSheet = it },
@@ -194,7 +205,7 @@ fun BuyerHomeScreen(
 
 @Composable
 private fun BuyerHomeHost(data: HomeContentData, callbacks: BuyerHomeCallbacks, actions: HomeHostActions, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         BuyerHomeLazyFeed(data = data, callbacks = callbacks, actions = actions)
         if (data.cart.totalItemsCount > 0) {
             FloatingHomeCartPill(
@@ -218,6 +229,20 @@ private fun BuyerHomeHost(data: HomeContentData, callbacks: BuyerHomeCallbacks, 
 
 @Composable
 private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbacks, actions: HomeHostActions) {
+    if (data.isLocationDisabled) {
+        LocationDisabledState(
+            onChooseManualLocation = { actions.onRefreshLocation() }
+        )
+        return
+    }
+
+    if (data.errorMessage != null && data.filteredOffers.isEmpty()) {
+        OfflineErrorState(
+            onRetry = actions.onRefreshOffers
+        )
+        return
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 110.dp)) {
         item {
             BuyerHomeLocationHeader(
@@ -242,17 +267,23 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
                 text = "Ofertas ordenadas por cercanía (${data.filteredOffers.size})",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = SensusTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
-        items(data.filteredOffers, key = { it.id }) { offer ->
-            ProductOfferCard(
-                offer = offer,
-                onClick = { callbacks.onProductClick(offer) },
-                isSaved = offer.id in data.savedOfferIds,
-                onSaveClick = { actions.onToggleSaveOffer(offer) }
-            )
+        if (data.isLoading && data.filteredOffers.isEmpty()) {
+            item {
+                ShimmerOfferList()
+            }
+        } else {
+            items(data.filteredOffers, key = { it.id }) { offer ->
+                ProductOfferCard(
+                    offer = offer,
+                    onClick = { callbacks.onProductClick(offer) },
+                    isSaved = offer.id in data.savedOfferIds,
+                    onSaveClick = { actions.onToggleSaveOffer(offer) }
+                )
+            }
         }
     }
 }

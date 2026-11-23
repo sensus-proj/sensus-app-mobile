@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,10 +15,16 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +51,7 @@ import com.example.sensus.presentation.buyer.RouteMapScreen
 import com.example.sensus.presentation.buyer.SensiChatScreen
 import com.example.sensus.presentation.buyer.SensiOfferActions
 import com.example.sensus.presentation.common.GuestModeBanner
+import com.example.sensus.presentation.components.states.OfflineBanner
 import com.example.sensus.presentation.merchant.MerchantDashboardCallbacks
 import com.example.sensus.presentation.merchant.MerchantDashboardScreen
 import com.example.sensus.presentation.merchant.MerchantEditOfferScreen
@@ -51,7 +59,6 @@ import com.example.sensus.presentation.merchant.MerchantNewOfferScreen
 import com.example.sensus.presentation.merchant.MerchantProfileScreen
 import com.example.sensus.presentation.merchant.MerchantRegisterScreen
 import com.example.sensus.presentation.merchant.MerchantSalesScreen
-import com.example.sensus.theme.SensusBackground
 
 private const val TAB_SENSI = 2
 private const val TAB_COMMUNITY = 3
@@ -61,16 +68,39 @@ private const val MERCHANT_TAB_SALES = 2
 private const val MERCHANT_TAB_PROFILE = 3
 private const val GUEST_BANNER_BOTTOM_PADDING_DP = 82
 
+data class MainAppContainerActions(
+    val onLogout: () -> Unit = {},
+    val onNavigateToTerms: () -> Unit = {}
+)
+
 @Composable
 fun MainAppContainer(
     modifier: Modifier = Modifier,
     isGuest: Boolean = false,
     isMerchantRegistered: Boolean = false,
-    onLogout: () -> Unit = {},
-    onNavigateToTerms: () -> Unit = {}
+    isOnline: Boolean = true,
+    actions: MainAppContainerActions = MainAppContainerActions()
 ) {
     val state = rememberMainAppState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var previousOnline by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(isOnline) {
+        val prev = previousOnline
+        previousOnline = isOnline
+        if (prev != null) {
+            if (prev && !isOnline) {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.offline_snackbar_lost)
+                )
+            } else if (!prev && isOnline) {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.offline_snackbar_restored)
+                )
+            }
+        }
+    }
 
     LaunchedEffect(isMerchantRegistered) {
         if (isMerchantRegistered) {
@@ -94,15 +124,17 @@ fun MainAppContainer(
         handleMainBackNavigation(state, context)
     }
 
-    val renderedOverlay = renderFullscreenOverlay(state, isGuest)
-    if (!renderedOverlay) {
-        MainAppScaffoldContent(
-            state = state,
-            isGuest = isGuest,
-            onLogout = onLogout,
-            onNavigateToTerms = onNavigateToTerms,
-            modifier = modifier
-        )
+    Box(modifier = modifier.fillMaxSize()) {
+        val renderedOverlay = renderFullscreenOverlay(state, isGuest)
+        if (!renderedOverlay) {
+            MainAppScaffoldContent(
+                state = state,
+                isGuest = isGuest,
+                isOnline = isOnline,
+                snackbarHostState = snackbarHostState,
+                actions = actions
+            )
+        }
     }
 }
 
@@ -220,7 +252,13 @@ private fun RenderMerchantRegisterOverlay(state: MainAppState) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogout: () -> Unit, onNavigateToTerms: () -> Unit, modifier: Modifier = Modifier) {
+private fun MainAppScaffoldContent(
+    state: MainAppState,
+    isGuest: Boolean,
+    isOnline: Boolean,
+    snackbarHostState: SnackbarHostState,
+    actions: MainAppContainerActions
+) {
     val animProgress by animateFloatAsState(
         targetValue = if (state.isFamOpen) 1f else 0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
@@ -229,8 +267,9 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
     val isKeyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0 || WindowInsets.isImeVisible
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = SensusBackground,
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(
@@ -238,15 +277,22 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (!state.isMerchantMode) {
-                BuyerTabContent(state = state, isGuest = isGuest, onNavigateToTerms = onNavigateToTerms)
-            } else {
-                MerchantTabContent(state = state)
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (!isOnline) {
+                    OfflineBanner()
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    if (!state.isMerchantMode) {
+                        BuyerTabContent(state = state, isGuest = isGuest, onNavigateToTerms = actions.onNavigateToTerms)
+                    } else {
+                        MerchantTabContent(state = state)
+                    }
+                }
             }
             FamBackdropScrim(state.isFamOpen, animProgress) { state.isFamOpen = false }
             if (isGuest && !state.isMerchantMode && !isKeyboardOpen) {
                 GuestModeBanner(
-                    onRegisterClick = onLogout,
+                    onRegisterClick = actions.onLogout,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
@@ -265,7 +311,7 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
                     RainbowFloatingMenuBar(state = state, animProgress = animProgress)
                 }
             }
-            MainAppDialogs(state = state, isGuest = isGuest, onLogout = onLogout)
+            MainAppDialogs(state = state, isGuest = isGuest, onLogout = actions.onLogout)
         }
     }
 }

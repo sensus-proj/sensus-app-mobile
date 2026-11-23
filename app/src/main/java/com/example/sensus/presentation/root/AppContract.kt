@@ -26,7 +26,9 @@ data class AppViewState(
     val isMerchantRegistered: Boolean = false,
     val pendingInterestsOnboarding: Boolean = false,
     val activeResetToken: String? = null,
-    val friendInviteSignal: Int = 0
+    val friendInviteSignal: Int = 0,
+    val isOnline: Boolean = true,
+    val pendingSyncCount: Int = 0
 ) : ViewState
 
 sealed interface AppViewIntent : ViewIntent {
@@ -41,4 +43,6 @@ sealed interface AppViewIntent : ViewIntent {
     data class NavigateTo(val screen: AppScreen) : AppViewIntent
 }
 
-sealed interface AppViewEffect : ViewEffect
+sealed interface AppViewEffect : ViewEffect {
+    data class ShowNetworkSnackbar(val message: String) : AppViewEffect
+}

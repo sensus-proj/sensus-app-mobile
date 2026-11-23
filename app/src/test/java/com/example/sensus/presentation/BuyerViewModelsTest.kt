@@ -108,6 +108,7 @@ class BuyerViewModelsTest {
         val sessionRepo = mockk<SessionRepository>(relaxed = true)
         coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(isGuest = true))
         coEvery { locationRepo.hasLocationPermission() } returns true
+        coEvery { locationRepo.isLocationEnabled() } returns true
         coEvery { locationRepo.getCurrentLocation() } returns UserLocation(19.5, -99.2)
         coEvery { locationRepo.getFreshLocation() } returns UserLocation(19.6, -99.3)
 
@@ -126,6 +127,38 @@ class BuyerViewModelsTest {
         vm.dispatchIntent(BuyerHomeViewIntent.RefreshLocation)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(19.6, vm.viewState.value.userLocation.latitude, 0.001)
+    }
+
+    @Test
+    fun buyerHome_locationDisabled_setsFlagAndShowsLocationDisabledState() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { locationRepo.hasLocationPermission() } returns true
+        coEvery { locationRepo.isLocationEnabled() } returns false
+
+        val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.viewState.value.isLocationDisabled)
+    }
+
+    @Test
+    fun buyerHome_offlineNoCache_setsErrorMessage() = runTest {
+        val offersRepo = mockk<OffersRepository>(relaxed = true)
+        val locationRepo = mockk<LocationRepository>(relaxed = true)
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { locationRepo.isLocationEnabled() } returns true
+        coEvery { offersRepo.fetchNearbyOffers(any(), any(), any()) } returns
+            com.example.sensus.common.Result.Failure(com.example.sensus.common.AppError.Network("Offline"))
+        coEvery { offersRepo.getOffers() } returns emptyList()
+
+        val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("Sin conexión", vm.viewState.value.errorMessage)
     }
 
     private fun createMapLayerUseCases(

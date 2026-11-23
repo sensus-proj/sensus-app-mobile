@@ -58,7 +58,17 @@ class BuyerHomeViewModel @Inject constructor(
 
     private fun refreshLocation(forceFresh: Boolean) {
         viewModelScope.launch {
-            if (locationRepository.hasLocationPermission()) {
+            val permissionGranted = locationRepository.hasLocationPermission()
+            val locationEnabled = locationRepository.isLocationEnabled()
+
+            if (permissionGranted && !locationEnabled) {
+                updateState { copy(isLocationDisabled = true) }
+                return@launch
+            } else {
+                updateState { copy(isLocationDisabled = false) }
+            }
+
+            if (permissionGranted) {
                 val loc = if (forceFresh) {
                     locationRepository.getFreshLocation()
                 } else {
@@ -71,7 +81,7 @@ class BuyerHomeViewModel @Inject constructor(
     }
 
     private fun loadOffers() {
-        updateState { copy(isLoading = true) }
+        updateState { copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             val loc = viewState.value.userLocation
             val radiusKm = viewState.value.selectedRadiusKm.toDouble()
@@ -80,12 +90,18 @@ class BuyerHomeViewModel @Inject constructor(
                 longitude = loc.longitude,
                 radiusKm = radiusKm
             )
-            val offers = when (remoteRes) {
-                is com.example.sensus.common.Result.Success ->
-                    remoteRes.data.filter { it.isPubliclyVisible }.ifEmpty { offersRepository.getOffers().filter { it.isPubliclyVisible } }
-                is com.example.sensus.common.Result.Failure -> offersRepository.getOffers().filter { it.isPubliclyVisible }
+            val cached = offersRepository.getOffers().filter { it.isPubliclyVisible }
+            val (offers, errorMsg) = when (remoteRes) {
+                is com.example.sensus.common.Result.Success -> {
+                    val list = remoteRes.data.filter { it.isPubliclyVisible }.ifEmpty { cached }
+                    Pair(list, null)
+                }
+                is com.example.sensus.common.Result.Failure -> {
+                    val err = if (cached.isEmpty()) "Sin conexión" else null
+                    Pair(cached, err)
+                }
             }
-            updateState { copy(offers = offers, isLoading = false) }
+            updateState { copy(offers = offers, isLoading = false, errorMessage = errorMsg) }
         }
     }
 }

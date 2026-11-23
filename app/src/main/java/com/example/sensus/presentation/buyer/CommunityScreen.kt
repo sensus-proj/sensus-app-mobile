@@ -34,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,7 +62,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
+import com.example.sensus.presentation.components.states.ShimmerFeedList
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextSecondary
@@ -103,7 +104,7 @@ fun CommunityScreen(
             callbacks.onSelectFriendsTab(true)
         }
     }
-    Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(modifier = Modifier.statusBarsPadding()) {
             TextButton(onClick = {
                 localShowFriends = false
@@ -155,17 +156,23 @@ internal fun CommunityFeedContent(
             item {
                 CommunityFeedHeader(state, onIntent)
             }
-            items(state.posts, key = { it.id }) { post ->
-                CommunityPostCard(
-                    post = post,
-                    onMerchantClick = onMerchantClick,
-                    actions = CommunityPostCardActions(
-                        isSaved = post.id in saveActions.savedPostIds,
-                        isLiking = post.id in state.likingPostIds,
-                        onSaveClick = { saveActions.onToggleSavePost(post) },
-                        onIntent = onIntent
+            if (state.isLoading && state.posts.isEmpty()) {
+                item {
+                    ShimmerFeedList()
+                }
+            } else {
+                items(state.posts, key = { it.id }) { post ->
+                    CommunityPostCard(
+                        post = post,
+                        onMerchantClick = onMerchantClick,
+                        actions = CommunityPostCardActions(
+                            isSaved = post.id in saveActions.savedPostIds,
+                            isLiking = post.id in state.likingPostIds,
+                            onSaveClick = { saveActions.onToggleSavePost(post) },
+                            onIntent = onIntent
+                        )
                     )
-                )
+                }
             }
             item {
                 if (state.hasMore) {

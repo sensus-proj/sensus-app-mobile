@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.domain.model.CommunityActivityItem
 import com.example.sensus.domain.model.CommunityActivityType
+import com.example.sensus.presentation.components.states.ShimmerFeedList
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
@@ -91,7 +92,9 @@ internal fun FriendsActivityFeedContent(state: FriendsActivityViewState, onRefre
             state.errorMessage?.let { error ->
                 item { Text(text = error, fontSize = 12.sp, color = SensusRed) }
             }
-            if (!state.isLoading && state.items.isEmpty() && state.errorMessage == null) {
+            if (state.isLoading && state.items.isEmpty()) {
+                item { ShimmerFeedList() }
+            } else if (!state.isLoading && state.items.isEmpty() && state.errorMessage == null) {
                 item { FriendsActivityEmptyCard() }
             } else {
                 items(state.items, key = { it.id }) { item ->
