@@ -25,9 +25,13 @@ class DefaultSyncManager @Inject constructor(
     private val _isSyncing = MutableStateFlow(false)
     override val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
+    private val _pendingOperationsCount = MutableStateFlow(0)
+    override val pendingOperationsCount: StateFlow<Int> = _pendingOperationsCount.asStateFlow()
+
     init {
         val scope = externalScope ?: CoroutineScope(ioDispatcher)
         scope.launch {
+            updatePendingCount()
             networkMonitor.isOnline.collect { isOnline ->
                 if (isOnline) {
                     syncPendingOperations()
@@ -44,7 +48,9 @@ class DefaultSyncManager @Inject constructor(
             System.currentTimeMillis(),
             "PENDING"
         )
-        pendingSyncDao.insert(entity)
+        val id = pendingSyncDao.insert(entity)
+        updatePendingCount()
+        id
     }
 
     override suspend fun syncPendingOperations(): SyncResult = withContext(ioDispatcher) {
@@ -66,6 +72,7 @@ class DefaultSyncManager @Inject constructor(
             }
         } finally {
             _isSyncing.value = false
+            updatePendingCount()
         }
 
         SyncResult(successCount, failedCount)
@@ -73,6 +80,15 @@ class DefaultSyncManager @Inject constructor(
 
     override suspend fun clearQueue() = withContext(ioDispatcher) {
         pendingSyncDao.clearAll()
+        updatePendingCount()
+    }
+
+    private fun updatePendingCount() {
+        try {
+            _pendingOperationsCount.value = pendingSyncDao.pendingOperations.size
+        } catch (_: Exception) {
+            _pendingOperationsCount.value = 0
+        }
     }
 
     private fun processOperation(operation: PendingSyncEntity) {

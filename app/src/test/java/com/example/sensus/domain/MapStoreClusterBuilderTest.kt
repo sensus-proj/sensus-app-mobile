@@ -99,6 +99,8 @@ class MapStoreClusterBuilderTest {
         assertEquals(listOf("o_lac"), dairyClusters.first().matchingOffers.map { it.id })
         assertFalse(MapStoreClusterBuilder.matchesCategory("Mascotas", StoreCategory.BAKERY))
         assertTrue(MapStoreClusterBuilder.matchesCategory("Lácteos", StoreCategory.DAIRY))
+        assertTrue(MapStoreClusterBuilder.matchesCategory("Dairy", StoreCategory.DAIRY))
+        assertTrue(MapStoreClusterBuilder.matchesCategory("CleaningHome", StoreCategory.CLEANING))
     }
 
     private fun sampleOffer(id: String, name: String, storeName: String, category: String, merchantId: String) = ProductOffer(

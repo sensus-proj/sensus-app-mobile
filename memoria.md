@@ -1194,3 +1194,91 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - Pruebas nuevas: `MyClaimsRepositoryTest`, `MyClaimsViewModelTest`, `MyClaimsScreenTest` (compilada, sin ejecutar en dispositivo). Sin APK/AAB.
 - Ajustes de gates: `ProductDetailScrollSection` y `BuyerHomeScreen` se dividieron (`MerchantScheduleAndPayments`, `rememberFilteredHomeOffers`) para respetar complejidad y longitud de Detekt. El cierre con atrás de "Mis reservas" vive en `dismissSecondaryOverlay`.
 - Validación local: 485 pruebas unitarias sin fallos, Kover Debug 80.74 %, compilación de app e instrumentadas, lint (0 errores), Detekt, ktlint y cinco gates Python en verde. Una primera ejecución de lint en paralelo con Detekt/ktlint falló internamente ("Unexpected failure during lint analysis"); en solitario pasó.
+## Bitácora - FT-30, FT-20 y FT-23 (RF-23-04): descubrimiento, intereses, soporte offline y LFPDPPP (2026-11-20)
+
+- **FT-30 (Feed de promociones e intereses):**
+  - Dominio (`domain/`): `OfferFeedModels.kt` (`OfferFeedRequest`, `OfferFeedItem`, `OfferFeedPage`, `InterestCatalog` sin `Todo`, `FeedSlot`, `haversineMeters`), `OfferFeedRepository`, `InterestsRepository`, `GetOfferFeedUseCase` (reutilización de `snapshotId`, reinicio por desplazamiento `> 500 m` o `forceRefresh`, deduplicación cuando `snapshotId` es nulo, bloqueo preventivo a invitados), `GetMyInterestsUseCase` y `UpdateMyInterestsUseCase` (`0..5` categorías válidas).
+  - Datos/DI (`data/`, `di/`): `OfferFeedApiService`, `InterestsApiService`, `OfferFeedDtos`, `FeedOfferEntity`/`FeedOfferDao` (Room `version = 8`, `MIGRATION_6_7`), `OfferFeedRepositoryImpl` (caché de página 1 en Room+SQLCipher), `InterestsRepositoryImpl`, `OfferFeedModule`.
+  - Presentación (`presentation/`): `InterestsPickerContract/ViewModel/Screen` (`AuthNavGraph` post-registro opcional y edición desde `BuyerProfileScreen`), `OfferFeedContract/ViewModel/Screen` (estados loading/refresh/paginación/sin conexión/sin intereses), pestaña `BuyerNavTab.PROMOTIONS` (`Promociones`, separada de `Comunidad` en barra curva de 6 ranuras en `MainAppMenu`), y `GuestPromptDialog` para invitados.
+- **FT-20 (Búsqueda inteligente y alternativas):**
+  - Dominio (`domain/`): `DiscoveryModels.kt` (`OfferSearchRequest`, `OfferSearchItem`, `OfferSearchPage`, `OfferAlternativeItem`), `DiscoveryRepository`, `SearchOffersUseCase` (validación vacía o `2..80` chars sin caracteres de control previos a `trim`, radio invitado tope `GuestRadiusPolicy.GUEST_MAX_RADIUS_KM = 2 km`, hasta `50 km` en autenticados, sin guardar historial para invitados) y `GetOfferAlternativesUseCase`.
+  - Datos/DI (`data/`, `di/`): `DiscoveryApiService`, `DiscoveryDtos`, `SearchHistoryEntity`/`SearchHistoryDao` (top 5, `MIGRATION_7_8`), `DiscoveryRepositoryImpl` (fallback offline sobre `OfferDao` sin salir de dispositivo), `DiscoveryModule`.
+  - Presentación (`presentation/`): `SearchOffersContract/ViewModel/Screen` (`debounce(300 ms)` + `flatMapLatest`, carga automática de alternativas en 0 resultados cuando hay `referenceOfferId`), botón de búsqueda desde `BuyerHomeScreen`, y sección `"Ofertas similares cerca de ti"` en `ProductDetailScreen` / `ProductDetailViewModel` cuando `unitsLeft <= 0`.
+- **FT-23 (`RF-23-04`, soporte y aviso offline):**
+  - `FaqCatalog.kt` + `HelpFaqScreen.kt` (`P-35`, 100 % offline, búsqueda local, acordeones expandibles, `mailto:` con `ActivityNotFoundException` controlado, acceso a `BuyerProfileScreen`), `GuestModeBanner.kt` (`C-49`, visible en `MainAppContainer` solo cuando `isGuest == true`), y `TermsScreen.kt` con el aviso `RF-23-04` (personalización e interacciones seudonimizadas con TTL de 180 días y baja de cuenta). Pendiente en repo web externo: texto equivalente en la *landing*.
+- **Verificación local:** `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt`, `ktlintCheck`, `lint`, `testDebugUnitTest` (`376/376`, `0` fallos, `0` omisiones), `koverVerifyDebug` + `check_coverage.py --min 80` (**80.87 %**), `check_sdd.py` (31 features), `check_layers.py` (294 archivos), `check_endpoints.py` (54 endpoints), `check_secrets.py` (408 archivos) todos en verde. Ejecución instrumentada de `Ft30Ft20Ft23ComposeTest` en emulador/dispositivo y escáneres en nube quedan para CI. Sin commit, push ni tags creados.
+
+## Bitácora - FT-22 UX transversal: offline, GPS apagado, shimmers y tema oscuro (2026-11-22)
+
+- **Paso 0 (Conciliación SDD canónica según `Componentes_Movil_Sensus.xlsx`):**
+  - Alineados los 4 artefactos (`spec.md`, `plan.md`, `tasks.md`, `checklists/checklist.md`): `P-05` = "Ubicación desactivada" (GPS apagado, manual picker), `P-06` = "Sin conexión" (error sin red, botón reintentar), `C-15` = "Lista con estado Cargando (esqueleto)".
+  - Eliminados componentes fuera de alcance (`C-06, C-10, C-19, C-50`) y eliminados `SensusEmptyState`/`SensusErrorRetryCard` para cero alcance oculto.
+  - Reubicado `OfflineBanner` desde `OfferFeedScreen.kt` a `presentation/components/states/OfflineBanner.kt` para reutilización transversal.
+  - Estado en tabla de Aprobación registrado como "En implementación" a la espera de aprobación final.
+- **Implementación de requerimientos funcionales (RF-22-01..05):**
+  - **RF-22-01 (Estado reactivo de red y sync):** `SyncManager` y `DefaultSyncManager` exponen `pendingOperationsCount: StateFlow<Int>`. `AppViewModel` observa `NetworkMonitor.isOnline` con `distinctUntilChanged().debounce(300L)` y `SyncManager.pendingOperationsCount`. Expone `isOnline` y `pendingSyncCount` en `AppViewState`, y emite `ShowNetworkSnackbar` al desconectar y al reconectar disparando `syncPendingOperations()`.
+  - **RF-22-02 (Offline fallback):** Sin red y sin caché en `BuyerHomeScreen`/`SearchOffersScreen` muestra `OfflineErrorState` (`P-06`) con botón "Reintentar" conectado a ViewIntent de recarga; con caché muestra datos guardados y `OfflineBanner`. Cero pantallas en blanco o spinners infinitos.
+  - **RF-22-03 (GPS desactivado):** `BuyerHomeScreen` muestra `LocationDisabledState` (`P-05`) con botón que abre `Settings.ACTION_LOCATION_SOURCE_SETTINGS` y selector de ubicación manual. Acceso a `android.provider.Settings` restringido a presentation, cero `android.*` en `domain/`.
+  - **RF-22-04 (Shimmers de carga C-15):** `presentation/components/states/ShimmerPlaceholders.kt` con `Modifier.shimmerEffect()`, `ShimmerOfferCard`, `ShimmerOfferList`, `ShimmerFeedItem`, `ShimmerFeedList` y `ShimmerPinPlaceholder`. Integrados en `BuyerHomeScreen`, `SearchOffersScreen` y `CommunityScreen` cuando `isLoading && offers.isEmpty()`.
+  - **RF-22-05 (Tema Oscuro y limpieza de paleta):** `LightColorScheme` y `DarkColorScheme` en `Theme.kt`/`Color.kt` con tokens WCAG AA y morado de marca (`#7C3AED` / `#8B5CF6`). Eliminado `SensusAmber`, cero amarillos/ámbar en UI interna y cero emojis (solo iconos vectoriales).
+- **Pruebas y QA de Calidad:**
+  - `FT22TransversalUxComposeTest.kt`: Pruebas instrumentadas de Compose UI verificando renderizado de `OfflineErrorState`, `LocationDisabledState`, `ShimmerOfferList` y soporte de `SensusTheme(darkTheme = true)`.
+  - `AppViewModelTest.kt`: 11 pruebas unitarias con Turbine para transiciones de red, debounce anti-rebote, notificación snackbar y sincronización reactiva.
+  - Corrección de exclusión de Kover para `presentation.components.*` en `app/build.gradle.kts` (al igual que el resto de componentes UI Compose).
+- **Resultados de Verificación y Gates:**
+  - `compileDebugKotlin`: BUILD SUCCESSFUL
+  - `compileDebugAndroidTestSources`: BUILD SUCCESSFUL
+  - `detekt` + `ktlintCheck`: BUILD SUCCESSFUL (0 errores, 0 warnings)
+  - `testDebugUnitTest`: 400 pruebas ejecutadas, 400 pasadas, 0 fallidas, 0 ignoradas (100 % éxito)
+  - `koverXmlReportDebug` + `check_coverage.py --min 80`: **81.12 %** (PASS)
+  - `check_sdd.py`: PASS (0 hallazgos, 34 features)
+  - `check_layers.py`: PASS (0 hallazgos, 318 archivos)
+  - `check_endpoints.py`: PASS (0 hallazgos, 57 endpoints)
+  - `check_secrets.py`: PASS (0 hallazgos, 439 archivos)
+- **Gobernanza Git:** Sin operaciones de Git (`add`, `commit`, `push`, ramas ni tags) conforme a la restricción estricta.
+
+## Bitácora - FT-19 Interacciones del Feed y Reportes de Moderación (2026-11-21)
+
+- **Alcance implementado (`FT-19`):**
+  - Dominio (`domain/`): `FeedComment`, `PagedFeedComments`, `TogglePostLikeResult` (`FeedModels.kt`), `ReportTargetType`, `ReportReason`, `ContentReportInput`, `SubmittedReport`, `ReportPolicy` con bloqueo preventivo CSAM (`ReportModels.kt`), ampliación de `FeedRepository`, `ReportsRepository`, `TogglePostLikeUseCase`, `GetFeedCommentsUseCase`, `AddFeedCommentUseCase`, `DeleteFeedPostUseCase` y `SubmitContentReportUseCase`.
+  - Datos/DI (`data/`, `di/`): `FeedDtos.kt`, `ReportDtos.kt`, `FeedApiService.kt`, `ReportsApiService.kt`, `NetworkClient.kt` (`reportsApi`), `FeedMapper.kt`, `FeedRepositoryImpl.kt`, `ReportsRepositoryImpl.kt` (`409` → `AppError.Conflict` en `Result.kt`) y registros en `CommunityModule.kt`.
+  - Presentación (`presentation/`): likes optimistas con rollback, `PostCommentsSheet.kt` (límite 300 chars + `ProfanityFilter`), borrado de publicaciones propias y reporte en `CommunityScreen.kt`/`CommunityViewModel.kt` (ocultamiento preventivo del post reportado), diálogo reutilizable `ReportContentDialog.kt` (`P-22`) y acción `"Reportar producto"` (`C-27`) en `ProductDetailScreen.kt`/`ProductDetailViewModel.kt`.
+  - Pruebas y docs: `FeedInteractionsAndReportUseCasesTest`, `FeedInteractionsAndReportsRepositoryTest` (`MockWebServer`), `CommunityViewModelInteractionsTest`, `ProductDetailReportTest`, `Ft19FeedInteractionsComposeTest` y actualización de `docs/endpoints-internos.md`, `docs/rate-matrix.md`, `specs/FT-19-interacciones-reportes/tasks.md`, `checklists/checklist.md` y `specs/README.md`.
+- **Verificación local:** `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt`, `ktlintCheck`, `lint`, `testDebugUnitTest`, `koverXmlReportDebug`, `koverVerifyDebug` (`BUILD SUCCESSFUL`), `check_sdd.py` (34 features), `check_layers.py` (323 archivos), `check_endpoints.py` (57 endpoints), `check_secrets.py` (448 archivos) y `check_coverage.py --min 80` (**81.66 %**) en `PASS`. Pendiente únicamente PR a `develop`/`main` y tag `v1.22.0-ft19`. Sin commits ni push.
+
+  ## Bitácora - FT-22 UX transversal: offline, GPS apagado, shimmers y tema oscuro (2026-11-22)
+- **Paso 0 (Conciliación SDD canónica según Componentes_Movil_Sensus.xlsx):**
+  - Alineados los 4 artefactos (spec.md, plan.md, tasks.md, checklists/checklist.md): P-05 = "Ubicación desactivada" (GPS apagado, manual picker), P-06 = "Sin conexión" (error sin red, botón reintentar), C-15 = "Lista con estado Cargando (esqueleto)".
+  - Eliminados componentes fuera de alcance (C-06, C-10, C-19, C-50) y eliminados SensusEmptyState/SensusErrorRetryCard para cero alcance oculto.
+  - Reubicado OfflineBanner desde OfferFeedScreen.kt a presentation/components/states/OfflineBanner.kt para reutilización transversal.
+  - Estado en tabla de Aprobación registrado como "En implementación" a la espera de aprobación final.
+- **Implementación de requerimientos funcionales (RF-22-01..05):**
+  - **RF-22-01 (Estado reactivo de red y sync):** SyncManager y DefaultSyncManager exponen pendingOperationsCount: StateFlow<Int>. AppViewModel observa NetworkMonitor.isOnline con distinctUntilChanged().debounce(300L) y SyncManager.pendingOperationsCount. Expone isOnline y pendingSyncCount en AppViewState, y emite ShowNetworkSnackbar al desconectar y al reconectar disparando syncPendingOperations().
+  - **RF-22-02 (Offline fallback):** Sin red y sin caché en BuyerHomeScreen/SearchOffersScreen muestra OfflineErrorState (P-06) con botón "Reintentar" conectado a ViewIntent de recarga; con caché muestra datos guardados y OfflineBanner. Cero pantallas en blanco o spinners infinitos.
+  - **RF-22-03 (GPS desactivado):** BuyerHomeScreen muestra LocationDisabledState (P-05) con botón que abre Settings.ACTION_LOCATION_SOURCE_SETTINGS y selector de ubicación manual. Acceso a android.provider.Settings restringido a presentation, cero android.* en domain/.
+  - **RF-22-04 (Shimmers de carga C-15):** presentation/components/states/ShimmerPlaceholders.kt con Modifier.shimmerEffect(), ShimmerOfferCard, ShimmerOfferList, ShimmerFeedItem, ShimmerFeedList y ShimmerPinPlaceholder. Integrados en BuyerHomeScreen, SearchOffersScreen y CommunityScreen cuando isLoading && offers.isEmpty().
+  - **RF-22-05 (Tema Oscuro y limpieza de paleta):** LightColorScheme y DarkColorScheme en Theme.kt/Color.kt con tokens WCAG AA y morado de marca (#7C3AED / #8B5CF6). Eliminado SensusAmber, cero amarillos/ámbar en UI interna y cero emojis (solo iconos vectoriales).
+- **Pruebas y QA de Calidad:**
+  - FT22TransversalUxComposeTest.kt: Pruebas instrumentadas de Compose UI verificando renderizado de OfflineErrorState, LocationDisabledState, ShimmerOfferList y soporte de SensusTheme(darkTheme = true).
+  - AppViewModelTest.kt: 11 pruebas unitarias con Turbine para transiciones de red, debounce anti-rebote, notificación snackbar y sincronización reactiva.
+  - Corrección de exclusión de Kover para presentation.components.* en app/build.gradle.kts (al igual que el resto de componentes UI Compose).
+- **Resultados de Verificación y Gates:**
+  - compileDebugKotlin: BUILD SUCCESSFUL
+  - compileDebugAndroidTestSources: BUILD SUCCESSFUL
+  - detekt + ktlintCheck: BUILD SUCCESSFUL (0 errores, 0 warnings)
+  - testDebugUnitTest: 400 pruebas ejecutadas, 400 pasadas, 0 fallidas, 0 ignoradas (100 % éxito)
+  - koverXmlReportDebug + check_coverage.py --min 80: 81.12 % (PASS)
+  - check_sdd.py: PASS (0 hallazgos, 34 features)
+  - check_layers.py: PASS (0 hallazgos, 318 archivos)
+  - check_endpoints.py: PASS (0 hallazgos, 57 endpoints)
+  - check_secrets.py: PASS (0 hallazgos, 439 archivos)
+- **Gobernanza Git:** Sin operaciones de Git (add, commit, push, ramas ni tags) conforme a la restricción estricta.
+
+### Integración de develop en movil_Rocio (PR #34, 2026-11-23)
+
+- Se fusionó `origin/develop` (FT-19, FT-20, FT-22, FT-26, FT-30, FT-31..33 de develop) con 34 archivos en conflicto. Se conservaron ambos alcances: likes, reportes, alternativas, intereses, búsqueda, estados offline/GPS y shimmers de develop junto con paginación, filtros, perfil público, Mis reservas y vistas por oferta de esta rama.
+- Decisiones: se mantiene el sistema de apariencia de esta rama (claro/oscuro/sistema) y se descartan los tokens oscuros duplicados de develop; el splash de develop (TextureView, timeout) usa el color de fondo del video; el banner de invitado conserva textos en recursos; los términos no prometen cancelación ni purga inmediata (texto de FT-23) y la sección de personalización usa `ft23_privacy_*`.
+- `OffersRepository` ya no expone `syncOffersFromServer` ni datos de muestra (T27.1); se ajustó `DomainRepositoriesDefaultsTest`. `CommunityViewModel` deja de recibir `StoreRepository` (amigos de muestra retirados).
+- Numeración duplicada: develop usa FT-31 (me gusta), FT-32 (actividad de amigos) y FT-33 (moderación), y esta rama FT-31 (sistema visual), FT-32 (rendimiento) y FT-33 (visibilidad). Ambas carpetas se conservan; la renumeración queda pendiente de acuerdo del equipo.
+- `gradlew` queda con permiso de ejecución en git (Snyk fallaba con EACCES).
+- Validación local: 534 pruebas unitarias sin fallos, Kover Debug 82.04 %, compilación de app e instrumentadas, lint (0 errores), Detekt, ktlint y cinco gates Python en verde.

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,13 +19,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,16 +62,19 @@ import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
+import com.example.sensus.presentation.components.states.ShimmerFeedList
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
 import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusTextButtonColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val COMMUNITY_NAV_CLEARANCE_DP = 96
+private const val ACTION_TOUCH_MIN_DP = 48
+private const val METER_ROUNDING_STEP = 100
 
 @ComposeUiModel
 internal data class CommunitySaveActions(
@@ -80,18 +93,12 @@ data class CommunityCallbacks(
 
 @Composable
 fun CommunityScreen(
-    viewModel: CommunityViewModel = hiltViewModel(),
+    viewModel: FriendsActivityViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
     callbacks: CommunityCallbacks = CommunityCallbacks(),
     openFriendsSignal: Int = 0
 ) {
-    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
-    val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
-    LaunchedEffect(viewModel) {
-        viewModel.viewEffect.collect { if (it == CommunityViewEffect.RequireAuth) callbacks.onRequireAuth() }
-    }
-    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     var localShowFriends by rememberSaveable { mutableStateOf(callbacks.isFriendsSelected) }
     LaunchedEffect(callbacks.isFriendsSelected) { localShowFriends = callbacks.isFriendsSelected }
     LaunchedEffect(openFriendsSignal) {
@@ -100,7 +107,7 @@ fun CommunityScreen(
             callbacks.onSelectFriendsTab(true)
         }
     }
-    Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(modifier = Modifier.statusBarsPadding()) {
             TextButton(colors = sensusTextButtonColors(), onClick = {
                 localShowFriends = false
@@ -114,19 +121,14 @@ fun CommunityScreen(
         if (localShowFriends) {
             FriendsCommunityTab(onRequireAuth = callbacks.onRequireAuth, onFriendClick = callbacks.onFriendClick, modifier = Modifier.weight(1f))
         } else {
-            CommunityFeedContent(
+            FriendsActivityFeedContent(
                 state = state,
-                onIntent = viewModel::dispatchIntent,
-                onMerchantClick = callbacks.onMerchantClick,
-                saveActions = CommunitySaveActions(
-                    savedPostIds = savedState.savedPostIds,
-                    onToggleSavePost = { savedViewModel.dispatchIntent(SavedInterestsViewIntent.TogglePost(it)) }
-                ),
+                onRefresh = { viewModel.dispatchIntent(FriendsActivityViewIntent.Refresh) },
+                onRequireAuth = callbacks.onRequireAuth,
                 modifier = Modifier.weight(1f)
             )
         }
     }
-    if (state.showComposer) CreateFeedPostSheet(state, viewModel::dispatchIntent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,13 +159,23 @@ internal fun CommunityFeedContent(
             item {
                 CommunityFeedHeader(state, onIntent)
             }
-            items(state.posts, key = { it.id }) { post ->
-                CommunityPostCard(
-                    post = post,
-                    onMerchantClick = onMerchantClick,
-                    isSaved = post.id in saveActions.savedPostIds,
-                    onSaveClick = { saveActions.onToggleSavePost(post) }
-                )
+            if (state.isLoading && state.posts.isEmpty()) {
+                item {
+                    ShimmerFeedList()
+                }
+            } else {
+                items(state.posts, key = { it.id }) { post ->
+                    CommunityPostCard(
+                        post = post,
+                        onMerchantClick = onMerchantClick,
+                        actions = CommunityPostCardActions(
+                            isSaved = post.id in saveActions.savedPostIds,
+                            isLiking = post.id in state.likingPostIds,
+                            onSaveClick = { saveActions.onToggleSavePost(post) },
+                            onIntent = onIntent
+                        )
+                    )
+                }
             }
             item {
                 if (state.hasMore) {
@@ -177,21 +189,164 @@ internal fun CommunityFeedContent(
             }
         }
     }
+
+    CommunityInteractionModals(state = state, onIntent = onIntent)
 }
 
 @Composable
-private fun CommunityPostCard(post: FeedPost, onMerchantClick: (String) -> Unit, isSaved: Boolean = false, onSaveClick: () -> Unit = {}) {
+private fun CommunityInteractionModals(state: CommunityViewState, onIntent: (CommunityViewIntent) -> Unit) {
+    state.activeCommentPost?.let { post ->
+        PostCommentsSheet(
+            model = CommentsSheetModel(
+                post = post,
+                comments = state.comments,
+                isLoading = state.isLoadingComments,
+                isSubmitting = state.isSubmittingComment,
+                draft = state.commentDraft,
+                errorMessage = state.commentError
+            ),
+            onDraftChange = { onIntent(CommunityViewIntent.CommentDraftChanged(it)) },
+            onSend = { onIntent(CommunityViewIntent.SubmitComment) },
+            onDismiss = { onIntent(CommunityViewIntent.CloseComments) }
+        )
+    }
+
+    state.reportTarget?.let { target ->
+        ReportContentDialog(
+            model = ReportDialogModel(
+                targetLabel = target.label,
+                isSubmitting = state.isSubmittingReport,
+                errorMessage = state.reportError
+            ),
+            onDismiss = { onIntent(CommunityViewIntent.CloseReport) },
+            onSubmit = { reason, details -> onIntent(CommunityViewIntent.SubmitReport(reason, details)) }
+        )
+    }
+
+    state.pendingDeletePost?.let {
+        AlertDialog(
+            onDismissRequest = { onIntent(CommunityViewIntent.CancelDeletePost) },
+            title = { Text(stringResource(R.string.ft19_delete_post_title)) },
+            text = { Text(stringResource(R.string.ft19_delete_post_body)) },
+            confirmButton = {
+                Button(
+                    onClick = { onIntent(CommunityViewIntent.ConfirmDeletePost) },
+                    colors = ButtonDefaults.buttonColors(containerColor = SensusRed)
+                ) {
+                    Text(stringResource(R.string.ft19_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onIntent(CommunityViewIntent.CancelDeletePost) }) {
+                    Text(stringResource(R.string.ft19_cancel))
+                }
+            }
+        )
+    }
+}
+
+@ComposeUiModel
+internal data class CommunityPostCardActions(
+    val isSaved: Boolean = false,
+    val isLiking: Boolean = false,
+    val onSaveClick: () -> Unit = {},
+    val onIntent: (CommunityViewIntent) -> Unit = {}
+)
+
+@Composable
+private fun CommunityPostCard(post: FeedPost, onMerchantClick: (String) -> Unit, actions: CommunityPostCardActions = CommunityPostCardActions()) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(post.authorName)
+            Text(post.authorName, fontWeight = FontWeight.SemiBold)
             Text(post.text)
             post.imageUrl?.let {
                 AsyncImage(model = it, contentDescription = stringResource(R.string.community_post_photo), modifier = Modifier.fillMaxWidth())
             }
-            Text("${post.distanceMeters / 100 * 100} m aprox. · ${post.createdAt}")
+            Text("${post.distanceMeters / METER_ROUNDING_STEP * METER_ROUNDING_STEP} m aprox. · ${post.createdAt}")
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 CommunityPostMerchantLabel(post = post, onMerchantClick = onMerchantClick)
-                CommunityPostSavePill(isSaved = isSaved, onSaveClick = onSaveClick)
+                CommunityPostSavePill(isSaved = actions.isSaved, onSaveClick = actions.onSaveClick)
+            }
+            HorizontalDivider()
+            CommunityPostActionsRow(post = post, isLiking = actions.isLiking, onIntent = actions.onIntent)
+        }
+    }
+}
+
+@Composable
+private fun CommunityPostActionsRow(post: FeedPost, isLiking: Boolean, onIntent: (CommunityViewIntent) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        PostEngagementActions(post = post, isLiking = isLiking, onIntent = onIntent)
+        PostModerationActions(post = post, onIntent = onIntent)
+    }
+}
+
+@Composable
+private fun PostEngagementActions(post: FeedPost, isLiking: Boolean, onIntent: (CommunityViewIntent) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .sizeIn(minWidth = ACTION_TOUCH_MIN_DP.dp, minHeight = ACTION_TOUCH_MIN_DP.dp)
+                .clickable(enabled = !isLiking) { onIntent(CommunityViewIntent.ToggleLike(post.id)) }
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (post.isLikedByMe) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = stringResource(R.string.ft19_like_post),
+                tint = if (post.isLikedByMe) SensusRed else SensusTextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("${post.likesCount}", fontSize = 13.sp, color = SensusTextSecondary)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Row(
+            modifier = Modifier
+                .sizeIn(minWidth = ACTION_TOUCH_MIN_DP.dp, minHeight = ACTION_TOUCH_MIN_DP.dp)
+                .clickable { onIntent(CommunityViewIntent.OpenComments(post)) }
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ChatBubbleOutline,
+                contentDescription = stringResource(R.string.ft19_comment_post),
+                tint = SensusTextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("${post.commentsCount}", fontSize = 13.sp, color = SensusTextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun PostModerationActions(post: FeedPost, onIntent: (CommunityViewIntent) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            onClick = { onIntent(CommunityViewIntent.OpenReportPost(post)) },
+            modifier = Modifier.size(ACTION_TOUCH_MIN_DP.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Flag,
+                contentDescription = stringResource(R.string.ft19_report_post),
+                tint = SensusTextSecondary
+            )
+        }
+        if (post.isMine) {
+            IconButton(
+                onClick = { onIntent(CommunityViewIntent.RequestDeletePost(post)) },
+                modifier = Modifier.size(ACTION_TOUCH_MIN_DP.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.ft19_delete_post_cd),
+                    tint = SensusRed
+                )
             }
         }
     }

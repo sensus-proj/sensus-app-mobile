@@ -85,6 +85,9 @@ import com.example.sensus.presentation.common.PublicOfferThumbnail
 import com.example.sensus.presentation.common.RadiusSelectorBottomSheet
 import com.example.sensus.presentation.common.formatRadiusText
 import com.example.sensus.presentation.common.getCategoryIcon
+import com.example.sensus.presentation.components.states.LocationDisabledState
+import com.example.sensus.presentation.components.states.OfflineErrorState
+import com.example.sensus.presentation.components.states.ShimmerOfferList
 import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusCardBorder
@@ -126,7 +129,8 @@ data class BuyerHomeCallbacks(
     val onProductClick: (ProductOffer) -> Unit = {},
     val onMapToggle: () -> Unit = {},
     val onNotificationsClick: () -> Unit = {},
-    val onOpenCart: (() -> Unit)? = null
+    val onOpenCart: (() -> Unit)? = null,
+    val onOpenSearch: (() -> Unit)? = null
 )
 
 @ComposeUiModel
@@ -150,7 +154,8 @@ private data class HomeContentData(
     val nextPage: Int? = null,
     val pageLoadFailed: Boolean = false,
     val usingCachedOffers: Boolean = false,
-    val filters: OfferDiscoveryFilters = OfferDiscoveryFilters()
+    val filters: OfferDiscoveryFilters = OfferDiscoveryFilters(),
+    val isLocationDisabled: Boolean = false
 )
 
 @ComposeUiModel
@@ -230,7 +235,8 @@ fun BuyerHomeScreen(
                 nextPage = homeState.nextPage,
                 pageLoadFailed = homeState.pageLoadFailed,
                 usingCachedOffers = homeState.usingCachedOffers,
-                filters = filters
+                filters = filters,
+                isLocationDisabled = homeState.isLocationDisabled
             ),
             callbacks = callbacks,
             actions = HomeHostActions(
@@ -276,7 +282,18 @@ private fun BuyerHomeHost(data: HomeContentData, callbacks: BuyerHomeCallbacks, 
 }
 
 @Composable
+private fun BuyerHomeBlockingState(data: HomeContentData, actions: HomeHostActions): Boolean {
+    when {
+        data.isLocationDisabled -> LocationDisabledState(onChooseManualLocation = { actions.onRefreshLocation() })
+        data.errorMessage != null && data.filteredOffers.isEmpty() -> OfflineErrorState(onRetry = actions.onRefreshOffers)
+        else -> return false
+    }
+    return true
+}
+
+@Composable
 private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbacks, actions: HomeHostActions) {
+    if (BuyerHomeBlockingState(data, actions)) return
     LazyColumn(
         modifier = Modifier.widthIn(max = 720.dp).fillMaxSize(),
         contentPadding = PaddingValues(bottom = 168.dp)
@@ -294,20 +311,25 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
                 searchState = data.searchState,
                 onSearchChange = actions.onSearchChange,
                 onRadiusClick = { actions.onToggleRadiusSheet(true) },
-                onMapToggle = callbacks.onMapToggle
+                onMapToggle = callbacks.onMapToggle,
+                onOpenSearch = callbacks.onOpenSearch
             )
         }
         item { BuyerCategoryChipsRow(selectedCategory = data.searchState.selectedCategory, onCategoryToggle = actions.onCategoryToggle) }
         item { BuyerOfferFilterControl(data.filters, actions.onChangeFilters) }
         item { BuyerFeedSummary(data, actions.onRefreshOffers) }
-        items(data.filteredOffers, key = { it.id }) { offer ->
-            ProductOfferCard(
-                offer = offer,
-                modifier = Modifier.animateItem(),
-                onClick = { callbacks.onProductClick(offer) },
-                isSaved = offer.id in data.savedOfferIds,
-                onSaveClick = { actions.onToggleSaveOffer(offer) }
-            )
+        if (data.isLoading && data.filteredOffers.isEmpty()) {
+            item { ShimmerOfferList() }
+        } else {
+            items(data.filteredOffers, key = { it.id }) { offer ->
+                ProductOfferCard(
+                    offer = offer,
+                    modifier = Modifier.animateItem(),
+                    onClick = { callbacks.onProductClick(offer) },
+                    isSaved = offer.id in data.savedOfferIds,
+                    onSaveClick = { actions.onToggleSaveOffer(offer) }
+                )
+            }
         }
         data.nextPage?.let { page ->
             item(key = "nearby-next-page-$page") {
@@ -392,13 +414,26 @@ private fun BuyerFeedSummary(data: HomeContentData, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun BuyerHomeSearchSection(searchState: HomeSearchProps, onSearchChange: (String) -> Unit, onRadiusClick: () -> Unit, onMapToggle: () -> Unit) {
+private fun BuyerHomeSearchSection(
+    searchState: HomeSearchProps,
+    onSearchChange: (String) -> Unit,
+    onRadiusClick: () -> Unit,
+    onMapToggle: () -> Unit,
+    onOpenSearch: (() -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
         OutlinedTextField(
             value = searchState.query,
             onValueChange = onSearchChange,
             placeholder = { Text(text = "Buscar productos o comercios...", fontSize = 15.sp, color = SensusTextMuted) },
             leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Buscar", tint = SensusTextSecondary) },
+            trailingIcon = {
+                if (onOpenSearch != null) {
+                    IconButton(onClick = onOpenSearch, modifier = Modifier.size(48.dp)) {
+                        Icon(imageVector = Icons.Default.Tune, contentDescription = "Búsqueda avanzada", tint = SensusPurple)
+                    }
+                }
+            },
             shape = RoundedCornerShape(14.dp),
             colors = sensusOutlinedTextFieldColors(containerColor = SensusSurface),
             modifier = Modifier.fillMaxWidth(),
@@ -626,6 +661,7 @@ private fun matchesHomeSearch(offer: ProductOffer, query: String): Boolean = que
     offer.storeName.contains(query, ignoreCase = true)
 
 private fun matchesCategoryKeyword(offer: ProductOffer, category: StoreCategory): Boolean {
+    if (StoreCategory.fromApiCode(offer.category) == category) return true
     val keyword = categoryKeywords[category] ?: return true
     return offer.category.contains(keyword, ignoreCase = true)
 }

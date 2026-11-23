@@ -1,24 +1,29 @@
-# PLAN — FT-22 Estados UX Transversales (Offline, Permisos, Vacíos y Shimmer)
+# PLAN — FT-22 UX Transversal: Conectividad Offline, Tema Oscuro y Shimmers
 
-> Derivado de `spec.md`. Historias/Alcance: SE-042, SE-043, SE-044 (Pantallas P-05, P-06; Componentes C-06, C-10, C-19, C-50).
+> Derivado de `spec.md`. Historias/Alcance: SE-042, SE-043, SE-044 (Pantallas P-05, P-06; Componente C-15).
 > Rector: `.specify/memory/constitution.md` §2, §4, §5, §6, §10 y §11.
 
 ## 1. Diseño
 
-1. **Conectividad reactiva (`NetworkMonitor`).** `SensusMainScaffold` observa `NetworkMonitor.isOnline` y despliega `OfflineBanner` (`C-06`) de forma no intrusiva.
-2. **Pantallas de bloqueo y error (`P-05`, `P-06`).** `NoConnectionScreen` (`P-05`) cuando no existe caché local y `LocationBlockedScreen` (`P-06`) con acceso a ajustes o selector manual de colonia.
-3. **Catálogo de estados reutilizables.** `SensusLoadingShimmer` (`C-10`), `SensusEmptyState` (`C-19`) y `SensusErrorRetryCard` unificados con semántica TalkBack y touch targets `>= 48x48 dp`.
+1. **Conectividad reactiva (`NetworkMonitor` y `SyncManager`).** `AppViewModel` observa `NetworkMonitor.isOnline` y `SyncManager.isSyncing` / pendientes, exponiendo `isOnline` y `pendingSyncCount` en `AppViewState`. `MainAppContainer` despliega `Snackbar` no intrusivo y `OfflineBanner` reutilizable cuando corresponda.
+2. **Pantallas de bloqueo y error (`P-05`, `P-06`).** `LocationDisabledState` (`P-05`) cuando el GPS está apagado (con botón a `Settings.ACTION_LOCATION_SOURCE_SETTINGS` y selección manual de ubicación reutilizando el patrón de `OnboardingLocationScreen` / `MerchantLocationPickerModal`), y `OfflineErrorState` (`P-06`) cuando no existe red ni caché local en `OfferDao`, ofreciendo botón `Reintentar`.
+3. **Shimmers y tema oscuro.** `ShimmerPlaceholders` (`C-15`) para tarjetas y listas con `rememberInfiniteTransition` durante `isLoading` sin caché. Paleta clara y oscura en `Color.kt` / `Theme.kt` con contraste WCAG AA, sin tonos amarillos (`SensusAmber` eliminado).
 
 ## 2. UI y navegación
 
-- `NoConnectionScreen` (`P-05`), `LocationBlockedScreen` (`P-06`), `OfflineBanner` (`C-06`) y `SensusLoadingShimmer` (`C-10`) en `presentation/components/states/`.
-- Previews: `OfflineBannerVisible`, `NoConnectionFull`, `LocationBlockedFull`, `ErrorRetryCard`.
+- Componentes en `presentation/components/states/`:
+  - `OfflineErrorState.kt` (`P-06`, sin conexión con botón Reintentar)
+  - `LocationDisabledState.kt` (`P-05`, ubicación desactivada con ajustes y selección manual)
+  - `ShimmerPlaceholders.kt` (`C-15`, estado cargando esqueleto)
+  - `OfflineBanner.kt` (banner informativo reutilizable)
+- Previews en claro y oscuro: `OfflineErrorState`, `LocationDisabledState`, `OfflineBanner`, `ShimmerPlaceholders`.
 
 ## 3. DI
 
 | Binding | Implementación |
 |---|---|
 | `NetworkMonitor` | `ConnectivityNetworkMonitor` vinculado en `AppModule` |
+| `SyncManager` | `DefaultSyncManager` vinculado en `AppModule` |
 
 ## 4. Gates
 
@@ -33,10 +38,11 @@
 
 ## 5. Orden de implementación
 
-1. Crear `NoConnectionScreen` (`P-05`) y `LocationBlockedScreen` (`P-06`).
-2. Unificar `SensusLoadingShimmer`, `SensusEmptyState` y `SensusErrorRetryCard`.
-3. Integrar `OfflineBanner` (`C-06`) en el scaffold principal.
-4. Verificar accesibilidad (`contentDescription`, touch target `>= 48 dp`) y pruebas Compose UI.
+1. Adaptar `Color.kt` y `Theme.kt` (`DarkColorScheme` + `LightColorScheme` con `isSystemInDarkTheme()`, eliminar `SensusAmber`).
+2. Actualizar `AppContract.kt` y `AppViewModel.kt` observando `NetworkMonitor` y `SyncManager`.
+3. Crear `OfflineErrorState.kt` (`P-06`), `LocationDisabledState.kt` (`P-05`), `ShimmerPlaceholders.kt` (`C-15`) y mover `OfflineBanner.kt` a `presentation/components/states/`.
+4. Integrar banner/snackbar en `MainAppContainer.kt` y conectar shimmers/estados en `BuyerHomeScreen.kt`, `SearchOffersScreen.kt` y `CommunityScreen.kt`.
+5. Pruebas unitarias (`AppViewModelTest`, ViewModels de pantalla), pruebas Compose UI y validación de gates.
 
 ## 6. Prohibiciones
 

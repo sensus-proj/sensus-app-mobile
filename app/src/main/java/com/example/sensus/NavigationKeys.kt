@@ -18,6 +18,7 @@ object NavigationKeys {
                 subclass(SensusRoute.Register::class, SensusRoute.Register.serializer())
                 subclass(SensusRoute.Otp::class, SensusRoute.Otp.serializer())
                 subclass(SensusRoute.Terms::class, SensusRoute.Terms.serializer())
+                subclass(SensusRoute.InterestsOnboarding::class, SensusRoute.InterestsOnboarding.serializer())
                 subclass(SensusRoute.ForgotPassword::class, SensusRoute.ForgotPassword.serializer())
                 subclass(SensusRoute.Main::class, SensusRoute.Main.serializer())
             }
@@ -39,18 +40,23 @@ sealed interface SensusRoute : NavKey {
 
     @Serializable data object Terms : SensusRoute
 
+    @Serializable data object InterestsOnboarding : SensusRoute
+
     @Serializable data object ForgotPassword : SensusRoute
 
     @Serializable data object Main : SensusRoute
 }
 
-fun AppScreen.toRoute(): SensusRoute = when (this) {
-    AppScreen.SPLASH -> SensusRoute.Splash
-    AppScreen.ONBOARDING -> SensusRoute.Onboarding
-    AppScreen.LOGIN -> SensusRoute.Login
-    AppScreen.REGISTER -> SensusRoute.Register
-    AppScreen.OTP -> SensusRoute.Otp
-    AppScreen.TERMS -> SensusRoute.Terms
-    AppScreen.FORGOT_PASSWORD -> SensusRoute.ForgotPassword
-    AppScreen.MAIN -> SensusRoute.Main
-}
+private val appScreenToRoute: Map<AppScreen, SensusRoute> = mapOf(
+    AppScreen.SPLASH to SensusRoute.Splash,
+    AppScreen.ONBOARDING to SensusRoute.Onboarding,
+    AppScreen.LOGIN to SensusRoute.Login,
+    AppScreen.REGISTER to SensusRoute.Register,
+    AppScreen.OTP to SensusRoute.Otp,
+    AppScreen.TERMS to SensusRoute.Terms,
+    AppScreen.INTERESTS_ONBOARDING to SensusRoute.InterestsOnboarding,
+    AppScreen.FORGOT_PASSWORD to SensusRoute.ForgotPassword,
+    AppScreen.MAIN to SensusRoute.Main
+)
+
+fun AppScreen.toRoute(): SensusRoute = appScreenToRoute.getValue(this)

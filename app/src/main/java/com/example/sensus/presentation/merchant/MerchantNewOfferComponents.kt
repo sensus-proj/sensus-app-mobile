@@ -98,11 +98,13 @@ internal data class NewOfferErrors(
     val productNameError: String? = null,
     val priceError: String? = null,
     val descriptionError: String? = null,
+    val categoryError: String? = null,
     val stockError: String? = null,
     val expirationError: String? = null,
     val photoError: String? = null
 ) {
-    val hasErrors: Boolean get() = productNameError != null || priceError != null || descriptionError != null || photoError != null
+    val hasErrors: Boolean
+        get() = productNameError != null || priceError != null || descriptionError != null || categoryError != null || photoError != null
 }
 
 @ComposeUiModel
@@ -237,6 +239,7 @@ internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFo
                 onValueChange = { onFormChange(form.copy(description = it)) }
             )
             OfferCategoryPicker(selected = form.selectedCategory, onSelect = { onFormChange(form.copy(selectedCategory = it)) })
+            errors.categoryError?.let { Text(text = it, color = SensusRed, fontSize = 11.sp) }
             OfferPriceRow(form = form, errors = errors, onFormChange = onFormChange)
             if (discountPercent > 0) {
                 DiscountPreviewChip(

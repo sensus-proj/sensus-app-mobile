@@ -21,7 +21,8 @@ data class BuyerHomeViewState(
     val nextPage: Int? = null,
     val pageLoadFailed: Boolean = false,
     val usingCachedOffers: Boolean = false,
-    val filters: OfferDiscoveryFilters = OfferDiscoveryFilters()
+    val filters: OfferDiscoveryFilters = OfferDiscoveryFilters(),
+    val isLocationDisabled: Boolean = false
 ) : ViewState
 
 sealed interface BuyerHomeViewIntent : ViewIntent {

@@ -28,7 +28,10 @@ import com.example.sensus.presentation.auth.OnboardingLocationScreen
 import com.example.sensus.presentation.auth.OtpVerificationScreen
 import com.example.sensus.presentation.auth.RegisterScreen
 import com.example.sensus.presentation.auth.TermsScreen
+import com.example.sensus.presentation.buyer.InterestsPickerCallbacks
+import com.example.sensus.presentation.buyer.InterestsPickerScreen
 import com.example.sensus.presentation.main.MainAppContainer
+import com.example.sensus.presentation.main.MainAppContainerActions
 import com.example.sensus.presentation.modals.ForgotPasswordScreen
 import com.example.sensus.presentation.root.AppScreen
 import com.example.sensus.presentation.root.AppViewIntent
@@ -165,7 +168,8 @@ private fun EntryProviderScope<NavKey>.registerAuthEntries(
     entry<SensusRoute.Register> {
         RegisterScreen(
             onRegisterSuccess = {
-                navigateAfterAuth(AppScreen.REGISTER, appState.hasAcceptedTerms, onSetPreviousTermsScreen, onIntent)
+                onSetPreviousTermsScreen(AppScreen.REGISTER)
+                onIntent(AppViewIntent.RegistrationCompleted)
             },
             onNavigateToLogin = { onIntent(AppViewIntent.NavigateTo(AppScreen.LOGIN)) },
             onContinueAsGuest = { onIntent(AppViewIntent.NavigateTo(AppScreen.MAIN)) },
@@ -204,6 +208,15 @@ private fun EntryProviderScope<NavKey>.registerSecondaryEntries(
             onNavigateBack = { onIntent(AppViewIntent.NavigateTo(previousScreenBeforeTerms ?: AppScreen.LOGIN)) }
         )
     }
+    entry<SensusRoute.InterestsOnboarding> {
+        InterestsPickerScreen(
+            isOnboarding = true,
+            callbacks = InterestsPickerCallbacks(
+                onCompleted = { onIntent(AppViewIntent.InterestsOnboardingCompleted) },
+                onSkip = { onIntent(AppViewIntent.InterestsOnboardingCompleted) }
+            )
+        )
+    }
 }
 
 private fun EntryProviderScope<NavKey>.registerMainEntry(
@@ -215,11 +228,14 @@ private fun EntryProviderScope<NavKey>.registerMainEntry(
         MainAppContainer(
             isGuest = appState.isGuest,
             isMerchantRegistered = appState.isMerchantRegistered,
-            onLogout = { onIntent(AppViewIntent.Logout) },
-            onNavigateToTerms = {
-                onSetPreviousTermsScreen(AppScreen.MAIN)
-                onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-            }
+            isOnline = appState.isOnline,
+            actions = MainAppContainerActions(
+                onLogout = { onIntent(AppViewIntent.Logout) },
+                onNavigateToTerms = {
+                    onSetPreviousTermsScreen(AppScreen.MAIN)
+                    onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
+                }
+            )
         )
     }
 }

@@ -29,7 +29,9 @@ object MerchantMapper {
             fotoFachadaUrl = fotoFachadaUrl,
             activo = activo,
             isVerified = isVerified,
-            paymentMethods = paymentMethods.orEmpty().map(String::trim).filter(String::isNotEmpty).distinct()
+            paymentMethods = paymentMethods.orEmpty().map(String::trim).filter(String::isNotEmpty).distinct(),
+            averageRating = averageRating,
+            reviewCount = reviewCount
         )
     }
 

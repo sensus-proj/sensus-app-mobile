@@ -22,4 +22,40 @@
     <string name="merchant_inventory_empty_paused_hint">Las ofertas pausadas aparecen aquí para que puedas gestionarlas.</string>
     <string name="merchant_inventory_empty_finished">Sin ofertas finalizadas</string>
     <string name="merchant_inventory_empty_finished_hint">Las ofertas expiradas, agotadas o dadas de baja se muestran en este historial.</string>
+    <!-- Transversal Offline & States (FT-22) -->
+    <string name="offline_snackbar_lost">Sin conexión a internet. Mostrando datos guardados.</string>
+    <string name="offline_snackbar_restored">Conexión restablecida.</string>
+    <string name="offline_banner_cached">Sin conexión · Mostrando tu última lista guardada</string>
+    <string name="offline_error_title">Sin conexión</string>
+    <string name="offline_error_subtitle">Revisa tu internet o tus datos móviles e inténtalo de nuevo. Las ofertas se actualizan cuando vuelvas a estar en línea.</string>
+    <string name="offline_error_retry">Reintentar</string>
+
+    <!-- Location Disabled State (P-05) -->
+    <string name="location_disabled_title">Activa tu ubicación</string>
+    <string name="location_disabled_subtitle">Sin tu ubicación no podemos mostrarte los comercios y ofertas que tienes cerca.</string>
+    <string name="location_step_1">Abre los Ajustes de tu teléfono</string>
+    <string name="location_step_2">Entra a Sensus > Ubicación</string>
+    <string name="location_step_3">Elige \'Mientras uso la app\'</string>
+    <string name="location_open_settings">Abrir ajustes</string>
+    <string name="location_choose_manual">Buscar por colonia</string>
+
+    <!-- Social Engagement & Moderation (FT-19) -->
+    <string name="ft19_like_post">Me gusta</string>
+    <string name="ft19_comment_post">Comentarios</string>
+    <string name="ft19_report_post">Reportar publicación</string>
+    <string name="ft19_report_product">Reportar producto</string>
+    <string name="ft19_delete_post_cd">Eliminar publicación</string>
+    <string name="ft19_delete_post_title">Eliminar publicación</string>
+    <string name="ft19_delete_post_body">¿Seguro que deseas eliminar esta publicación de la comunidad? Esta acción no se puede deshacer.</string>
+    <string name="ft19_delete_confirm">Eliminar</string>
+    <string name="ft19_cancel">Cancelar</string>
+    <string name="ft19_comments_title">Comentarios en la publicación de %1$s</string>
+    <string name="ft19_comments_empty">Sé la primera persona en comentar.</string>
+    <string name="ft19_comment_placeholder">Escribe un comentario respetuoso…</string>
+    <string name="ft19_comment_send">Enviar comentario</string>
+    <string name="ft19_report_dialog_title">Reportar contenido</string>
+    <string name="ft19_report_target_hint">Indícanos el motivo para revisar: %1$s</string>
+    <string name="ft19_report_details_label">Detalles adicionales (opcional)</string>
+    <string name="ft19_report_submit">Enviar reporte</string>
+    <string name="ft19_report_sending">Enviando…</string>
 </resources>

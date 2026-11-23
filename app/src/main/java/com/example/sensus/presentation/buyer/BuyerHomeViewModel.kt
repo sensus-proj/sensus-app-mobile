@@ -87,7 +87,17 @@ class BuyerHomeViewModel @Inject constructor(
 
     private fun refreshLocation(forceFresh: Boolean) {
         viewModelScope.launch {
-            if (locationRepository.hasLocationPermission()) {
+            val permissionGranted = locationRepository.hasLocationPermission()
+            val locationEnabled = locationRepository.isLocationEnabled()
+
+            if (permissionGranted && !locationEnabled) {
+                updateState { copy(isLocationDisabled = true) }
+                return@launch
+            } else {
+                updateState { copy(isLocationDisabled = false) }
+            }
+
+            if (permissionGranted) {
                 val loc = if (forceFresh) {
                     locationRepository.getFreshLocation()
                 } else {
@@ -104,7 +114,7 @@ class BuyerHomeViewModel @Inject constructor(
             offersRefresh?.cancel()
             profileRefresh?.cancel()
             merchantProfiles = emptyMap()
-            updateState { copy(isLoading = true, nextPage = null, pageLoadFailed = false) }
+            updateState { copy(isLoading = true, errorMessage = null, nextPage = null, pageLoadFailed = false) }
         } else if (offersRefresh?.isActive == true) {
             return
         }
@@ -144,7 +154,8 @@ class BuyerHomeViewModel @Inject constructor(
             page == 1 -> {
                 val cached = getNearbyOffers.readCachedOffers().filter { it.isPubliclyVisible }
                 kotlin.coroutines.coroutineContext.ensureActive()
-                updateState { copy(offers = cached, isLoading = false, usingCachedOffers = true) }
+                val offline = if (cached.isEmpty()) "Sin conexión" else null
+                updateState { copy(offers = cached, isLoading = false, usingCachedOffers = true, errorMessage = offline) }
             }
             else -> updateState { copy(pageLoadFailed = true) }
         }

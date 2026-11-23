@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -65,6 +66,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -88,6 +90,7 @@ import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
 import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.StatusGreen
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 private const val STORE_AVATAR_ALPHA = 0.12f
@@ -266,8 +269,9 @@ private fun MerchantProfileListContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(SensusBackground),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 96.dp),
+            .background(SensusBackground)
+            .statusBarsPadding(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         display.updateSuccessMessage?.let { msg -> item { ProfileSuccessBanner(message = msg) } }
@@ -365,16 +369,37 @@ private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, i
             )
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = storeName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-                Text(text = store.category, fontSize = 13.sp, color = SensusTextSecondary)
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Calificación: ${store.rating} (${store.reviewCount} opiniones)",
+                    text = storeName,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusTextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = store.category,
+                    fontSize = 12.sp,
+                    color = SensusTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                val ratingSummaryText = if (store.reviewCount <= 0) {
+                    "Sin calificaciones aún"
+                } else {
+                    "Calificación: ${String.format(Locale.US, "%.1f", store.rating)} ★ (${store.reviewCount} opiniones)"
+                }
+                Text(
+                    text = ratingSummaryText,
                     fontSize = 11.sp,
                     color = SensusVioletInk,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+            Spacer(modifier = Modifier.width(8.dp))
             IconButton(
                 onClick = onEditClick,
                 modifier = Modifier.size(36.dp).clip(CircleShape).background(SensusPurple.copy(alpha = EDIT_BTN_ALPHA))

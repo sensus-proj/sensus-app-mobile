@@ -248,6 +248,7 @@ kover {
                     "*Icons*",
                     "*NavTab*",
                     "com.example.sensus.presentation.common.*",
+                    "com.example.sensus.presentation.components.*",
                 )
                 annotatedBy("com.example.sensus.presentation.common.ComposeUiModel")
             }

@@ -23,9 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Card
@@ -57,6 +59,7 @@ import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
@@ -112,21 +115,30 @@ internal fun StoreCatalogTopBar(storeName: String, offersCount: Int, onNavigateB
 private const val CATALOG_THUMB_DP = 54
 
 @Composable
-internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier = Modifier) {
+internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier = Modifier, onHeaderClick: (() -> Unit)? = null) {
     val addressText = if (cluster.postalCode.isNotBlank()) "${cluster.address} • C.P. ${cluster.postalCode}" else cluster.address
     val openDays = cluster.merchantProfile?.horarios?.count { !it.estaCerrado } ?: 0
     val scheduleText = if (openDays > 0) "Abierto $openDays días por semana" else "Horario publicado en tienda"
+    val reviewCount = cluster.merchantProfile?.reviewCount ?: 0
+    val avgRating = cluster.merchantProfile?.averageRating ?: 0.0
+    val ratingLabel = if (reviewCount > 0) {
+        "${String.format(Locale.US, "%.1f", avgRating)} ($reviewCount)"
+    } else {
+        "Calificar tienda"
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onHeaderClick != null) Modifier.clickable(onClick = onHeaderClick) else Modifier)
     ) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             StoreAvatarThumbnail(photoUrl = cluster.merchantProfile?.fotoFachadaUrl, storeName = cluster.storeName, sizeDp = CATALOG_THUMB_DP)
             Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -142,6 +154,16 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
                     Icon(imageVector = Icons.Default.AccessTime, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = scheduleText, fontSize = 13.sp, color = SensusTextMuted)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Star, contentDescription = "Reseñas", tint = SensusPurple, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "$ratingLabel • Toca para ver reseñas",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SensusPurple
+                    )
                 }
             }
         }
@@ -305,18 +327,38 @@ private fun CatalogPinBadge(isSaved: Boolean, onSaveClick: () -> Unit, modifier:
 @Composable
 private fun CatalogProductStockFooter(offer: ProductOffer) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Surface(color = SensusSuccess.copy(alpha = STOCK_BADGE_ALPHA), shape = RoundedCornerShape(6.dp)) {
-            Row(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(imageVector = Icons.Default.Inventory2, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(12.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(color = SensusSuccess.copy(alpha = STOCK_BADGE_ALPHA), shape = RoundedCornerShape(6.dp)) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(imageVector = Icons.Default.Inventory2, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${offer.unitsLeft} pzs",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SensusSuccess
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Me gusta",
+                    tint = SensusRed,
+                    modifier = Modifier.size(13.dp)
+                )
                 Text(
-                    text = "Quedan ${offer.unitsLeft} pzs",
+                    text = "${offer.likesCount}",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = SensusSuccess
+                    color = SensusTextSecondary
                 )
             }
         }

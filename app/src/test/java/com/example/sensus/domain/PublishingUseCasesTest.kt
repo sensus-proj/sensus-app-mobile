@@ -50,6 +50,7 @@ class PublishingUseCasesTest {
             input.copy(title = " ") to OfferField.TITLE,
             input.copy(description = " ") to OfferField.DESCRIPTION,
             input.copy(description = "x".repeat(501)) to OfferField.DESCRIPTION,
+            input.copy(category = StoreCategory.ALL) to OfferField.CATEGORY,
             input.copy(originalPrice = Double.NaN) to OfferField.PRICE,
             input.copy(discountPrice = Double.POSITIVE_INFINITY) to OfferField.PRICE,
             input.copy(originalPrice = 0.0) to OfferField.PRICE,
@@ -178,5 +179,34 @@ class PublishingUseCasesTest {
         coVerify { feed.nearby(FeedQuery(20.0, -99.0, radiusMeters = 2000, pageSize = 100)) }
         assertTrue(GetNearbyFeedUseCase(feed, session)(FeedQuery(91.0, -99.0)) is Result.Failure)
         assertTrue(GetNearbyFeedUseCase(feed, session)(FeedQuery(20.0, -99.0, page = 0)) is Result.Failure)
+    }
+
+    @Test
+    fun storeCategory_mapsAllOfferCategoryApiCodesBidirectionally() {
+        val expectedCodes = mapOf(
+            StoreCategory.ALL to null,
+            StoreCategory.GROCERY to "Grocery",
+            StoreCategory.CLEANING to "CleaningHome",
+            StoreCategory.PERISHABLES to "Perishables",
+            StoreCategory.DAIRY to "Dairy",
+            StoreCategory.FOOD to "Food",
+            StoreCategory.BAKERY to "Bakery",
+            StoreCategory.BEVERAGES to "Beverages",
+            StoreCategory.PETS to "Pets",
+            StoreCategory.PHARMACY to "Pharmacy"
+        )
+        expectedCodes.forEach { (category, code) ->
+            assertEquals(code, category.apiCode)
+            if (code != null) {
+                assertEquals(category, StoreCategory.fromApiCode(code))
+                assertEquals(category, StoreCategory.fromApiCode(" ${code.lowercase()} "))
+                assertEquals(category.displayName, StoreCategory.displayNameFor(code))
+            }
+        }
+        assertNull(StoreCategory.fromApiCode(null))
+        assertNull(StoreCategory.fromApiCode(" "))
+        assertNull(StoreCategory.fromApiCode("Moda"))
+        assertEquals("Todo", StoreCategory.displayNameFor(" "))
+        assertEquals("Abarrotes", StoreCategory.displayNameFor("Abarrotes"))
     }
 }

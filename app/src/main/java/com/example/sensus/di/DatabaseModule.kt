@@ -4,8 +4,10 @@ import android.content.Context
 import com.example.sensus.data.local.db.DatabaseFactory
 import com.example.sensus.data.local.db.SensusDatabase
 import com.example.sensus.data.local.db.dao.AiMessageDao
+import com.example.sensus.data.local.db.dao.FeedOfferDao
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
+import com.example.sensus.data.local.db.dao.SearchHistoryDao
 import com.example.sensus.data.local.db.dao.UserPreferenceDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
 import com.example.sensus.data.local.security.DatabaseKeyManager
@@ -54,5 +56,17 @@ object DatabaseModule {
     @Singleton
     fun provideAiMessageDao(database: SensusDatabase): AiMessageDao {
         return database.aiMessageDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideFeedOfferDao(database: SensusDatabase): FeedOfferDao {
+        return database.feedOfferDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSearchHistoryDao(database: SensusDatabase): SearchHistoryDao {
+        return database.searchHistoryDao()
     }
 }

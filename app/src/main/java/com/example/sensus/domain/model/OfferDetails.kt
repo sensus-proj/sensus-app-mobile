@@ -1,6 +1,13 @@
 package com.example.sensus.domain.model
 
-data class OfferDetails(val offer: ProductOffer, val viewCount: Int, val hasActiveClaim: Boolean, val startsAtMillis: Long) {
+data class OfferDetails(
+    val offer: ProductOffer,
+    val viewCount: Int,
+    val hasActiveClaim: Boolean,
+    val startsAtMillis: Long,
+    val likesCount: Int = 0,
+    val isLikedByMe: Boolean = false
+) {
     val hasLowStock: Boolean
         get() = offer.isPubliclyVisible && offer.unitsLeft <= LOW_STOCK_THRESHOLD
 
@@ -14,5 +21,11 @@ data class OfferDetails(val offer: ProductOffer, val viewCount: Int, val hasActi
         return offer.isPubliclyVisible && isCurrent && !hasActiveClaim
     }
 }
+
+data class ToggleOfferLikeResult(
+    val offerId: String,
+    val likesCount: Int,
+    val isLikedByMe: Boolean
+)
 
 private const val LOW_STOCK_THRESHOLD = 3

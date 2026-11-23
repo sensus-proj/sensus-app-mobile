@@ -61,7 +61,7 @@ data class SharedOfferMessage(
         id = offerId,
         name = offerTitle,
         storeName = storeName,
-        category = category ?: "Oferta",
+        category = category?.takeIf { it.isNotBlank() }?.let { StoreCategory.displayNameFor(it, fallback = it) } ?: "Oferta",
         originalPrice = originalPrice,
         discountPrice = discountedPrice,
         discountPercent = discountPercentage,

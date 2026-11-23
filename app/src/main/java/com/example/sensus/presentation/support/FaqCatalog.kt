@@ -13,8 +13,8 @@ object FaqCatalog {
             id = "radius",
             category = "Búsqueda y radio",
             question = "¿Qué alcance geográfico tengo para descubrir ofertas?",
-            answer = "Como usuario registrado puedes elegir radios de 100 a 500 metros o de 1 a 5 km en la lista y el mapa. " +
-                "En modo invitado el radio es fijo de 2 km."
+            answer = "Como usuario registrado puedes elegir radios de 100 a 500 metros o de 1 a 5 km en la lista y el mapa, " +
+                "y hasta 50 km en el feed de promociones. En modo invitado el radio es fijo de 2 km."
         ),
         FaqItem(
             id = "merchant_no_ine",
