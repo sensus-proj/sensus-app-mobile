@@ -2,4 +2,21 @@
     <string name="app_name">Sensus</string>
     <string name="community_feed_unavailable">El servicio de comunidad no está disponible en el servidor. Inténtalo más tarde.</string>
     <string name="community_publish_unavailable">El servidor no tiene disponible el servicio de publicaciones. Tu borrador se conserva; inténtalo más tarde.</string>
+
+    <!-- Transversal Offline & States (FT-22) -->
+    <string name="offline_snackbar_lost">Sin conexión a internet. Mostrando datos guardados.</string>
+    <string name="offline_snackbar_restored">Conexión restablecida.</string>
+    <string name="offline_banner_cached">Sin conexión · Mostrando tu última lista guardada</string>
+    <string name="offline_error_title">Sin conexión</string>
+    <string name="offline_error_subtitle">Revisa tu internet o tus datos móviles e inténtalo de nuevo. Las ofertas se actualizan cuando vuelvas a estar en línea.</string>
+    <string name="offline_error_retry">Reintentar</string>
+
+    <!-- Location Disabled State (P-05) -->
+    <string name="location_disabled_title">Activa tu ubicación</string>
+    <string name="location_disabled_subtitle">Sin tu ubicación no podemos mostrarte los comercios y ofertas que tienes cerca.</string>
+    <string name="location_step_1">Abre los Ajustes de tu teléfono</string>
+    <string name="location_step_2">Entra a Sensus > Ubicación</string>
+    <string name="location_step_3">Elige \'Mientras uso la app\'</string>
+    <string name="location_open_settings">Abrir ajustes</string>
+    <string name="location_choose_manual">Buscar por colonia</string>
 </resources>

@@ -947,3 +947,32 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **FT-23 (`RF-23-04`, soporte y aviso offline):**
   - `FaqCatalog.kt` + `HelpFaqScreen.kt` (`P-35`, 100 % offline, búsqueda local, acordeones expandibles, `mailto:` con `ActivityNotFoundException` controlado, acceso a `BuyerProfileScreen`), `GuestModeBanner.kt` (`C-49`, visible en `MainAppContainer` solo cuando `isGuest == true`), y `TermsScreen.kt` con el aviso `RF-23-04` (personalización e interacciones seudonimizadas con TTL de 180 días y baja de cuenta). Pendiente en repo web externo: texto equivalente en la *landing*.
 - **Verificación local:** `compileDebugKotlin`, `compileDebugAndroidTestSources`, `detekt`, `ktlintCheck`, `lint`, `testDebugUnitTest` (`376/376`, `0` fallos, `0` omisiones), `koverVerifyDebug` + `check_coverage.py --min 80` (**80.87 %**), `check_sdd.py` (31 features), `check_layers.py` (294 archivos), `check_endpoints.py` (54 endpoints), `check_secrets.py` (408 archivos) todos en verde. Ejecución instrumentada de `Ft30Ft20Ft23ComposeTest` en emulador/dispositivo y escáneres en nube quedan para CI. Sin commit, push ni tags creados.
+
+## Bitácora - FT-22 UX transversal: offline, GPS apagado, shimmers y tema oscuro (2026-11-22)
+
+- **Paso 0 (Conciliación SDD canónica según `Componentes_Movil_Sensus.xlsx`):**
+  - Alineados los 4 artefactos (`spec.md`, `plan.md`, `tasks.md`, `checklists/checklist.md`): `P-05` = "Ubicación desactivada" (GPS apagado, manual picker), `P-06` = "Sin conexión" (error sin red, botón reintentar), `C-15` = "Lista con estado Cargando (esqueleto)".
+  - Eliminados componentes fuera de alcance (`C-06, C-10, C-19, C-50`) y eliminados `SensusEmptyState`/`SensusErrorRetryCard` para cero alcance oculto.
+  - Reubicado `OfflineBanner` desde `OfferFeedScreen.kt` a `presentation/components/states/OfflineBanner.kt` para reutilización transversal.
+  - Estado en tabla de Aprobación registrado como "En implementación" a la espera de aprobación final.
+- **Implementación de requerimientos funcionales (RF-22-01..05):**
+  - **RF-22-01 (Estado reactivo de red y sync):** `SyncManager` y `DefaultSyncManager` exponen `pendingOperationsCount: StateFlow<Int>`. `AppViewModel` observa `NetworkMonitor.isOnline` con `distinctUntilChanged().debounce(300L)` y `SyncManager.pendingOperationsCount`. Expone `isOnline` y `pendingSyncCount` en `AppViewState`, y emite `ShowNetworkSnackbar` al desconectar y al reconectar disparando `syncPendingOperations()`.
+  - **RF-22-02 (Offline fallback):** Sin red y sin caché en `BuyerHomeScreen`/`SearchOffersScreen` muestra `OfflineErrorState` (`P-06`) con botón "Reintentar" conectado a ViewIntent de recarga; con caché muestra datos guardados y `OfflineBanner`. Cero pantallas en blanco o spinners infinitos.
+  - **RF-22-03 (GPS desactivado):** `BuyerHomeScreen` muestra `LocationDisabledState` (`P-05`) con botón que abre `Settings.ACTION_LOCATION_SOURCE_SETTINGS` y selector de ubicación manual. Acceso a `android.provider.Settings` restringido a presentation, cero `android.*` en `domain/`.
+  - **RF-22-04 (Shimmers de carga C-15):** `presentation/components/states/ShimmerPlaceholders.kt` con `Modifier.shimmerEffect()`, `ShimmerOfferCard`, `ShimmerOfferList`, `ShimmerFeedItem`, `ShimmerFeedList` y `ShimmerPinPlaceholder`. Integrados en `BuyerHomeScreen`, `SearchOffersScreen` y `CommunityScreen` cuando `isLoading && offers.isEmpty()`.
+  - **RF-22-05 (Tema Oscuro y limpieza de paleta):** `LightColorScheme` y `DarkColorScheme` en `Theme.kt`/`Color.kt` con tokens WCAG AA y morado de marca (`#7C3AED` / `#8B5CF6`). Eliminado `SensusAmber`, cero amarillos/ámbar en UI interna y cero emojis (solo iconos vectoriales).
+- **Pruebas y QA de Calidad:**
+  - `FT22TransversalUxComposeTest.kt`: Pruebas instrumentadas de Compose UI verificando renderizado de `OfflineErrorState`, `LocationDisabledState`, `ShimmerOfferList` y soporte de `SensusTheme(darkTheme = true)`.
+  - `AppViewModelTest.kt`: 11 pruebas unitarias con Turbine para transiciones de red, debounce anti-rebote, notificación snackbar y sincronización reactiva.
+  - Corrección de exclusión de Kover para `presentation.components.*` en `app/build.gradle.kts` (al igual que el resto de componentes UI Compose).
+- **Resultados de Verificación y Gates:**
+  - `compileDebugKotlin`: BUILD SUCCESSFUL
+  - `compileDebugAndroidTestSources`: BUILD SUCCESSFUL
+  - `detekt` + `ktlintCheck`: BUILD SUCCESSFUL (0 errores, 0 warnings)
+  - `testDebugUnitTest`: 400 pruebas ejecutadas, 400 pasadas, 0 fallidas, 0 ignoradas (100 % éxito)
+  - `koverXmlReportDebug` + `check_coverage.py --min 80`: **81.12 %** (PASS)
+  - `check_sdd.py`: PASS (0 hallazgos, 34 features)
+  - `check_layers.py`: PASS (0 hallazgos, 318 archivos)
+  - `check_endpoints.py`: PASS (0 hallazgos, 57 endpoints)
+  - `check_secrets.py`: PASS (0 hallazgos, 439 archivos)
+- **Gobernanza Git:** Sin operaciones de Git (`add`, `commit`, `push`, ramas ni tags) conforme a la restricción estricta.

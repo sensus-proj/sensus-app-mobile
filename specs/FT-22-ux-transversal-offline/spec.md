@@ -18,7 +18,7 @@ Aunque `ConnectivityNetworkMonitor` y `DefaultSyncManager` ya existen en la capa
 |---|---|
 | RF-22-01 | Observar `NetworkMonitor.isOnline` en `AppViewModel` / contenedor principal para mostrar `Snackbar` no intrusivo al perder conexión y aviso de sincronización al recuperarla. |
 | RF-22-02 | Cuando no exista red ni datos cacheados en `OfferDao`, renderizar vista `P-06` (`OfflineErrorScreen`) con botón `'Reintentar'` que dispare recarga del `ViewModel` actual. |
-| RF-22-03 | Cuando los servicios de ubicación del dispositivo estén desactivados (`P-05`), ofrecer pantalla/tarjeta informativa con botón para abrir ajustes de ubicación del sistema o elegir ubicación manualmente (`LocationPickerSheet`). |
+| RF-22-03 | Cuando los servicios de ubicación del dispositivo estén desactivados (`P-05`), ofrecer pantalla/tarjeta informativa con botón para abrir ajustes de ubicación del sistema (`Settings.ACTION_LOCATION_SOURCE_SETTINGS`) o elegir ubicación manualmente (reutilizando el patrón de `OnboardingLocationScreen` / `MerchantLocationPickerModal`). |
 | RF-22-04 | Reemplazar indicadores vacíos de carga por componentes `Shimmer` animados en `BuyerHomeScreen`, `SearchOffersScreen` y `CommunityScreen`. |
 | RF-22-05 | Soportar paleta clara y oscura en `Theme.kt` respetando `isSystemInDarkTheme()`, contraste AA y regla estricta de cero tonos amarillos en UI interna. |
 
@@ -32,11 +32,13 @@ Aunque `ConnectivityNetworkMonitor` y `DefaultSyncManager` ya existen en la capa
 
 ```text
 presentation/root/AppContract.kt, AppViewModel.kt   # Expone isOnline y pendingSyncCount
-presentation/common/
-  OfflineErrorState.kt            # P-06 Reintentar
-  LocationDisabledState.kt        # P-05 Ubicación apagada
-  ShimmerPlaceholders.kt          # C-15 estado cargando (esqueleto)
-theme/Color.kt, Theme.kt          # DarkColorScheme + LightColorScheme con SensusPurple
+presentation/main/MainAppContainer.kt              # Host del Snackbar y OfflineBanner transversal
+presentation/components/states/
+  OfflineErrorState.kt                             # P-06 Sin conexión con botón Reintentar
+  LocationDisabledState.kt                         # P-05 Ubicación desactivada con ajustes y selección manual
+  ShimmerPlaceholders.kt                           # C-15 estado cargando (esqueleto)
+  OfflineBanner.kt                                 # Banner no intrusivo reutilizable
+theme/Color.kt, Theme.kt                           # DarkColorScheme + LightColorScheme con SensusPurple, sin SensusAmber
 ```
 
 ## 5. Criterios de aceptacion
@@ -59,4 +61,4 @@ theme/Color.kt, Theme.kt          # DarkColorScheme + LightColorScheme con Sensu
 
 | Estado | Revisor | Fecha | Evidencia |
 |---|---|---|---|
-| Borrador | — | — | Pendiente de ejecución |
+| En implementación | Rodrigo | 2026-11-22 | Ejecución autorizada T22.1–T22.9 |

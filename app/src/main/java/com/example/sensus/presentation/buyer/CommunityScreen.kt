@@ -25,6 +25,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,7 +53,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
+import com.example.sensus.presentation.components.states.ShimmerFeedList
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusVioletBg
@@ -91,7 +92,7 @@ fun CommunityScreen(
             callbacks.onSelectFriendsTab(true)
         }
     }
-    Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(modifier = Modifier.statusBarsPadding()) {
             TextButton(onClick = {
                 localShowFriends = false
@@ -143,13 +144,19 @@ internal fun CommunityFeedContent(
             item {
                 CommunityFeedHeader(state, onIntent)
             }
-            items(state.posts, key = { it.id }) { post ->
-                CommunityPostCard(
-                    post = post,
-                    onMerchantClick = onMerchantClick,
-                    isSaved = post.id in saveActions.savedPostIds,
-                    onSaveClick = { saveActions.onToggleSavePost(post) }
-                )
+            if (state.isLoading && state.posts.isEmpty()) {
+                item {
+                    ShimmerFeedList()
+                }
+            } else {
+                items(state.posts, key = { it.id }) { post ->
+                    CommunityPostCard(
+                        post = post,
+                        onMerchantClick = onMerchantClick,
+                        isSaved = post.id in saveActions.savedPostIds,
+                        onSaveClick = { saveActions.onToggleSavePost(post) }
+                    )
+                }
             }
             item {
                 if (state.hasMore) {

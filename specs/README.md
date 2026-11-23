@@ -41,7 +41,7 @@ specs/FT-XX-<slug>/
 | `FT-19-interacciones-reportes` | Negocio (Ola 3) | SE-030..SE-033; P-22 | FT-18 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
 | `FT-20-busqueda-recomendaciones-ml` | Negocio (Ola 3) | SE-034, SE-035, SE-037, SE-038; P-12, P-13 | FT-12, FT-17 | En revision | `SearchOffersUseCase`, `GetOfferAlternativesUseCase`, `SearchOffersScreen`, `SearchHistoryEntity` v8, tests y `MockWebServer`; pendiente PR/tag |
 | `FT-21-push-fcm-ajustes` | Negocio / Push (Ola 3) | SE-039..SE-041; P-04, P-26 | FT-10 | En implementacion | 8/12 tareas; `GET/PUT /users/settings`, `PUT /users/device-token`; falta `google-services.json` oficial y receptor FCM (auditoría 2026-11-15) |
-| `FT-22-ux-transversal-offline` | UX / Offline (Ola 4) | SE-042..SE-044; P-05, P-06 | FT-11 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-22-ux-transversal-offline` | UX / Offline (Ola 4) | SE-042..SE-044; P-05, P-06 | FT-11 | En implementacion | `spec.md`, `plan.md`, `tasks.md`, `checklists/checklist.md` |
 | `FT-23-soporte-legal-faq` | Soporte / Legal (Ola 4) | SE-042..SE-044; P-35 | FT-10 | En revision | `HelpFaqScreen`, `GuestModeBanner` (`C-49`), `TermsScreen` offline (`RF-23-04`), conectado en `BuyerProfileScreen` y `MainAppContainer`; pendiente PR/tag y actualización en landing |
 | `FT-24-sensi-ia` | Negocio (Ola 5) | P-25, C-39, Tesina | FT-12 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | En revision | `FriendModels.kt`, `FriendsApiService.kt`, `FriendsRepositoryImpl.kt`, `FriendsCommunityScreen.kt`, `QrScannerDialog.kt`, `FriendRequestNotifier.kt`, Spec `050` backend (pendiente despliegue AWS y landing) |
