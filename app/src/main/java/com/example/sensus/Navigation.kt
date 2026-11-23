@@ -31,6 +31,7 @@ import com.example.sensus.presentation.auth.TermsScreen
 import com.example.sensus.presentation.buyer.InterestsPickerCallbacks
 import com.example.sensus.presentation.buyer.InterestsPickerScreen
 import com.example.sensus.presentation.main.MainAppContainer
+import com.example.sensus.presentation.main.MainAppContainerActions
 import com.example.sensus.presentation.modals.ForgotPasswordScreen
 import com.example.sensus.presentation.root.AppScreen
 import com.example.sensus.presentation.root.AppViewIntent
@@ -226,11 +227,14 @@ private fun EntryProviderScope<NavKey>.registerMainEntry(
         MainAppContainer(
             isGuest = appState.isGuest,
             isMerchantRegistered = appState.isMerchantRegistered,
-            onLogout = { onIntent(AppViewIntent.Logout) },
-            onNavigateToTerms = {
-                onSetPreviousTermsScreen(AppScreen.MAIN)
-                onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
-            }
+            isOnline = appState.isOnline,
+            actions = MainAppContainerActions(
+                onLogout = { onIntent(AppViewIntent.Logout) },
+                onNavigateToTerms = {
+                    onSetPreviousTermsScreen(AppScreen.MAIN)
+                    onIntent(AppViewIntent.NavigateTo(AppScreen.TERMS))
+                }
+            )
         )
     }
 }

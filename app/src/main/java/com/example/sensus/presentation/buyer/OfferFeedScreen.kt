@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
@@ -29,7 +28,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -51,6 +49,7 @@ import com.example.sensus.domain.model.FeedSlot
 import com.example.sensus.domain.model.OfferFeedItem
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.components.states.OfflineBanner
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
@@ -60,7 +59,6 @@ import com.example.sensus.theme.SensusTheme
 
 private const val PREFETCH_DISTANCE = 5
 private const val EXPANDED_RADIUS_KM = 25
-private const val TINT_BG_ALPHA = 0.08f
 private const val BOTTOM_NAV_CLEARANCE_DP = 110
 private const val PREVIEW_ORIG_PRICE_A = 120.0
 private const val PREVIEW_FINAL_PRICE_A = 59.0
@@ -120,7 +118,7 @@ internal fun OfferFeedContent(
         OfferFeedHeader(onOpenInterests = { onIntent(OfferFeedViewIntent.OpenInterestsPicker) })
 
         if (state.isOfflineCached) {
-            OfferFeedOfflineBanner(onRetry = { onIntent(OfferFeedViewIntent.Refresh) })
+            OfflineBanner(onRetry = { onIntent(OfferFeedViewIntent.Refresh) })
         }
 
         when {
@@ -181,34 +179,6 @@ private fun OfferFeedHeader(onOpenInterests: () -> Unit) {
             Icon(imageVector = Icons.Default.Tune, contentDescription = "Editar intereses", tint = SensusPurple, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text(text = "Intereses", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
-        }
-    }
-}
-
-@Composable
-private fun OfferFeedOfflineBanner(onRetry: () -> Unit) {
-    Surface(
-        color = SensusPurple.copy(alpha = TINT_BG_ALPHA),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Icon(imageVector = Icons.Default.CloudOff, contentDescription = "Sin conexión", tint = SensusPurple, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Sin conexión · Mostrando tu última lista guardada",
-                    fontSize = 12.sp,
-                    color = SensusTextPrimary
-                )
-            }
-            OutlinedButton(onClick = onRetry, modifier = Modifier.height(48.dp)) {
-                Text(text = "Reintentar", fontSize = 12.sp, color = SensusPurple)
-            }
         }
     }
 }

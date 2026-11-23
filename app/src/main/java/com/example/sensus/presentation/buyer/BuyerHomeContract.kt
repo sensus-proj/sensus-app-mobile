@@ -16,7 +16,8 @@ data class BuyerHomeViewState(
     val isGuest: Boolean = false,
     val selectedRadiusKm: Float = GuestRadiusPolicy.GUEST_MAX_RADIUS_KM,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isLocationDisabled: Boolean = false
 ) : ViewState
 
 sealed interface BuyerHomeViewIntent : ViewIntent {

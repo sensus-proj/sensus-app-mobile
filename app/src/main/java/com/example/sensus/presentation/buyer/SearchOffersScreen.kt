@@ -3,7 +3,6 @@ package com.example.sensus.presentation.buyer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -29,9 +28,9 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,10 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sensus.R
 import com.example.sensus.domain.model.OfferAlternativeItem
 import com.example.sensus.domain.model.OfferSearchItem
 import com.example.sensus.domain.model.ProductOffer
-import com.example.sensus.theme.SensusBackground
+import com.example.sensus.presentation.components.states.OfflineBanner
+import com.example.sensus.presentation.components.states.OfflineErrorState
+import com.example.sensus.presentation.components.states.ShimmerOfferList
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextMuted
@@ -107,7 +110,7 @@ internal fun SearchOffersContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SensusBackground)
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -135,16 +138,23 @@ internal fun SearchOffersContent(
             )
         }
 
-        SearchOffersBody(state = state, onOfferClick = onOfferClick, modifier = Modifier.weight(1f).fillMaxWidth())
+        SearchOffersBody(
+            state = state,
+            onOfferClick = onOfferClick,
+            onRetry = { onIntent(SearchOffersViewIntent.SubmitSearch(state.query)) },
+            modifier = Modifier.weight(1f).fillMaxWidth()
+        )
     }
 }
 
 @Composable
-private fun SearchOffersBody(state: SearchOffersViewState, onOfferClick: (ProductOffer) -> Unit, modifier: Modifier = Modifier) {
+private fun SearchOffersBody(state: SearchOffersViewState, onOfferClick: (ProductOffer) -> Unit, onRetry: () -> Unit = {}, modifier: Modifier = Modifier) {
     when {
-        state.isLoading -> Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = SensusPurple)
-        }
+        state.isLoading && state.results.isEmpty() -> ShimmerOfferList(modifier = modifier.padding(16.dp))
+        state.errorMessage != null && state.results.isEmpty() -> OfflineErrorState(
+            onRetry = onRetry,
+            modifier = modifier
+        )
         state.hasSearched && state.results.isEmpty() -> SearchEmptyWithAlternativesState(
             searchedQuery = state.lastCompletedQuery,
             alternatives = state.alternatives,
@@ -153,11 +163,9 @@ private fun SearchOffersBody(state: SearchOffersViewState, onOfferClick: (Produc
         else -> LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = LIST_BOTTOM_PAD_DP.dp)) {
             if (state.isOfflineFallback) {
                 item {
-                    Text(
-                        text = "Mostrando resultados guardados localmente (sin conexión).",
-                        fontSize = 12.sp,
-                        color = SensusTextSecondary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    OfflineBanner(
+                        message = stringResource(R.string.offline_banner_cached),
+                        onRetry = onRetry
                     )
                 }
             }
