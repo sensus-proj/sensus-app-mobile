@@ -1,16 +1,29 @@
 package com.example.sensus.presentation.buyer
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.ContentReportInput
 import com.example.sensus.domain.model.CreatePostInput
+import com.example.sensus.domain.model.FeedPolicy
+import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.FeedQuery
+import com.example.sensus.domain.model.PagedFeed
+import com.example.sensus.domain.model.ReportReason
+import com.example.sensus.domain.model.ReportTargetType
+import com.example.sensus.domain.model.SubmittedReport
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SessionRepository
+import com.example.sensus.domain.usecase.AddFeedCommentUseCase
 import com.example.sensus.domain.usecase.CreateFeedPostUseCase
+import com.example.sensus.domain.usecase.DeleteFeedPostUseCase
+import com.example.sensus.domain.usecase.GetFeedCommentsUseCase
 import com.example.sensus.domain.usecase.GetNearbyFeedUseCase
+import com.example.sensus.domain.usecase.SubmitContentReportUseCase
+import com.example.sensus.domain.usecase.TogglePostLikeUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -20,6 +33,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Suppress("TooManyFunctions", "LongParameterList")
 @HiltViewModel
 class CommunityViewModel @Inject constructor(
     private val getFeed: GetNearbyFeedUseCase,
@@ -27,17 +41,19 @@ class CommunityViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val sessionRepository: SessionRepository,
     private val offersRepository: OffersRepository,
-    private val storeRepository: com.example.sensus.domain.repository.StoreRepository? = null
+    private val storeRepository: com.example.sensus.domain.repository.StoreRepository? = null,
+    private val togglePostLikeUseCase: TogglePostLikeUseCase? = null,
+    private val getCommentsUseCase: GetFeedCommentsUseCase? = null,
+    private val addCommentUseCase: AddFeedCommentUseCase? = null,
+    private val deletePostUseCase: DeleteFeedPostUseCase? = null,
+    private val submitReportUseCase: SubmitContentReportUseCase? = null
 ) : MviViewModel<CommunityViewState, CommunityViewIntent, CommunityViewEffect>(CommunityViewState()) {
-    /**
-     * Dispatcher para el trabajo de E/S. Los tests lo sustituyen por el dispatcher de prueba: un salto de hilo
-     * real con `Dispatchers.IO` puede terminar después de `resetMain()` y dejar una excepción de `Looper` que
-     * `runTest` atribuye al test siguiente (ver docs/errores-conocidos.md, E-03).
-     */
-    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-    private var imageBytes: ByteArray? = null
     private var location: UserLocation? = null
     private var feedJob: Job? = null
+    private var imageBytes: ByteArray? = null
+
+    @VisibleForTesting
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     init {
         updateState { copy(friends = storeRepository?.getSampleFriends().orEmpty()) }
@@ -59,22 +75,71 @@ class CommunityViewModel @Inject constructor(
         when (intent) {
             CommunityViewIntent.Refresh -> loadPage(refresh = true)
             CommunityViewIntent.LoadMore -> if (viewState.value.hasMore) loadPage(refresh = false)
-            CommunityViewIntent.NewPost -> openComposer()
-            CommunityViewIntent.CloseComposer -> if (!viewState.value.isPublishing) closeComposer()
-            CommunityViewIntent.Submit -> submit()
-            else -> editDraft(intent)
+            CommunityViewIntent.NewPost,
+            CommunityViewIntent.CloseComposer,
+            is CommunityViewIntent.TextChanged,
+            is CommunityViewIntent.MerchantSelected,
+            is CommunityViewIntent.ImageSelected,
+            CommunityViewIntent.ImageReadFailed,
+            CommunityViewIntent.Submit -> processComposerIntent(intent)
+            is CommunityViewIntent.ToggleLike -> toggleLike(intent.postId)
+            is CommunityViewIntent.OpenComments,
+            CommunityViewIntent.CloseComments,
+            is CommunityViewIntent.CommentDraftChanged,
+            CommunityViewIntent.SubmitComment -> processCommentIntent(intent)
+            is CommunityViewIntent.RequestDeletePost,
+            CommunityViewIntent.CancelDeletePost,
+            CommunityViewIntent.ConfirmDeletePost,
+            is CommunityViewIntent.OpenReportPost,
+            CommunityViewIntent.CloseReport,
+            is CommunityViewIntent.SubmitReport -> processModerationIntent(intent)
         }
     }
 
-    private fun editDraft(intent: CommunityViewIntent) {
+    private fun processComposerIntent(intent: CommunityViewIntent) {
         when (intent) {
+            CommunityViewIntent.NewPost -> openComposer()
+            CommunityViewIntent.CloseComposer -> handleCloseComposer()
             is CommunityViewIntent.TextChanged -> updateState { copy(draftText = intent.text, publishError = null) }
             is CommunityViewIntent.MerchantSelected -> updateState { copy(merchantId = intent.id) }
             is CommunityViewIntent.ImageSelected -> {
                 imageBytes = intent.bytes
                 updateState { copy(hasImage = intent.bytes != null, publishError = null) }
             }
-            CommunityViewIntent.ImageReadFailed -> updateState { copy(publishError = AppError.Validation("No se pudo leer la foto. Selecciónala de nuevo.")) }
+            CommunityViewIntent.ImageReadFailed -> updateState {
+                copy(publishError = AppError.Validation("No se pudo leer la foto. Selecciónala de nuevo."))
+            }
+            CommunityViewIntent.Submit -> submit()
+            else -> Unit
+        }
+    }
+
+    private fun handleCloseComposer() {
+        if (!viewState.value.isPublishing) closeComposer()
+    }
+
+    private fun processCommentIntent(intent: CommunityViewIntent) {
+        when (intent) {
+            is CommunityViewIntent.OpenComments -> openComments(intent.post)
+            CommunityViewIntent.CloseComments -> updateState {
+                copy(activeCommentPost = null, comments = emptyList(), commentDraft = "", commentError = null)
+            }
+            is CommunityViewIntent.CommentDraftChanged -> updateState {
+                copy(commentDraft = intent.text.take(FeedPolicy.MAX_COMMENT_LENGTH), commentError = null)
+            }
+            CommunityViewIntent.SubmitComment -> submitComment()
+            else -> Unit
+        }
+    }
+
+    private fun processModerationIntent(intent: CommunityViewIntent) {
+        when (intent) {
+            is CommunityViewIntent.RequestDeletePost -> updateState { copy(pendingDeletePost = intent.post) }
+            CommunityViewIntent.CancelDeletePost -> updateState { copy(pendingDeletePost = null) }
+            CommunityViewIntent.ConfirmDeletePost -> confirmDeletePost()
+            is CommunityViewIntent.OpenReportPost -> openReportPost(intent.post)
+            CommunityViewIntent.CloseReport -> updateState { copy(reportTarget = null, reportError = null) }
+            is CommunityViewIntent.SubmitReport -> submitReport(intent.reason, intent.details)
             else -> Unit
         }
     }
@@ -86,7 +151,9 @@ class CommunityViewModel @Inject constructor(
         updateState { copy(isLoading = true, feedError = null) }
         feedJob = viewModelScope.launch {
             if (!locationRepository.hasLocationPermission()) {
-                updateState { copy(isLoading = false, feedError = AppError.Validation("Activa el permiso de ubicación para ver tu comunidad.")) }
+                updateState {
+                    copy(isLoading = false, feedError = AppError.Validation("Activa el permiso de ubicación para ver tu comunidad."))
+                }
                 return@launch
             }
             val current = resolveLocation(refresh)
@@ -101,7 +168,7 @@ class CommunityViewModel @Inject constructor(
         return current
     }
 
-    private fun applyPage(result: Result<com.example.sensus.domain.model.PagedFeed>, refresh: Boolean, page: Int) {
+    private fun applyPage(result: Result<PagedFeed>, refresh: Boolean, page: Int) {
         when (result) {
             is Result.Success -> updateState {
                 val items = if (refresh) result.data.posts else (posts + result.data.posts).distinctBy { it.id }
@@ -164,6 +231,195 @@ class CommunityViewModel @Inject constructor(
                 }
                 is Result.Failure -> updateState { copy(isPublishing = false, publishError = result.error) }
             }
+        }
+    }
+
+    private fun toggleLike(postId: String) {
+        if (viewState.value.isGuest) {
+            emitEffect(CommunityViewEffect.RequireAuth)
+            return
+        }
+        val useCase = togglePostLikeUseCase ?: return
+        val previous = viewState.value.posts.firstOrNull { it.id == postId }
+        if (previous != null && postId !in viewState.value.likingPostIds) {
+            applyOptimisticLike(postId, previous)
+            viewModelScope.launch {
+                when (val result = useCase(postId)) {
+                    is Result.Success -> reconcileLike(postId, result.data.isLikedByMe, result.data.likesCount)
+                    is Result.Failure -> rollbackLike(postId, previous, result.error)
+                }
+            }
+        }
+    }
+
+    private fun applyOptimisticLike(postId: String, previous: FeedPost) {
+        val nextLiked = !previous.isLikedByMe
+        val nextCount = (previous.likesCount + if (nextLiked) 1 else -1).coerceAtLeast(0)
+        updateState {
+            copy(
+                likingPostIds = likingPostIds + postId,
+                posts = posts.map { if (it.id == postId) it.copy(isLikedByMe = nextLiked, likesCount = nextCount) else it }
+            )
+        }
+    }
+
+    private fun reconcileLike(postId: String, isLikedByMe: Boolean, likesCount: Int) {
+        updateState {
+            copy(
+                likingPostIds = likingPostIds - postId,
+                posts = posts.map { if (it.id == postId) it.copy(isLikedByMe = isLikedByMe, likesCount = likesCount) else it }
+            )
+        }
+    }
+
+    private fun rollbackLike(postId: String, previous: FeedPost, error: AppError) {
+        updateState {
+            copy(likingPostIds = likingPostIds - postId, posts = posts.map { if (it.id == postId) previous else it })
+        }
+        val effect = if (error is AppError.Unauthorized) {
+            CommunityViewEffect.RequireAuth
+        } else {
+            CommunityViewEffect.ShowMessage(error.message)
+        }
+        emitEffect(effect)
+    }
+
+    private fun openComments(post: FeedPost) {
+        updateState {
+            copy(
+                activeCommentPost = post,
+                comments = emptyList(),
+                isLoadingComments = true,
+                commentDraft = "",
+                commentError = null
+            )
+        }
+        val useCase = getCommentsUseCase ?: run {
+            updateState { copy(isLoadingComments = false) }
+            return
+        }
+        viewModelScope.launch {
+            when (val result = useCase(post.id)) {
+                is Result.Success -> updateState { copy(isLoadingComments = false, comments = result.data.items) }
+                is Result.Failure -> updateState { copy(isLoadingComments = false, commentError = result.error.message) }
+            }
+        }
+    }
+
+    private fun submitComment() {
+        if (viewState.value.isGuest) {
+            emitEffect(CommunityViewEffect.RequireAuth)
+            return
+        }
+        val useCase = addCommentUseCase
+        val post = viewState.value.activeCommentPost
+        if (useCase == null || post == null || viewState.value.isSubmittingComment) return
+        val draft = viewState.value.commentDraft
+        updateState { copy(isSubmittingComment = true, commentError = null) }
+        viewModelScope.launch {
+            when (val result = useCase(post.id, draft)) {
+                is Result.Success -> updateState {
+                    copy(
+                        isSubmittingComment = false,
+                        commentDraft = "",
+                        comments = comments + result.data,
+                        posts = posts.map { if (it.id == post.id) it.copy(commentsCount = it.commentsCount + 1) else it },
+                        activeCommentPost = post.copy(commentsCount = post.commentsCount + 1)
+                    )
+                }
+                is Result.Failure -> {
+                    updateState { copy(isSubmittingComment = false, commentError = result.error.message) }
+                    if (result.error is AppError.Unauthorized) emitEffect(CommunityViewEffect.RequireAuth)
+                }
+            }
+        }
+    }
+
+    private fun confirmDeletePost() {
+        val post = viewState.value.pendingDeletePost ?: return
+        val useCase = deletePostUseCase ?: return
+        updateState { copy(pendingDeletePost = null, deletingPostIds = deletingPostIds + post.id) }
+        viewModelScope.launch {
+            when (val result = useCase(post.id)) {
+                is Result.Success -> {
+                    updateState {
+                        copy(
+                            deletingPostIds = deletingPostIds - post.id,
+                            posts = posts.filterNot { it.id == post.id },
+                            activeCommentPost = if (activeCommentPost?.id == post.id) null else activeCommentPost
+                        )
+                    }
+                    emitEffect(CommunityViewEffect.ShowMessage("Publicación eliminada."))
+                }
+                is Result.Failure -> {
+                    updateState { copy(deletingPostIds = deletingPostIds - post.id) }
+                    val effect = if (result.error is AppError.Unauthorized) {
+                        CommunityViewEffect.RequireAuth
+                    } else {
+                        CommunityViewEffect.ShowMessage(result.error.message)
+                    }
+                    emitEffect(effect)
+                }
+            }
+        }
+    }
+
+    private fun openReportPost(post: FeedPost) {
+        if (viewState.value.isGuest) {
+            emitEffect(CommunityViewEffect.RequireAuth)
+            return
+        }
+        updateState {
+            copy(
+                reportTarget = ReportTargetUi(
+                    targetType = ReportTargetType.POST,
+                    targetId = post.id,
+                    label = post.authorName
+                ),
+                reportError = null
+            )
+        }
+    }
+
+    private fun submitReport(reason: ReportReason, details: String) {
+        val target = viewState.value.reportTarget ?: return
+        val useCase = submitReportUseCase ?: return
+        if (viewState.value.isSubmittingReport) return
+        updateState { copy(isSubmittingReport = true, reportError = null) }
+        viewModelScope.launch {
+            val input = ContentReportInput(target.targetType, target.targetId, reason, details)
+            handleReportResult(target, useCase(input))
+        }
+    }
+
+    private fun handleReportResult(target: ReportTargetUi, result: Result<SubmittedReport>) {
+        when (result) {
+            is Result.Success -> {
+                updateState {
+                    val updatedPosts = if (target.targetType == ReportTargetType.POST) {
+                        posts.filterNot { it.id == target.targetId }
+                    } else {
+                        posts
+                    }
+                    copy(isSubmittingReport = false, reportTarget = null, reportError = null, posts = updatedPosts)
+                }
+                emitEffect(CommunityViewEffect.ShowMessage(result.data.message))
+            }
+            is Result.Failure -> handleReportError(result.error)
+        }
+    }
+
+    private fun handleReportError(err: AppError) {
+        when (err) {
+            is AppError.Unauthorized -> {
+                updateState { copy(isSubmittingReport = false, reportTarget = null) }
+                emitEffect(CommunityViewEffect.RequireAuth)
+            }
+            is AppError.Conflict -> {
+                updateState { copy(isSubmittingReport = false, reportTarget = null) }
+                emitEffect(CommunityViewEffect.ShowMessage(err.message))
+            }
+            else -> updateState { copy(isSubmittingReport = false, reportError = err.message) }
         }
     }
 

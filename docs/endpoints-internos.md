@@ -50,11 +50,11 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `GET /api/v1/users/favorites` | `GetFavoritesUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-17) |
 | `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Cliente implementado; GET oficial 404; backend spec 026 pendiente en main 01dad6e (2026-11-14, FT-18) |
 | `POST /api/v1/feed/posts` | `CreateFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 10/hora por usuario | Cliente implementado; backend spec 024 pendiente en main 01dad6e; sin POST real de prueba (2026-11-14, FT-18) |
-| `DELETE /api/v1/feed/posts/{id}` | `DeletePostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer autor | 20/hora por usuario | Pendiente (FT-19, spec 024) |
-| `POST /api/v1/feed/posts/{id}/like` | `TogglePostLikeUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-19, spec 039) |
-| `GET /api/v1/feed/posts/{id}/comments` | `GetPostCommentsUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Pendiente (FT-19, spec 025) |
-| `POST /api/v1/feed/posts/{id}/comments` | `AddCommentUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 30/hora por usuario | Pendiente (FT-19, spec 025) |
-| `POST /api/v1/reports` | `SubmitReportUseCase` -> `ReportsRepository` -> `ReportsApiService` | Bearer (no invitado) | 10/hora por usuario | Pendiente (FT-19, spec 040) |
+| `DELETE /api/v1/feed/posts/{id}` | `DeleteFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer autor | 20/hora por usuario | Implementado cliente + MockWebServer (FT-19, 2026-11-21; backend Spec 024 pendiente) |
+| `POST /api/v1/feed/posts/{id}/like` | `TogglePostLikeUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + MockWebServer (FT-19, 2026-11-21; backend Spec 039 pendiente) |
+| `GET /api/v1/feed/posts/{id}/comments` | `GetFeedCommentsUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (Invitado o Registrado) | 60/min por usuario | Implementado cliente + backend (`FT-19`, Spec 025, 2026-11-21) |
+| `POST /api/v1/feed/posts/{id}/comments` | `AddFeedCommentUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 30/hora por usuario | Implementado cliente + backend (`FT-19`, Spec 025, 2026-11-21) |
+| `POST /api/v1/reports` | `SubmitContentReportUseCase` -> `ReportsRepository` -> `ReportsApiService` | Bearer (no invitado) | 10/hora por usuario | Implementado cliente + backend (`FT-19`, Spec 040, 2026-11-21) |
 | `GET /api/v1/offers/search` | `SearchOffersUseCase` -> `DiscoveryRepository` -> `DiscoveryApiService` | Bearer (registrado o invitado, 2 km) | `read-heavy` backend | Implementado cliente / MockWebServer y backend validado (FT-20, 2026-11-20, spec 041) |
 | `GET /api/v1/feed/offers` | `GetOfferFeedUseCase` -> `OfferFeedRepository` -> `OfferFeedApiService` | Bearer (no invitado) | `read-heavy` backend | Implementado cliente / MockWebServer y backend validado (FT-30, 2026-11-20, spec 042 v2.0.0) |
 | `GET /api/v1/users/me/interests` | `GetMyInterestsUseCase` -> `InterestsRepository` -> `InterestsApiService` | Bearer (no invitado) | `read-heavy` backend | Implementado cliente / MockWebServer y backend validado (FT-30, 2026-11-20, spec 054) |
@@ -97,6 +97,7 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | FT-26 | `GET /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/reviews/{reviewId}/like`, `POST /api/v1/merchants/reviews/{reviewId}/replies` | Calificación 1..5, comentarios/respuestas moderados (`ProfanityFilter` + IA), likes en reseñas y promedio real en `MerchantProfileScreen`. |
 | FT-31 | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/like` | Alternancia de Me gusta sobre ofertas de producto y conteo público (`LikesCount`). |
 | FT-32 | `GET /api/v1/community/friends-activity` | Solo comentarios y likes de ofertas de amigos conectados y del usuario actual. |
+| FT-19 | `POST /api/v1/feed/posts/{id}/like`, `GET`/`POST /api/v1/feed/posts/{id}/comments`, `DELETE /api/v1/feed/posts/{id}`, `POST /api/v1/reports` | Likes optimistas con rollback, comentarios moderados (max 300), borrado de autor y reporte tipificado con deduplicación 24h y exclusión CSAM. |
 
 ## Plantilla para nuevas filas
 

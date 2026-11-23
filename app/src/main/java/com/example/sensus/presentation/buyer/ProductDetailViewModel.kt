@@ -3,9 +3,13 @@ package com.example.sensus.presentation.buyer
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.ContentReportInput
+import com.example.sensus.domain.model.ReportReason
+import com.example.sensus.domain.model.ReportTargetType
 import com.example.sensus.domain.usecase.GetOfferAlternativesUseCase
 import com.example.sensus.domain.usecase.GetOfferDetailUseCase
 import com.example.sensus.domain.usecase.RegisterOfferViewUseCase
+import com.example.sensus.domain.usecase.SubmitContentReportUseCase
 import com.example.sensus.domain.usecase.ToggleOfferLikeUseCase
 import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +22,8 @@ class ProductDetailViewModel @Inject constructor(
     private val getDetail: GetOfferDetailUseCase,
     private val registerView: RegisterOfferViewUseCase,
     private val getAlternatives: GetOfferAlternativesUseCase? = null,
-    private val toggleLikeUseCase: ToggleOfferLikeUseCase? = null
+    private val toggleLikeUseCase: ToggleOfferLikeUseCase? = null,
+    private val submitReportUseCase: SubmitContentReportUseCase? = null
 ) : MviViewModel<ProductDetailViewState, ProductDetailViewIntent, ProductDetailViewEffect>(ProductDetailViewState()) {
     private var loadJob: Job? = null
     private val viewedOffers = mutableSetOf<String>()
@@ -30,6 +35,9 @@ class ProductDetailViewModel @Inject constructor(
                 copy(quantity = intent.quantity.coerceIn(1, (details?.offer?.unitsLeft ?: 1).coerceAtLeast(1)))
             }
             is ProductDetailViewIntent.ToggleLike -> toggleLike(intent.offerId)
+            ProductDetailViewIntent.OpenReport -> updateState { copy(showReportDialog = true, reportError = null) }
+            ProductDetailViewIntent.CloseReport -> updateState { copy(showReportDialog = false, reportError = null) }
+            is ProductDetailViewIntent.SubmitReport -> submitReport(intent.offerId, intent.reason, intent.details)
         }
     }
 
@@ -101,6 +109,34 @@ class ProductDetailViewModel @Inject constructor(
                         emitEffect(ProductDetailViewEffect.RequireAuth)
                     } else {
                         emitEffect(ProductDetailViewEffect.ShowMessage(result.error.message))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun submitReport(offerId: String, reason: ReportReason, details: String) {
+        val useCase = submitReportUseCase ?: return
+        if (viewState.value.isSubmittingReport) return
+        updateState { copy(isSubmittingReport = true, reportError = null) }
+        viewModelScope.launch {
+            val input = ContentReportInput(ReportTargetType.OFFER, offerId, reason, details)
+            when (val result = useCase(input)) {
+                is Result.Success -> {
+                    updateState { copy(isSubmittingReport = false, showReportDialog = false, reportError = null) }
+                    emitEffect(ProductDetailViewEffect.ShowMessage(result.data.message))
+                }
+                is Result.Failure -> {
+                    when (val error = result.error) {
+                        is AppError.Unauthorized -> {
+                            updateState { copy(isSubmittingReport = false, showReportDialog = false) }
+                            emitEffect(ProductDetailViewEffect.RequireAuth)
+                        }
+                        is AppError.Conflict -> {
+                            updateState { copy(isSubmittingReport = false, showReportDialog = false) }
+                            emitEffect(ProductDetailViewEffect.ShowMessage(error.message))
+                        }
+                        else -> updateState { copy(isSubmittingReport = false, reportError = error.message) }
                     }
                 }
             }

@@ -11,7 +11,11 @@ data class FeedPostDto(
     val distanceMeters: Int = 0,
     val imageUrl: String? = null,
     val merchantId: String? = null,
-    val merchantName: String? = null
+    val merchantName: String? = null,
+    val likesCount: Int = 0,
+    val isLikedByMe: Boolean = false,
+    val commentsCount: Int = 0,
+    val isMine: Boolean = false
 )
 
 @Serializable
@@ -24,4 +28,36 @@ data class CreateFeedPostRequest(
     val longitude: Double,
     val mediaId: String? = null,
     val merchantId: String? = null
+)
+
+@Serializable
+data class TogglePostLikeDto(
+    val postId: String = "",
+    val likesCount: Int = 0,
+    val isLikedByMe: Boolean = false
+)
+
+@Serializable
+data class CreateFeedCommentRequest(
+    val content: String
+)
+
+@Serializable
+data class FeedCommentDto(
+    val id: String,
+    val postId: String,
+    val authorUserId: String = "",
+    val authorName: String = "Usuario",
+    val authorPhotoUrl: String? = null,
+    val content: String = "",
+    val createdAtUtc: String = ""
+)
+
+@Serializable
+data class PagedFeedCommentsDto(
+    val items: List<FeedCommentDto> = emptyList(),
+    val totalCount: Int = 0,
+    val pageNumber: Int = 1,
+    val pageSize: Int = 20,
+    val hasNextPage: Boolean = false
 )
