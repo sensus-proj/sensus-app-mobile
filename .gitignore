@@ -39,3 +39,6 @@ signing/
 # Entorno dual
 .agent/skills/
 sensus-back/
+
+# FT-27: lo genera el CI antes de OSV-Scanner (LENIENT, no se versiona)
+/app/gradle.lockfile

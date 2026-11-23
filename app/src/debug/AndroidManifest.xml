@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <application>
+    <application android:allowBackup="false">
         <!-- Solo debug: anfitrión de pruebas instrumentadas con Hilt (FT-27). -->
         <activity
             android:name="com.example.sensus.HiltTestActivity"

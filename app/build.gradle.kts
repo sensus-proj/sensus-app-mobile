@@ -292,6 +292,17 @@ ktlint {
     ignoreFailures.set(false)
 }
 
+// FT-27: OSV-Scanner necesita un lockfile como fuente de dependencias. El CI lo genera con
+// `:app:dependencies --configuration releaseRuntimeClasspath --write-locks`; en modo LENIENT
+// la compilación local no falla si el lockfile no existe o queda desactualizado.
+dependencyLocking {
+    lockMode.set(LockMode.LENIENT)
+}
+
+configurations.matching { it.name == "releaseRuntimeClasspath" }.configureEach {
+    resolutionStrategy.activateDependencyLocking()
+}
+
 val pitestCli: Configuration by configurations.creating
 
 dependencies {

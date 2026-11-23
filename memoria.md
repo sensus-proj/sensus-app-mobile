@@ -1288,3 +1288,8 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - Al hacerse bloqueantes, los escáneres de `security-scanners.yml` fallaron en el PR #36 por configuración de herramientas y no por el código de FT-11..FT-16: SonarCloud con Automatic Analysis activo, Snyk con `JAVA_HOME` inválido dentro del contenedor, acción de ktlint con versión distinta a la del proyecto (1,424 avisos en todo el repo), Semgrep sin `pkg_resources`, OSV sin fuentes de dependencias, Dependency-Check con falso positivo en `gradle-wrapper.jar` y avisos de MobSFscan.
 - Decisión: el PR de FT-11..FT-16 usa la versión de `develop` del flujo y el endurecimiento se tramita en un PR aparte desde `develop` (T27.9). No se suprimió ni desactivó ningún hallazgo.
 - mobsfscan marcó `val key = "20.0:-99.0:2000:20"` en `PublishingApiTest` (CWE-798); era la clave de página del feed y se renombró a `cacheKey`.
+
+### FT-27 — Escáneres corregidos dentro del PR #36 (2026-11-23)
+
+- La responsable de la rama pidió corregir los escáneres en el mismo PR. Se restauró el flujo bloqueante y se corrigió cada herramienta sin desactivar ninguna: Semgrep (`setuptools<81`), ktlint de la acción (1.0.1 y estilo Android, igual que Gradle), OSV (lockfile de `releaseRuntimeClasspath` generado en CI, bloqueo LENIENT), Snyk (CLI en el runner), `allowBackup=false` en el manifiesto debug y sangría del `build.gradle.kts` raíz.
+- Quedan para decisión del equipo tres falsos positivos que solo se resuelven con supresión justificada (Dependency-Check en el wrapper, Semgrep `exported_activity`, StrandHogg en MobSFscan) y dos acciones externas: desactivar Automatic Analysis en SonarCloud y publicar `assetlinks.json` en rodnix.com.mx.
