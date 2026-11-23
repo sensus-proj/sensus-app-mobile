@@ -353,10 +353,10 @@ class PublishingApiTest {
     fun offlineFeed_usesOnlyCacheForTheSameQuery() = runTest {
         val api = mockk<FeedApiService>()
         coEvery { api.nearby(any(), any(), any(), any(), any()) } throws IOException("offline")
-        val key = "20.0:-99.0:2000:20"
-        every { dao.getPage(key, 1) } returns listOf(
-            FeedPostEntity("broken", key, 1, 0, "{invalid"),
-            FeedPostEntity("post-1", key, 1, 1, postJson)
+        val cacheKey = "20.0:-99.0:2000:20"
+        every { dao.getPage(cacheKey, 1) } returns listOf(
+            FeedPostEntity("broken", cacheKey, 1, 0, "{invalid"),
+            FeedPostEntity("post-1", cacheKey, 1, 1, postJson)
         )
         val result = FeedRepositoryImpl(api, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Success
         assertTrue(result.data.isCached)
