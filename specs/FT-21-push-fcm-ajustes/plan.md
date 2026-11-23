@@ -62,3 +62,5 @@ El ViewModel observa cambios de identidad sin exponer tokens y limpia preferenci
 Constructor de ViewModel conservado con tres casos de uso. Fuentes de pruebas propias adaptadas y
 NotificationPreferencesSessionTest agregado para invitados, logout y cambio de cuenta durante operaciones.
 No se ejecutó Gradle; validación de compilación, pruebas y gates pendiente por main.
+
+El caso de uso de registro reutiliza NotificationPermissionChecker para la activación manual y el flujo de FT-39. Si Android revoca el permiso mientras Firebase resuelve el token, el caso de uso termina antes de la petición de registro.

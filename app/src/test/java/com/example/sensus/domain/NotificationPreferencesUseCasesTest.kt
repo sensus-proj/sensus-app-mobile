@@ -4,6 +4,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.NotificationsDevice
 import com.example.sensus.domain.model.NotificationsPreferences
+import com.example.sensus.domain.repository.NotificationPermissionChecker
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.example.sensus.domain.repository.NotificationsRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -23,6 +24,7 @@ import org.junit.Test
 class NotificationPreferencesUseCasesTest {
     private val repository = mockk<NotificationsRepository>()
     private val provider = mockk<NotificationsPushDeviceProvider>()
+    private val permission = mockk<NotificationPermissionChecker> { every { canPostNotifications() } returns true }
     private val session = mockk<SessionRepository> {
         every { sessionState } returns MutableStateFlow(
             SessionState(isSessionActive = true, activeToken = java.util.UUID.randomUUID().toString())
@@ -50,10 +52,34 @@ class NotificationPreferencesUseCasesTest {
     }
 
     @Test
+    fun blockedAndroidNotificationsNeverReachFirebaseOrRegistration() = runTest {
+        every { permission.canPostNotifications() } returns false
+        val useCase = NotificationsRegisterDeviceUseCase(provider, repository, session, permission)
+        val expected = Result.Failure(AppError.Forbidden(NotificationsRegisterDeviceUseCase.PERMISSION_REQUIRED))
+
+        assertEquals(expected, useCase())
+        assertEquals(expected, useCase("refreshed-sdk-token"))
+        coVerify(exactly = 0) { provider.getDevice(any()) }
+        coVerify(exactly = 0) { repository.registerDevice(any()) }
+    }
+
+    @Test
+    fun permissionRevokedWhileGettingFirebaseTokenPreventsRegistration() = runTest {
+        every { permission.canPostNotifications() } returns true andThen false
+        coEvery { provider.getDevice() } returns Result.Success(NotificationsDevice("installation-id", "sdk-token-from-provider"))
+
+        val result = NotificationsRegisterDeviceUseCase(provider, repository, session, permission)()
+
+        assertEquals(Result.Failure(AppError.Forbidden(NotificationsRegisterDeviceUseCase.PERMISSION_REQUIRED)), result)
+        coVerify(exactly = 1) { provider.getDevice() }
+        coVerify(exactly = 0) { repository.registerDevice(any()) }
+    }
+
+    @Test
     fun missingFirebaseConfigurationNeverRegistersDevice() = runTest {
         val failure = Result.Failure(AppError.NotFound(NotificationsPushDeviceProvider.CONFIGURATION_UNAVAILABLE))
         coEvery { provider.getDevice() } returns failure
-        assertEquals(failure, NotificationsRegisterDeviceUseCase(provider, repository, session)())
+        assertEquals(failure, NotificationsRegisterDeviceUseCase(provider, repository, session, permission)())
         coVerify(exactly = 0) { repository.registerDevice(any()) }
     }
 
@@ -63,7 +89,7 @@ class NotificationPreferencesUseCasesTest {
         val failure = Result.Failure(AppError.Unauthorized())
         coEvery { provider.getDevice() } returns Result.Success(device)
         coEvery { repository.registerDevice(device) } returns failure
-        assertEquals(failure, NotificationsRegisterDeviceUseCase(provider, repository, session)())
+        assertEquals(failure, NotificationsRegisterDeviceUseCase(provider, repository, session, permission)())
         coVerify(exactly = 1) { repository.registerDevice(device) }
     }
 }

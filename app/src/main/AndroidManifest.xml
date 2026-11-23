@@ -53,16 +53,11 @@
                 <data
                     android:scheme="https"
                     android:host="rodnix.com.mx"
-                    android:pathPrefix="/sensus/reset" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                    android:path="/sensus/reset" />
                 <data
-                    android:scheme="http"
+                    android:scheme="https"
                     android:host="rodnix.com.mx"
-                    android:pathPrefix="/sensus/reset" />
+                    android:path="/sensus/reset/" />
             </intent-filter>
 
             <!-- FT-25 Deep Link: sensus://invitacion?code=... -->

@@ -37,6 +37,7 @@ import com.example.sensus.presentation.buyer.CommunityScreen
 import com.example.sensus.presentation.buyer.FriendDeepLinkHandler
 import com.example.sensus.presentation.buyer.FriendSharedOffersActions
 import com.example.sensus.presentation.buyer.FriendSharedOffersScreen
+import com.example.sensus.presentation.buyer.MyClaimsScreen
 import com.example.sensus.presentation.buyer.NotificationsScreen
 import com.example.sensus.presentation.buyer.ProductDetailCallbacks
 import com.example.sensus.presentation.buyer.ProductDetailScreen
@@ -46,6 +47,7 @@ import com.example.sensus.presentation.buyer.SavedInterestsScreen
 import com.example.sensus.presentation.buyer.SensiChatScreen
 import com.example.sensus.presentation.buyer.SensiOfferActions
 import com.example.sensus.presentation.buyer.StoreCatalogScreen
+import com.example.sensus.presentation.common.GuestModeBannerIfVisible
 import com.example.sensus.presentation.merchant.MerchantDashboardCallbacks
 import com.example.sensus.presentation.merchant.MerchantDashboardScreen
 import com.example.sensus.presentation.merchant.MerchantEditOfferScreen
@@ -53,6 +55,7 @@ import com.example.sensus.presentation.merchant.MerchantNewOfferScreen
 import com.example.sensus.presentation.merchant.MerchantProfileScreen
 import com.example.sensus.presentation.merchant.MerchantRegisterScreen
 import com.example.sensus.presentation.merchant.MerchantSalesScreen
+import com.example.sensus.presentation.support.HelpFaqScreen
 import com.example.sensus.theme.SensusBackground
 
 private const val TAB_SENSI = 2
@@ -60,6 +63,8 @@ internal const val TAB_COMMUNITY = 3
 private const val TAB_PROFILE = 4
 internal const val MERCHANT_TAB_SALES = 2
 private const val MERCHANT_TAB_PROFILE = 3
+
+private const val GUEST_BANNER_BOTTOM_PADDING_DP = 100
 
 @Composable
 fun MainAppContainer(
@@ -96,7 +101,7 @@ fun MainAppContainer(
         handleMainBackNavigation(state, context)
     }
 
-    val renderedOverlay = renderFullscreenOverlay(state, isGuest)
+    val renderedOverlay = renderFullscreenOverlay(state, isGuest, onNavigateToTerms)
     if (!renderedOverlay) {
         MainAppScaffoldContent(
             state = state,
@@ -109,12 +114,17 @@ fun MainAppContainer(
 }
 
 @Composable
-private fun renderFullscreenOverlay(state: MainAppState, isGuest: Boolean): Boolean =
-    renderPrimaryOverlay(state, isGuest) || renderSecondaryOverlay(state, isGuest)
+private fun renderFullscreenOverlay(state: MainAppState, isGuest: Boolean, onNavigateToTerms: () -> Unit): Boolean =
+    renderPrimaryOverlay(state, isGuest, onNavigateToTerms) || renderSecondaryOverlay(state, isGuest)
 
 @Composable
-private fun renderPrimaryOverlay(state: MainAppState, isGuest: Boolean): Boolean {
+private fun renderPrimaryOverlay(state: MainAppState, isGuest: Boolean, onNavigateToTerms: () -> Unit): Boolean {
     when {
+        state.showHelpCenter -> HelpFaqScreen(
+            onNavigateBack = { state.showHelpCenter = false },
+            onOpenTerms = onNavigateToTerms
+        )
+        state.showMyClaims -> MyClaimsScreen(onNavigateBack = { state.showMyClaims = false })
         state.showNotifications -> RenderNotificationsOverlay(state)
         state.activeRouteOffer != null -> RenderRouteOverlay(state, isGuest)
         state.activeApartadoOffer != null -> RenderApartadoOfferOverlay(state)
@@ -291,6 +301,11 @@ private fun MainAppScaffoldContent(state: MainAppState, isGuest: Boolean, onLogo
             } else {
                 MerchantTabContent(state = state)
             }
+            GuestModeBannerIfVisible(
+                visible = isGuest && !isKeyboardOpen && !state.isMerchantMode,
+                onRegisterClick = { state.showGuestPrompt = true },
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = GUEST_BANNER_BOTTOM_PADDING_DP.dp)
+            )
             FamBackdropScrim(state.isFamOpen, animProgress) { state.isFamOpen = false }
             if (!isKeyboardOpen) {
                 Box(
@@ -365,7 +380,9 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
                 onLogoutClick = { state.showConfirmLogout = true },
                 onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
                 onTermsClick = onNavigateToTerms,
+                onHelpSupportClick = { state.showHelpCenter = true },
                 onHistoryClick = { runWhenAuthenticated(state, isGuest) { state.showSavedInterests = true } },
+                onMyClaimsClick = { runWhenAuthenticated(state, isGuest) { state.showMyClaims = true } },
                 onGuestActionRequired = { state.showGuestPrompt = true }
             )
         )

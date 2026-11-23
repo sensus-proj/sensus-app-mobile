@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.sensus.domain.model.FriendInviteCodec
+import com.example.sensus.presentation.auth.PasswordResetLink
 import com.example.sensus.presentation.common.FriendRequestNotifier
 import com.example.sensus.presentation.push.PushLaunchParser
 import com.example.sensus.presentation.push.PushOpenRequests
@@ -79,15 +80,12 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         fun parseResetToken(intent: Intent?): String? {
-            val data = intent?.data ?: return null
-            val isReset = (data.scheme.equals("sensus", ignoreCase = true) && data.host.equals("reset", ignoreCase = true)) ||
-                (data.host?.equals("rodnix.com.mx", ignoreCase = true) == true && (data.path?.startsWith("/sensus/reset") == true))
-            return if (isReset) data.getQueryParameter("token") else null
+            return intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString?.let(PasswordResetLink::parse)
         }
 
         fun parseFriendInviteUrl(intent: Intent?): String? {
-            val raw = intent?.dataString ?: return null
-            if (raw.startsWith(FriendRequestNotifier.OPEN_REQUESTS_URI)) return raw
+            val raw = intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString ?: return null
+            if (raw == FriendRequestNotifier.OPEN_REQUESTS_URI) return raw
             return raw.takeIf { FriendInviteCodec.parseInvite(it) != null }
         }
     }

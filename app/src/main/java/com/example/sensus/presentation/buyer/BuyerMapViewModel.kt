@@ -11,8 +11,10 @@ import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
+import com.example.sensus.domain.usecase.GetNearbyOffersUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.SavePreferredMapLayerUseCase
+import com.example.sensus.domain.usecase.nearbyRadiusKm
 import com.example.sensus.presentation.base.MviViewModel
 import com.example.sensus.presentation.common.MapLayerStyle
 import com.example.sensus.presentation.common.toDomain
@@ -28,12 +30,12 @@ private const val MAP_METERS_PER_KM = 1000
 
 @HiltViewModel
 class BuyerMapViewModel @Inject constructor(
-    private val offersRepository: OffersRepository,
     private val locationRepository: LocationRepository,
     private val sessionRepository: SessionRepository,
     private val getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase,
     private val savePreferredMapLayerUseCase: SavePreferredMapLayerUseCase,
-    private val getNearbyMerchantsUseCase: GetNearbyMerchantsUseCase
+    private val getNearbyMerchantsUseCase: GetNearbyMerchantsUseCase,
+    private val getNearbyOffers: GetNearbyOffersUseCase
 ) : MviViewModel<BuyerMapViewState, BuyerMapViewIntent, BuyerMapViewEffect>(
     BuyerMapViewState(
         selectedLayer = getPreferredMapLayerUseCase.peekCached()?.toStyle() ?: MapLayerStyle.STANDARD
@@ -47,12 +49,12 @@ class BuyerMapViewModel @Inject constructor(
         getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase,
         savePreferredMapLayerUseCase: SavePreferredMapLayerUseCase
     ) : this(
-        offersRepository,
         locationRepository,
         sessionRepository,
         getPreferredMapLayerUseCase,
         savePreferredMapLayerUseCase,
-        GetNearbyMerchantsUseCase(NoOpMapMerchantRepository)
+        GetNearbyMerchantsUseCase(NoOpMapMerchantRepository),
+        GetNearbyOffersUseCase(offersRepository)
     )
 
     @Volatile
@@ -63,7 +65,7 @@ class BuyerMapViewModel @Inject constructor(
 
     init {
         initialCacheLoad = viewModelScope.launch {
-            val offers = offersRepository.readCachedOffers().filter { it.isPubliclyVisible }
+            val offers = getNearbyOffers.readCachedOffers().filter { it.isPubliclyVisible }
             ensureActive()
             updateState { copy(offers = offers) }
         }
@@ -75,7 +77,7 @@ class BuyerMapViewModel @Inject constructor(
 
     private fun refreshNearbyOffers(location: UserLocation, radiusKm: Float, force: Boolean = false) {
         val isGuest = sessionRepository.sessionState.value.isGuest
-        val search = NearbySearch(location, GuestRadiusPolicy.clampRadius(radiusKm, isGuest), isGuest)
+        val search = NearbySearch(location, nearbyRadiusKm(radiusKm, isGuest), isGuest)
         if (!force && search == currentSearch && nearbyRefresh?.isActive == true) return
         if (currentSearch != null && (force || search != currentSearch)) {
             initialCacheLoad?.cancel()
@@ -89,7 +91,7 @@ class BuyerMapViewModel @Inject constructor(
     }
 
     private suspend fun refreshOffers(search: NearbySearch) {
-        val result = offersRepository.fetchNearbyOffers(search.location.latitude, search.location.longitude, search.radiusKm.toDouble())
+        val result = getNearbyOffers(search.location, search.radiusKm, search.isGuest)
         currentCoroutineContext().ensureActive()
         if (result is Result.Success) {
             initialCacheLoad?.cancel()
@@ -121,6 +123,8 @@ class BuyerMapViewModel @Inject constructor(
         var lastIsStoreOpen: Boolean? = null
         viewModelScope.launch {
             sessionRepository.sessionState.collect { session ->
+                val previousRadius = viewState.value.selectedRadiusKm
+                val preferredRadius = if (session.isGuest) null else getNearbyOffers.getPreferredRadiusKm()
                 val userChanged = lastIsGuest != null &&
                     (lastEmail != session.activeEmail || lastIsGuest != session.isGuest)
                 val storeVisibilityChanged = lastIsStoreOpen != null && lastIsStoreOpen != session.isStoreOpen
@@ -130,10 +134,10 @@ class BuyerMapViewModel @Inject constructor(
                 updateState {
                     copy(
                         isGuest = session.isGuest,
-                        selectedRadiusKm = GuestRadiusPolicy.clampRadius(selectedRadiusKm, session.isGuest)
+                        selectedRadiusKm = nearbyRadiusKm(preferredRadius ?: selectedRadiusKm, session.isGuest)
                     )
                 }
-                if (userChanged || storeVisibilityChanged) {
+                if (userChanged || storeVisibilityChanged || viewState.value.selectedRadiusKm != previousRadius) {
                     refreshNearbyOffers(viewState.value.userLocation, viewState.value.selectedRadiusKm, force = true)
                 }
             }
@@ -164,6 +168,7 @@ class BuyerMapViewModel @Inject constructor(
             is BuyerMapViewIntent.MerchantSelected -> updateState { copy(selectedMerchant = intent.merchant, selectedOffer = null) }
             is BuyerMapViewIntent.LocationPermissionGranted -> handlePermissionGranted(intent.granted)
             is BuyerMapViewIntent.RefreshLocation -> handleRefreshLocation(intent.forceFresh)
+            is BuyerMapViewIntent.ManualLocationSelected -> selectManualLocation(intent.location)
             is BuyerMapViewIntent.RadiusSelected -> handleRadiusSelected(intent.radiusKm)
             is BuyerMapViewIntent.LayerSelected -> handleLayerSelected(intent.layer)
             BuyerMapViewIntent.RefreshNearby -> refreshNearbyOffers(
@@ -171,6 +176,11 @@ class BuyerMapViewModel @Inject constructor(
                 viewState.value.selectedRadiusKm
             )
         }
+    }
+
+    private fun selectManualLocation(location: UserLocation) {
+        updateState { copy(userLocation = location, recenterSignal = recenterSignal + 1) }
+        refreshNearbyOffers(location, viewState.value.selectedRadiusKm)
     }
 
     private fun handleLayerSelected(layer: MapLayerStyle) {
@@ -237,12 +247,13 @@ class BuyerMapViewModel @Inject constructor(
 
     private fun handleRadiusSelected(radiusKm: Float) {
         val isGuest = viewState.value.isGuest || sessionRepository.sessionState.value.isGuest
-        if (isGuest && !GuestRadiusPolicy.isRadiusAllowedForGuest(radiusKm)) {
+        if (isGuest && radiusKm != GuestRadiusPolicy.GUEST_MAX_RADIUS_KM) {
             updateState { copy(selectedRadiusKm = GuestRadiusPolicy.GUEST_MAX_RADIUS_KM) }
             emitEffect(BuyerMapViewEffect.RequireAuthForRadius)
         } else {
             val safeRadius = GuestRadiusPolicy.clampRadius(radiusKm, isGuest = false)
             updateState { copy(selectedRadiusKm = safeRadius) }
+            if (!isGuest) viewModelScope.launch { getNearbyOffers.savePreferredRadiusKm(safeRadius) }
             refreshNearbyOffers(viewState.value.userLocation, safeRadius)
         }
     }

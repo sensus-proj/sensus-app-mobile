@@ -72,6 +72,11 @@ class DataMappersTest {
         )
 
         val merchant = comercioDto.toDomain()
+        assertNull(merchant.isVerified)
+        assertEquals(emptyList<String>(), merchant.paymentMethods)
+        val published = comercioDto.copy(isVerified = true, paymentMethods = listOf(" Efectivo ", "", "Efectivo")).toDomain()
+        assertEquals(true, published.isVerified)
+        assertEquals(listOf("Efectivo"), published.paymentMethods)
         assertEquals("m-1", merchant.id)
         assertEquals("Sábado", merchant.horarios.first().dia)
 

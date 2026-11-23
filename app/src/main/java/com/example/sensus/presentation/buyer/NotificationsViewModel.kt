@@ -110,7 +110,7 @@ class NotificationsViewModel @Inject constructor(
                     emitEffect(NotificationsViewEffect.DeviceRegistered)
                 }
                 is Result.Failure -> updateState {
-                    copy(isRegistering = false, error = result.error.toNotificationError(device = true))
+                    copy(isRegistering = false, error = result.error.toDeviceNotificationError())
                 }
             }
         }
@@ -138,14 +138,16 @@ private fun AppError.toLocationError(): NotificationsError = when {
     else -> toNotificationError()
 }
 
-private fun AppError.toNotificationError(device: Boolean = false): NotificationsError = when (this) {
+private fun AppError.toDeviceNotificationError(): NotificationsError = when {
+    this is AppError.Forbidden && message == NotificationsRegisterDeviceUseCase.PERMISSION_REQUIRED -> NotificationsError.PERMISSION
+    this is AppError.NotFound && message == NotificationsPushDeviceProvider.CONFIGURATION_UNAVAILABLE -> NotificationsError.FIREBASE
+    else -> toNotificationError()
+}
+
+private fun AppError.toNotificationError(): NotificationsError = when (this) {
     is AppError.Network -> NotificationsError.NETWORK
     is AppError.Unauthorized, is AppError.Forbidden -> NotificationsError.SESSION
-    is AppError.NotFound -> if (device && message == NotificationsPushDeviceProvider.CONFIGURATION_UNAVAILABLE) {
-        NotificationsError.FIREBASE
-    } else {
-        NotificationsError.UNAVAILABLE
-    }
+    is AppError.NotFound -> NotificationsError.UNAVAILABLE
     is AppError.Validation -> NotificationsError.VALIDATION
     else -> NotificationsError.GENERIC
 }

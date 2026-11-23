@@ -26,12 +26,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
+import com.example.sensus.domain.model.MerchantOfferMetrics
 import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.OfferPublishingPolicy
@@ -114,7 +115,7 @@ fun MerchantDashboardScreen(callbacks: MerchantDashboardCallbacks, viewModel: Me
     MerchantDashboardFeed(
         dashState = dashState,
         callbacks = callbacks,
-        onSelectFilter = { viewModel.dispatchIntent(MerchantDashboardViewIntent.SelectOfferFilter(it)) },
+        onIntent = viewModel::dispatchIntent,
         onAdjustStockClick = { selectedOfferForStock = it },
         modifier = modifier
     )
@@ -135,7 +136,7 @@ fun MerchantDashboardScreen(callbacks: MerchantDashboardCallbacks, viewModel: Me
 private fun MerchantDashboardFeed(
     dashState: MerchantDashboardViewState,
     callbacks: MerchantDashboardCallbacks,
-    onSelectFilter: (MerchantOfferFilter) -> Unit,
+    onIntent: (MerchantDashboardViewIntent) -> Unit,
     onAdjustStockClick: (ProductOffer) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -148,10 +149,10 @@ private fun MerchantDashboardFeed(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { MerchantStoreBannerCard(store = store, onSwitchToBuyer = callbacks.onSwitchToBuyer) }
+        item { MerchantStoreBannerCard(store, dashState.hasMerchantProfile, callbacks.onSwitchToBuyer) }
         item { MerchantQuickActionsRow(onNewOfferClick = callbacks.onNewOfferClick, onScanQrClick = callbacks.onScanQrClick) }
-        item { MerchantKpisCard(store = store) }
-        item { CommerceFeedFeedback(dashState.isLoading, dashState.errorMessage) }
+        if (!dashState.isLoading && dashState.errorMessage == null) item { MerchantKpisCard(metrics = dashState.metrics) }
+        item { CommerceFeedFeedback(dashState.isLoading, dashState.errorMessage) { onIntent(MerchantDashboardViewIntent.Refresh) } }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -162,11 +163,11 @@ private fun MerchantDashboardFeed(
                 MerchantOfferFilterRow(
                     selectedFilter = dashState.selectedFilter,
                     allOffers = dashState.allStoreOffers,
-                    onSelectFilter = onSelectFilter
+                    onSelectFilter = { onIntent(MerchantDashboardViewIntent.SelectOfferFilter(it)) }
                 )
             }
         }
-        if (visibleOffers.isEmpty()) {
+        if (visibleOffers.isEmpty() && !dashState.isLoading && dashState.errorMessage == null) {
             item {
                 EmptyMerchantOffersCard(
                     selectedFilter = dashState.selectedFilter,
@@ -193,7 +194,7 @@ private fun MerchantOfferFilterRow(selectedFilter: MerchantOfferFilter, allOffer
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         MerchantOfferFilter.entries.forEach { filter ->
-            val count = filterOfferCount(filter, allOffers)
+            val count = allOffers.count(filter::matches)
             val selected = filter == selectedFilter
             val background by animateColorAsState(if (selected) SensusVioletBg else SensusSurface, label = "offerFilter")
             Surface(
@@ -205,7 +206,7 @@ private fun MerchantOfferFilterRow(selectedFilter: MerchantOfferFilter, allOffer
                     .selectable(selected) { onSelectFilter(filter) }
             ) {
                 Text(
-                    text = "${filter.label} ($count)",
+                    text = stringResource(R.string.merchant_inventory_filter_count, stringResource(filter.labelResource), count),
                     style = MaterialTheme.typography.labelMedium,
                     color = if (selected) SensusVioletInk else SensusTextSecondary,
                     textAlign = TextAlign.Center,
@@ -216,18 +217,6 @@ private fun MerchantOfferFilterRow(selectedFilter: MerchantOfferFilter, allOffer
     }
 }
 
-private fun filterOfferCount(filter: MerchantOfferFilter, allOffers: List<ProductOffer>): Int = when (filter) {
-    MerchantOfferFilter.ACTIVE -> allOffers.count { it.isPubliclyVisible }
-    MerchantOfferFilter.PAUSED -> allOffers.count { isPausedOffer(it) }
-    MerchantOfferFilter.ARCHIVED -> allOffers.count { isArchivedOrExpired(it) }
-}
-
-private fun isPausedOffer(offer: ProductOffer): Boolean = offer.status == OfferLifecycleStatus.PAUSED ||
-    (offer.status == OfferLifecycleStatus.ACTIVE && offer.unitsLeft <= 0) ||
-    offer.status == OfferLifecycleStatus.SOLD_OUT
-
-private fun isArchivedOrExpired(offer: ProductOffer): Boolean = offer.status == OfferLifecycleStatus.ARCHIVED || offer.status == OfferLifecycleStatus.EXPIRED
-
 @Composable
 private fun EmptyMerchantOffersCard(selectedFilter: MerchantOfferFilter, onNewOfferClick: () -> Unit) {
     val (title, subtitle) = when (selectedFilter) {
@@ -235,11 +224,9 @@ private fun EmptyMerchantOffersCard(selectedFilter: MerchantOfferFilter, onNewOf
             "Aún no tienes ofertas activas" to
                 "Pulsa 'Nueva Oferta' para registrar tus productos con stock real y que aparezcan en el mapa de clientes."
         MerchantOfferFilter.PAUSED ->
-            "Sin ofertas en pausa" to
-                "Las promociones pausadas o sin stock aparecerán aquí para que puedas reactivarlas cuando quieras."
-        MerchantOfferFilter.ARCHIVED ->
-            "Sin ofertas dadas de baja" to
-                "Las promociones expiradas o dadas de baja se guardan aquí para tu historial."
+            stringResource(R.string.merchant_inventory_empty_paused) to stringResource(R.string.merchant_inventory_empty_paused_hint)
+        MerchantOfferFilter.FINISHED ->
+            stringResource(R.string.merchant_inventory_empty_finished) to stringResource(R.string.merchant_inventory_empty_finished_hint)
     }
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -332,16 +319,9 @@ private fun StockStepButton(icon: ImageVector, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MerchantStoreBannerCard(store: MerchantStore, onSwitchToBuyer: () -> Unit) {
+private fun MerchantStoreBannerCard(store: MerchantStore, hasProfile: Boolean, onSwitchToBuyer: () -> Unit) {
     CommerceHero(title = store.name, modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            StoreOpenStatusBadge(store.isOpen)
-            Text("• ${store.category}", style = MaterialTheme.typography.labelMedium, color = SensusWhite)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Default.Star, contentDescription = null, tint = SensusWhite, modifier = Modifier.size(16.dp))
-            Text("${store.rating} (${store.reviewCount} opiniones)", color = SensusWhite)
-        }
+        if (hasProfile) StoreOpenStatusBadge(store.isOpen)
         TextButton(
             onClick = onSwitchToBuyer,
             modifier = Modifier.heightIn(min = 48.dp),
@@ -370,20 +350,24 @@ private fun StoreOpenStatusBadge(isOpen: Boolean) {
 }
 
 @Composable
-private fun MerchantKpisCard(store: MerchantStore) {
+private fun MerchantKpisCard(metrics: MerchantOfferMetrics) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            MerchantKpi(icon = Icons.Default.CheckCircle, value = "${store.redeemedTodayCount}", label = "Canjes hechos")
-            MerchantKpi(icon = Icons.Default.Inventory, value = "${store.activeOffersCount}", label = "Ofertas activas")
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.merchant_metrics_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = SensusTextPrimary
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                MerchantKpi(Icons.Default.Inventory, "${metrics.active}", stringResource(R.string.merchant_metrics_active))
+                MerchantKpi(Icons.Default.Inventory2, "${metrics.availableUnits}", stringResource(R.string.merchant_metrics_units))
+                MerchantKpi(Icons.Default.WarningAmber, "${metrics.lowStock}", stringResource(R.string.merchant_metrics_low_stock))
+            }
         }
     }
 }
@@ -428,7 +412,7 @@ private fun MerchantKpi(icon: ImageVector, value: String, label: String) {
 }
 
 @Composable
-private fun MerchantOfferItem(offer: ProductOffer, onEditClick: () -> Unit, onAdjustClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun MerchantOfferItem(offer: ProductOffer, onEditClick: () -> Unit, onAdjustClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = SensusSurface),
@@ -443,6 +427,9 @@ private fun MerchantOfferItem(offer: ProductOffer, onEditClick: () -> Unit, onAd
                 color = SensusTextSecondary
             )
             OfferPriceAndStatusRow(offer.discountPrice, offer.status, offer.unitsLeft)
+            offer.viewCount?.let { views ->
+                Text(stringResource(R.string.merchant_offer_views, views), style = MaterialTheme.typography.bodySmall)
+            }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(colors = sensusTextButtonColors(), onClick = onEditClick, modifier = Modifier.heightIn(min = 48.dp)) { Text("Gestionar") }
                 OutlinedButton(
@@ -483,6 +470,7 @@ private fun OfferPriceAndStatusRow(discountPrice: Double, status: OfferLifecycle
 private fun resolveStatusBadge(status: OfferLifecycleStatus, unitsLeft: Int): Pair<String, Color> = when {
     status == OfferLifecycleStatus.ARCHIVED -> "De baja" to SensusRed
     status == OfferLifecycleStatus.EXPIRED -> "Expirada" to SensusRed
-    status == OfferLifecycleStatus.PAUSED || unitsLeft <= 0 -> "Pausada" to SensusOrangeDark
+    status == OfferLifecycleStatus.PAUSED -> status.displayLabel to SensusOrangeDark
+    status == OfferLifecycleStatus.SOLD_OUT || unitsLeft <= 0 -> OfferLifecycleStatus.SOLD_OUT.displayLabel to SensusRed
     else -> "Activa" to SensusSuccess
 }

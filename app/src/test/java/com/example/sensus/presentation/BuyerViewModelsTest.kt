@@ -6,6 +6,7 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.AiConversation
 import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.model.MerchantProfile
+import com.example.sensus.domain.model.PagedOffers
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.domain.model.StoreCategory
@@ -19,6 +20,8 @@ import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
+import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
+import com.example.sensus.domain.usecase.GetNearbyOffersUseCase
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.LoadAiConversationUseCase
@@ -89,7 +92,7 @@ class BuyerViewModelsTest {
         coEvery { offersRepo.readCachedOffers() } returns listOf(
             ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
         )
-        coEvery { offersRepo.fetchNearbyOffers(any(), any(), any(), any()) } returns Result.Failure(AppError.Network("Sin conexión"))
+        coEvery { offersRepo.fetchNearbyOffersPage(any()) } returns Result.Failure(AppError.Network("Sin conexión"))
         val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -112,7 +115,7 @@ class BuyerViewModelsTest {
         val cachedOffer = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
         every { session.sessionState } returns MutableStateFlow(SessionState())
         coEvery { offers.readCachedOffers() } returns listOf(cachedOffer)
-        coEvery { offers.fetchNearbyOffers(any(), any(), any(), any()) } returns Result.Success(emptyList())
+        coEvery { offers.fetchNearbyOffersPage(any()) } returns Result.Success(PagedOffers(emptyList()))
 
         val viewModel = BuyerHomeViewModel(offers, location, session)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -120,6 +123,49 @@ class BuyerViewModelsTest {
         assertEquals(emptyList<ProductOffer>(), viewModel.viewState.value.offers)
         assertFalse(viewModel.viewState.value.isLoading)
         coVerify(exactly = 0) { offers.readCachedOffers() }
+    }
+
+    @Test
+    fun buyerHomeJoinsVerifiedProfilesByMerchantId() = runTest {
+        val offers = mockk<OffersRepository>()
+        val location = mockk<LocationRepository>(relaxed = true)
+        val session = mockk<SessionRepository>()
+        val nearby = mockk<GetNearbyMerchantsUseCase>()
+        val first = ProductOffer("a", "Pan", "Tienda", "Panadería", 10.0, 5.0, 50, 1, 100, merchantId = "m1")
+        val profile = MerchantProfile(id = "m1", nombreComercial = "Tienda", direccion = "", codigoPostal = "", isVerified = true)
+        every { session.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { offers.fetchNearbyOffersPage(any()) } returns Result.Success(PagedOffers(listOf(first, first.copy(id = "b", merchantId = "m2"))))
+        coEvery { nearby(any(), any(), any(), any()) } returns Result.Success(listOf(profile))
+        val vm = BuyerHomeViewModel(location, session, GetNearbyOffersUseCase(offers), nearby)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(listOf(profile, null), vm.viewState.value.offers.map { it.merchantProfile })
+    }
+
+    @Test
+    fun buyerHome_loadNextPage_appendsWithoutDuplicates_andMarksFailedPage() = runTest {
+        val offers = mockk<OffersRepository>()
+        val location = mockk<LocationRepository>(relaxed = true)
+        val session = mockk<SessionRepository>()
+        val first = ProductOffer("1", "Offer 1", "Store", "Abarrotes", 10.0, 5.0, 50, 5, 200)
+        val second = ProductOffer("2", "Offer 2", "Store", "Abarrotes", 10.0, 6.0, 40, 5, 300)
+        every { session.sessionState } returns MutableStateFlow(SessionState())
+        coEvery { offers.fetchNearbyOffersPage(match { it.page == 1 }) } returns Result.Success(PagedOffers(listOf(first), nextPage = 2))
+        coEvery { offers.fetchNearbyOffersPage(match { it.page == 2 }) } returns Result.Success(PagedOffers(listOf(first, second), nextPage = 3))
+        coEvery { offers.fetchNearbyOffersPage(match { it.page == 3 }) } returns Result.Failure(AppError.Network("Sin conexión"))
+
+        val vm = BuyerHomeViewModel(offers, location, session)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(2, vm.viewState.value.nextPage)
+
+        vm.dispatchIntent(BuyerHomeViewIntent.LoadNextPage)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(listOf("1", "2"), vm.viewState.value.offers.map { it.id })
+        assertEquals(3, vm.viewState.value.nextPage)
+
+        vm.dispatchIntent(BuyerHomeViewIntent.LoadNextPage)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.pageLoadFailed)
+        assertEquals(2, vm.viewState.value.offers.size)
     }
 
     @Test
@@ -131,6 +177,7 @@ class BuyerViewModelsTest {
         coEvery { locationRepo.hasLocationPermission() } returns true
         coEvery { locationRepo.getCurrentLocation() } returns UserLocation(19.5, -99.2)
         coEvery { locationRepo.getFreshLocation() } returns UserLocation(19.6, -99.3)
+        coEvery { offersRepo.fetchNearbyOffersPage(any()) } returns Result.Success(PagedOffers(emptyList()))
 
         val vm = BuyerHomeViewModel(offersRepo, locationRepo, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -216,7 +263,7 @@ class BuyerViewModelsTest {
     }
 
     @Test
-    fun buyerMap_guestMode_blocksRadiusAbove2Km_and_registeredAllows5KmAndLayers() = runTest {
+    fun buyerMap_guestRadiusIsFixedAndRegisteredBuyerCanChangeRadiusAndLayers() = runTest {
         val offersRepo = mockk<OffersRepository>(relaxed = true)
         val locationRepo = mockk<LocationRepository>(relaxed = true)
         val sessionFlow = MutableStateFlow(SessionState(isGuest = true))
@@ -235,11 +282,10 @@ class BuyerViewModelsTest {
             cancelAndIgnoreRemainingEvents()
         }
 
-        // Invitado si puede reducir hasta el mínimo de 50 m (0.05 km) y <= 2 km
         vm.dispatchIntent(BuyerMapViewIntent.RadiusSelected(0.05f))
-        assertEquals(0.05f, vm.viewState.value.selectedRadiusKm, 0.001f)
+        assertEquals(2.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
         vm.dispatchIntent(BuyerMapViewIntent.RadiusSelected(1.0f))
-        assertEquals(1.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
+        assertEquals(2.0f, vm.viewState.value.selectedRadiusKm, 0.001f)
 
         // Usuario autenticado puede ampliar a 5 km y cambiar capas del mapa
         sessionFlow.value = SessionState(isGuest = false)

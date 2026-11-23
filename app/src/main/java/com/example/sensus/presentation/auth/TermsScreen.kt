@@ -49,10 +49,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensus.R
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
@@ -209,6 +211,30 @@ private fun TermsGuidelinesCard() {
                 title = "Seguridad y Datos",
                 description = "No compartimos tu información personal ni tus coordenadas con " +
                     "redes de publicidad externa. Tus datos están seguros con nosotros."
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.ConfirmationNumber,
+                title = stringResource(R.string.ft23_cancellation_title),
+                description = stringResource(R.string.ft23_cancellation_summary)
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.Security,
+                title = stringResource(R.string.ft23_privacy_title),
+                description = stringResource(R.string.ft23_privacy_summary)
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.VerifiedUser,
+                title = stringResource(R.string.ft23_rights_title),
+                description = stringResource(R.string.ft23_rights_summary)
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SensusCardBorder)
+            TermItem(
+                icon = Icons.Default.Security,
+                title = stringResource(R.string.ft23_account_title),
+                description = stringResource(R.string.ft23_account_summary)
             )
         }
     }

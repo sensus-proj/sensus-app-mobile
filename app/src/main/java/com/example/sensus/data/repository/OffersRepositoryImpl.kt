@@ -12,7 +12,9 @@ import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.api.RepublishOfferRequestDto
 import com.example.sensus.data.remote.dto.ChangeOfferStatusRequestDto
 import com.example.sensus.domain.model.CreateOfferInput
+import com.example.sensus.domain.model.NearbyOffersQuery
 import com.example.sensus.domain.model.OfferLifecycleStatus
+import com.example.sensus.domain.model.PagedOffers
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.UpdateOfferInput
@@ -78,53 +80,47 @@ class OffersRepositoryImpl(
         }
     }
 
-    override suspend fun fetchNearbyOffers(latitude: Double, longitude: Double, radiusKm: Double?, category: String?): Result<List<ProductOffer>> {
-        val api = offersApi ?: return Result.Success(readCachedOffers())
-        val networkResult = safeNetworkCall("Error al cargar ofertas cercanas.") {
-            val response = api.getNearbyOffers(
-                lat = latitude,
-                lng = longitude,
-                radiusKm = radiusKm,
-                category = category
-            )
+    override suspend fun fetchNearbyOffersPage(query: NearbyOffersQuery): Result<PagedOffers> {
+        val api = offersApi ?: return Result.Failure(AppError.Network())
+        return safeNetworkCall("Error al cargar ofertas cercanas.") {
+            val parameters = buildMap {
+                put("lat", query.location.latitude.toString())
+                put("lng", query.location.longitude.toString())
+                put("page", query.page.toString())
+                put("pageSize", query.pageSize.toString())
+                query.radiusKm?.let { put("radiusKm", it.toString()) }
+                query.category?.let { put("category", it) }
+            }
+            val response = api.getNearbyOffers(parameters)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                val mapped = body.items.map { it.toDomain() }.filter { it.isPubliclyVisible }
-                syncOffersFromServer(mapped)
-                Result.Success(mapped)
+                val offers = body.items.map { it.toDomain() }.filter { it.isPubliclyVisible }
+                withContext(Dispatchers.IO) {
+                    if (query.page == 1) {
+                        syncOffersFromServer(offers)
+                    } else {
+                        runCatching { offerDao?.insertOffers(offers.map { it.toEntity() }) }
+                    }
+                }
+                val hasMore = body.page == query.page && body.items.isNotEmpty() &&
+                    query.page.toLong() * query.pageSize < body.totalCount
+                Result.Success(PagedOffers(offers, (query.page + 1).takeIf { hasMore }))
             } else {
                 mapCreateOfferError(response)
             }
         }
-        return if (networkResult is Result.Failure) Result.Success(readCachedOffers()) else networkResult
     }
 
     override suspend fun fetchMerchantOffers(status: String?): Result<List<ProductOffer>> {
-        val api = offersApi ?: return Result.Success(readMerchantCachedOffers())
-        val networkResult = safeNetworkCall("Error al cargar tus ofertas.") {
+        val api = offersApi ?: return Result.Failure(AppError.Network("No se pudo consultar el inventario del comercio."))
+        return safeNetworkCall("Error al cargar tus ofertas.") {
             val response = api.getMyMerchantOffers(status = status)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                val mapped = body.map { it.toDomain() }
-                syncOffersFromServer(mapped)
-                Result.Success(mapped)
+                Result.Success(body.map { it.toDomain() })
             } else {
                 mapCreateOfferError(response)
             }
-        }
-        return if (networkResult is Result.Failure) Result.Success(readMerchantCachedOffers()) else networkResult
-    }
-
-    private suspend fun readMerchantCachedOffers(): List<ProductOffer> = withContext(Dispatchers.IO) { getMerchantCachedOffers() }
-
-    private fun getMerchantCachedOffers(): List<ProductOffer> {
-        val dao = offerDao ?: return emptyList()
-        return try {
-            dao.getOffers().orEmpty()
-                .filterNot { it.id in LEGACY_FAKE_OFFER_IDS }
-                .map { it.toDomain() }
-        } catch (_: Exception) {
-            emptyList()
         }
     }
 
@@ -161,7 +157,7 @@ class OffersRepositoryImpl(
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 val updated = body.toDomain(fallbackExpiresAtMillis = input.expiresAtMillis, fallbackImageUrl = input.imageUrl)
-                addOffer(updated)
+                withContext(Dispatchers.IO) { addOffer(updated) }
                 Result.Success(updated)
             } else {
                 mapCreateOfferError(response)
@@ -176,7 +172,7 @@ class OffersRepositoryImpl(
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 val updated = body.toDomain()
-                addOffer(updated)
+                withContext(Dispatchers.IO) { addOffer(updated) }
                 Result.Success(updated)
             } else {
                 mapCreateOfferError(response)
@@ -196,7 +192,7 @@ class OffersRepositoryImpl(
             val body = response.body()
             if (response.code() == HTTP_OK && body != null) {
                 val updated = body.toDomain()
-                offerDao?.insertOffer(updated.toEntity())
+                withContext(Dispatchers.IO) { addOffer(updated) }
                 Result.Success(updated)
             } else {
                 mapCreateOfferError(response)
@@ -212,7 +208,7 @@ class OffersRepositoryImpl(
             if (response.code() == HTTP_CREATED && body != null) {
                 val created = body.toDomain(fallbackExpiresAtMillis = input.expiresAtMillis, fallbackImageUrl = media?.url)
                     .copy(category = input.category.displayName)
-                addOffer(created)
+                withContext(Dispatchers.IO) { addOffer(created) }
                 Result.Success(created)
             } else {
                 mapCreateOfferError(response)

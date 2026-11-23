@@ -20,12 +20,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
+import com.example.sensus.domain.model.OfferDetails
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.publishedHours
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
@@ -110,7 +113,11 @@ private fun ShareOfferEffectsHandler(friendsViewModel: FriendsViewModel, onShare
 
 @Composable
 internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewState, actions: ProductDetailActions, modifier: Modifier = Modifier) {
-    val current = state.details?.offer?.copy(distanceMeters = offer.distanceMeters) ?: offer.copy(isVerified = false, rating = 0.0, reviewCount = 0)
+    val detailOffer = state.details?.offer
+    val current = detailOffer?.copy(
+        distanceMeters = offer.distanceMeters,
+        merchantProfile = detailOffer.merchantProfile ?: offer.merchantProfile?.takeIf { it.id == detailOffer.merchantId }
+    ) ?: offer.copy(isVerified = false, rating = 0.0, reviewCount = 0)
     val canClaim = state.details?.canClaim(System.currentTimeMillis()) == true
     val context = LocalContext.current
     var showAddedNotice by remember(offer.id) { mutableStateOf(false) }
@@ -128,14 +135,16 @@ internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewS
             actions = ProductBottomBarActions(
                 enabled = canClaim,
                 onAddToCart = {
-                    actions.onAddToCart(current, state.quantity)
-                    showAddedNotice = true
-                    Toast.makeText(context, context.getString(R.string.detail_added_to_cart), Toast.LENGTH_SHORT).show()
+                    if (state.details?.canClaim(System.currentTimeMillis()) == true) {
+                        actions.onAddToCart(current, state.quantity)
+                        showAddedNotice = true
+                        Toast.makeText(context, context.getString(R.string.detail_added_to_cart), Toast.LENGTH_SHORT).show()
+                    }
                 },
                 onApartarDirect = {
                     if (state.details?.hasActiveClaim == true) {
                         actions.navigation.onViewActiveClaim(current)
-                    } else {
+                    } else if (state.details?.canClaim(System.currentTimeMillis()) == true) {
                         actions.navigation.onApartarDirect(current, 1)
                     }
                 },
@@ -195,8 +204,20 @@ private fun ProductDetailScrollSection(
             onRouteClick = { callbacks.onNavigateToRoute?.invoke(offer) }
         )
         Spacer(modifier = Modifier.height(16.dp))
+        MerchantScheduleAndPayments(offer)
         ProductDescriptionCard(description = offer.description, quantity = quantity)
     }
+}
+
+@Composable
+private fun MerchantScheduleAndPayments(offer: ProductOffer) {
+    MerchantOpenStatusText(offer.merchantProfile)
+    offer.merchantProfile?.horarios.orEmpty().forEach { day ->
+        val hours = if (day.estaCerrado) stringResource(R.string.discovery_day_closed) else day.publishedHours()
+        if (hours != null) Text(stringResource(R.string.discovery_day_schedule, day.dia, hours))
+    }
+    val methods = offer.merchantProfile?.paymentMethods.orEmpty()
+    if (methods.isNotEmpty()) Text(stringResource(R.string.discovery_payment_methods, methods.joinToString(", ")))
 }
 
 @Composable
@@ -207,9 +228,21 @@ internal fun ProductDetailStatus(state: ProductDetailViewState, onRetry: () -> U
             Text(state.error.message, color = SensusRed)
             TextButton(colors = sensusTextButtonColors(), onClick = onRetry) { Text(stringResource(R.string.detail_retry)) }
         }
-        state.details?.hasActiveClaim == true -> Text(stringResource(R.string.detail_active_claim), modifier = Modifier.padding(16.dp))
-        state.details?.canClaim(System.currentTimeMillis()) == false -> Text(stringResource(R.string.detail_unavailable), modifier = Modifier.padding(16.dp))
+        else -> state.details?.let { ProductAvailabilityNotice(it, System.currentTimeMillis()) }
     }
+}
+
+@Composable
+private fun ProductAvailabilityNotice(details: OfferDetails, nowMillis: Long) {
+    val message = when {
+        details.hasActiveClaim -> stringResource(R.string.detail_active_claim)
+        details.isSoldOut -> stringResource(R.string.detail_sold_out)
+        details.isExpired(nowMillis) -> stringResource(R.string.detail_expired)
+        !details.canClaim(nowMillis) -> stringResource(R.string.detail_unavailable)
+        details.hasLowStock -> pluralStringResource(R.plurals.detail_low_stock, details.offer.unitsLeft, details.offer.unitsLeft)
+        else -> return
+    }
+    Text(message, modifier = Modifier.padding(16.dp))
 }
 
 @ComposeUiModel

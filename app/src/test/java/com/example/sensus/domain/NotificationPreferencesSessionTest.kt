@@ -4,6 +4,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.NotificationsDevice
 import com.example.sensus.domain.model.NotificationsPreferences
+import com.example.sensus.domain.repository.NotificationPermissionChecker
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.example.sensus.domain.repository.NotificationsRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -23,6 +24,7 @@ import org.junit.Test
 class NotificationPreferencesSessionTest {
     private val repository = mockk<NotificationsRepository>()
     private val provider = mockk<NotificationsPushDeviceProvider>()
+    private val permission = mockk<NotificationPermissionChecker> { every { canPostNotifications() } returns true }
     private val state = MutableStateFlow(SessionState())
     private val session = mockk<SessionRepository> { every { sessionState } returns state }
     private val settings = NotificationsPreferences(true, true, false, 5)
@@ -38,7 +40,7 @@ class NotificationPreferencesSessionTest {
             state.value = invalid
             assertEquals(unauthorized, NotificationsGetSettingsUseCase(repository, session)())
             assertEquals(unauthorized, NotificationsUpdateSettingsUseCase(repository, session)(settings))
-            assertEquals(unauthorized, NotificationsRegisterDeviceUseCase(provider, repository, session)())
+            assertEquals(unauthorized, NotificationsRegisterDeviceUseCase(provider, repository, session, permission)())
         }
         coVerify(exactly = 0) { repository.getSettings() }
         coVerify(exactly = 0) { repository.updateSettings(any()) }
@@ -73,7 +75,7 @@ class NotificationPreferencesSessionTest {
             state.value = SessionState()
             Result.Success(NotificationsDevice("sdk-installation", "sdk-device-token"))
         }
-        assertEquals(unauthorized, NotificationsRegisterDeviceUseCase(provider, repository, session)())
+        assertEquals(unauthorized, NotificationsRegisterDeviceUseCase(provider, repository, session, permission)())
         coVerify(exactly = 0) { repository.registerDevice(any()) }
     }
 }

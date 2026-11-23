@@ -7,6 +7,7 @@ import com.example.sensus.domain.model.CreateOfferInput
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.OfferPublishingPolicy
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
 import java.text.ParseException
@@ -38,7 +39,7 @@ object RemoteOfferMapper {
         return CreateOfferRequest(
             title = title,
             description = safeDescription,
-            category = category.displayName,
+            category = requireNotNull(category.apiCode) { "La categoría de la oferta es obligatoria." },
             originalPrice = originalPrice,
             discountPrice = discountPrice,
             discountPercentage = pct,
@@ -78,7 +79,7 @@ object RemoteOfferMapper {
             id = id,
             name = title,
             storeName = merchantName.orEmpty().ifBlank { "Comercio Sensus" },
-            category = category.orEmpty().ifBlank { "Todo" },
+            category = StoreCategory.displayNameFor(category),
             originalPrice = originalPrice,
             discountPrice = resolvedDiscountPrice,
             discountPercent = resolvedDiscountPct,
@@ -91,7 +92,8 @@ object RemoteOfferMapper {
             merchantId = merchantId,
             status = resolvedStatus,
             version = version.coerceAtLeast(1),
-            expiresAtMillis = expiresMillis
+            expiresAtMillis = expiresMillis,
+            viewCount = viewCount?.takeIf { it >= 0 }
         )
         return applyOfferCoordinates(offer)
     }

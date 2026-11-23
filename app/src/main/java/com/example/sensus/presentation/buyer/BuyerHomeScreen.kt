@@ -48,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,10 +71,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
-import com.example.sensus.domain.model.GuestRadiusPolicy
+import com.example.sensus.domain.model.OfferDiscoveryFilters
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.domain.model.StoreCategory
+import com.example.sensus.domain.usecase.nearbyRadiusKm
 import com.example.sensus.presentation.common.CommerceFeedFeedback
 import com.example.sensus.presentation.common.CommerceHero
 import com.example.sensus.presentation.common.ComposeUiModel
@@ -144,7 +146,11 @@ private data class HomeContentData(
     val showRadiusSheet: Boolean,
     val savedOfferIds: Set<String> = emptySet(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val nextPage: Int? = null,
+    val pageLoadFailed: Boolean = false,
+    val usingCachedOffers: Boolean = false,
+    val filters: OfferDiscoveryFilters = OfferDiscoveryFilters()
 )
 
 @ComposeUiModel
@@ -155,8 +161,29 @@ private data class HomeHostActions(
     val onToggleRadiusSheet: (Boolean) -> Unit,
     val onRadiusSelected: (Float) -> Unit,
     val onToggleSaveOffer: (ProductOffer) -> Unit = {},
-    val onRefreshOffers: () -> Unit = {}
+    val onRefreshOffers: () -> Unit = {},
+    val onLoadNextPage: () -> Unit = {},
+    val onChangeFilters: (OfferDiscoveryFilters) -> Unit = {}
 )
+
+@Composable
+private fun rememberFilteredHomeOffers(
+    homeState: BuyerHomeViewState,
+    searchQuery: String,
+    selectedCategory: StoreCategory,
+    radiusKm: Float,
+    merchantId: String?
+): List<ProductOffer> {
+    val minute = merchantLocalMinute()
+    val filters = homeState.filters
+    return remember(searchQuery, selectedCategory, homeState.userLocation, homeState.offers, radiusKm, merchantId, filters, minute) {
+        filters.applyTo(
+            filterHomeOffers(homeState.userLocation, homeState.offers, radiusKm, searchQuery, selectedCategory)
+                .filter { merchantId == null || it.merchantId == merchantId },
+            minute
+        )
+    }
+}
 
 @Composable
 fun BuyerHomeScreen(
@@ -172,12 +199,13 @@ fun BuyerHomeScreen(
     val cartState by cartViewModel.viewState.collectAsStateWithLifecycle()
     val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
     val effectiveIsGuest = callbacks.isGuest || homeState.isGuest
-    val effectiveRadiusKm = GuestRadiusPolicy.clampRadius(homeState.selectedRadiusKm, effectiveIsGuest)
+    val effectiveRadiusKm = nearbyRadiusKm(homeState.selectedRadiusKm, effectiveIsGuest)
 
     var locationLabel by remember { mutableStateOf("Ubicación actual") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(StoreCategory.ALL) }
     var showRadiusSheet by remember { mutableStateOf(false) }
+    val filters = homeState.filters
 
     LaunchedEffect(Unit) {
         homeViewModel.viewEffect.collect { effect ->
@@ -187,10 +215,7 @@ fun BuyerHomeScreen(
     SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
     LaunchedEffect(homeState.userLocation) { locationLabel = OsmMapUtils.resolveLocationLabel(context, homeState.userLocation) }
 
-    val filteredOffers = remember(searchQuery, selectedCategory, homeState.userLocation, homeState.offers, effectiveRadiusKm, merchantId) {
-        filterHomeOffers(homeState.userLocation, homeState.offers, effectiveRadiusKm, searchQuery, selectedCategory)
-            .filter { merchantId == null || it.merchantId == merchantId }
-    }
+    val filteredOffers = rememberFilteredHomeOffers(homeState, searchQuery, selectedCategory, effectiveRadiusKm, merchantId)
 
     MerchantOfferFilter(merchantId, callbacks.onClearMerchantFilter, modifier) {
         BuyerHomeHost(
@@ -201,7 +226,11 @@ fun BuyerHomeScreen(
                 showRadiusSheet = showRadiusSheet,
                 savedOfferIds = savedState.savedOfferIds,
                 isLoading = homeState.isLoading,
-                errorMessage = homeState.errorMessage
+                errorMessage = homeState.errorMessage,
+                nextPage = homeState.nextPage,
+                pageLoadFailed = homeState.pageLoadFailed,
+                usingCachedOffers = homeState.usingCachedOffers,
+                filters = filters
             ),
             callbacks = callbacks,
             actions = HomeHostActions(
@@ -211,7 +240,9 @@ fun BuyerHomeScreen(
                 onToggleRadiusSheet = { showRadiusSheet = it },
                 onRadiusSelected = { km -> homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km)) },
                 onToggleSaveOffer = { offer -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(offer)) },
-                onRefreshOffers = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshOffers) }
+                onRefreshOffers = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshOffers) },
+                onLoadNextPage = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.LoadNextPage) },
+                onChangeFilters = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.ChangeFilters(it)) }
             ),
             modifier = Modifier
         )
@@ -267,6 +298,7 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
             )
         }
         item { BuyerCategoryChipsRow(selectedCategory = data.searchState.selectedCategory, onCategoryToggle = actions.onCategoryToggle) }
+        item { BuyerOfferFilterControl(data.filters, actions.onChangeFilters) }
         item { BuyerFeedSummary(data, actions.onRefreshOffers) }
         items(data.filteredOffers, key = { it.id }) { offer ->
             ProductOfferCard(
@@ -276,6 +308,17 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
                 isSaved = offer.id in data.savedOfferIds,
                 onSaveClick = { actions.onToggleSaveOffer(offer) }
             )
+        }
+        data.nextPage?.let { page ->
+            item(key = "nearby-next-page-$page") {
+                if (data.pageLoadFailed) {
+                    TextButton(onClick = actions.onLoadNextPage) {
+                        Text(stringResource(R.string.nearby_retry_page))
+                    }
+                } else {
+                    LaunchedEffect(page) { actions.onLoadNextPage() }
+                }
+            }
         }
     }
 }
@@ -330,7 +373,8 @@ private fun BuyerFeedSummary(data: HomeContentData, onRetry: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        CommerceFeedFeedback(data.isLoading, data.errorMessage, onRetry)
+        val message = if (data.usingCachedOffers) stringResource(R.string.nearby_cached_offers) else data.errorMessage
+        CommerceFeedFeedback(data.isLoading, message, onRetry)
         Text(
             stringResource(R.string.commerce_buyer_results, data.filteredOffers.size),
             style = MaterialTheme.typography.titleMedium,
@@ -493,6 +537,8 @@ fun ProductOfferCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifie
                 Text(text = "${offer.storeName} • Caduca ${offer.expirationDate}", fontSize = 13.sp, color = SensusTextSecondary)
             }
             Spacer(modifier = Modifier.height(12.dp))
+            if (offer.merchantProfile?.isVerified == true) Text(stringResource(R.string.discovery_verified))
+            MerchantOpenStatusText(offer.merchantProfile)
             ProductOfferCardPriceFooter(offer = offer)
         }
     }

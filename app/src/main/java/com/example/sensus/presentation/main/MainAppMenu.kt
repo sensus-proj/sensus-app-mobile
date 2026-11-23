@@ -149,11 +149,13 @@ internal class MainAppState {
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
     var showSavedInterests by mutableStateOf(false)
+    var showMyClaims by mutableStateOf(false)
     var showMerchantRegister by mutableStateOf(false)
     var isMerchantRegistered by mutableStateOf(false)
     var showConfirmLogout by mutableStateOf(false)
     var showConfirmDeleteAccount by mutableStateOf(false)
     var showOfflineDialog by mutableStateOf(false)
+    var showHelpCenter by mutableStateOf(false)
     var showGuestPrompt by mutableStateOf(false)
     var lastBackPressTime by mutableLongStateOf(0L)
 }
@@ -216,6 +218,10 @@ private fun dismissActiveDialog(state: MainAppState): Boolean = when {
         state.showOfflineDialog = false
         true
     }
+    state.showHelpCenter -> {
+        state.showHelpCenter = false
+        true
+    }
     state.showGuestPrompt -> {
         state.showGuestPrompt = false
         true
@@ -264,6 +270,10 @@ private fun dismissSecondaryOverlay(state: MainAppState): Boolean = when {
     }
     state.showSavedInterests -> {
         state.showSavedInterests = false
+        true
+    }
+    state.showMyClaims -> {
+        state.showMyClaims = false
         true
     }
     state.showMerchantRegister -> {

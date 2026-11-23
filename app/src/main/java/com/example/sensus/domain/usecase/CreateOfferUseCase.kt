@@ -24,13 +24,22 @@ class CreateOfferUseCase(
 ) {
     suspend operator fun invoke(input: CreateOfferInput, imageBytes: ByteArray? = null): Result<ProductOffer> {
         val normalized = input.copy(title = input.title.trim(), description = input.description.trim())
-        OfferPublishingPolicy.validate(normalized, clock())?.let { return Result.Failure(AppError.Validation(it.message)) }
-
-        val media = when (val upload = uploadMediaIfPresent(mediaRepository, imageCompressor, imageBytes)) {
-            is Result.Failure -> return upload
-            is Result.Success -> upload.data
+        if (imageBytes == null || imageBytes.isEmpty()) {
+            return Result.Failure(AppError.Validation("Debes tomar o seleccionar una foto del producto."))
         }
-        return offersRepository.createOffer(normalized, media)
+        val validationMessage = OfferPublishingPolicy.validate(normalized, clock())?.message
+            ?: "Selecciona una categoría para la oferta.".takeIf { normalized.category.apiCode == null }
+        if (validationMessage != null) return Result.Failure(AppError.Validation(validationMessage))
+
+        return when (val upload = compressAndUpload(mediaRepository, imageCompressor, imageBytes)) {
+            is Result.Failure -> upload
+            is Result.Success -> createAfterUpload(normalized, upload.data)
+        }
+    }
+
+    private suspend fun createAfterUpload(input: CreateOfferInput, media: UploadedMedia): Result<ProductOffer> {
+        val error = OfferPublishingPolicy.validate(input, clock())
+        return if (error != null) Result.Failure(AppError.Validation(error.message)) else offersRepository.createOffer(input, media)
     }
 }
 

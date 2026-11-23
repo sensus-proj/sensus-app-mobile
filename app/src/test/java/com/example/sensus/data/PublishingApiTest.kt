@@ -24,11 +24,14 @@ import com.example.sensus.domain.model.CreateOfferInput
 import com.example.sensus.domain.model.CreatePostInput
 import com.example.sensus.domain.model.FeedQuery
 import com.example.sensus.domain.model.ModerationResult
+import com.example.sensus.domain.model.NearbyOffersQuery
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
+import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.repository.ImageModerationRepository
+import io.mockk.Called
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -36,6 +39,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.test.runTest
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.mockwebserver.MockResponse
@@ -44,6 +48,7 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -108,7 +113,7 @@ class PublishingApiTest {
         val repo = OffersRepositoryImpl(offerDao, client.offersApi)
 
         val nearbyJson = "{\"items\":[{\"id\":\"o_near\",\"merchantId\":\"m_1\",\"merchantName\":\"Tienda UTTT\"," +
-            "\"category\":\"Abarrotes\",\"title\":\"Leche 1L\",\"description\":\"Leche entera\",\"originalPrice\":30.0," +
+            "\"category\":\"Grocery\",\"title\":\"Leche 1L\",\"description\":\"Leche entera\",\"originalPrice\":30.0," +
             "\"discountPercentage\":50,\"discountedPrice\":15.0,\"stock\":8,\"startsAt\":\"2026-11-14T00:00:00Z\"," +
             "\"endsAt\":\"2026-11-15T00:00:00Z\",\"distanceMeters\":120.0,\"latitude\":20.0536,\"longitude\":-99.3436}]," +
             "\"totalCount\":1,\"page\":1,\"pageSize\":20}"
@@ -117,8 +122,16 @@ class PublishingApiTest {
         assertTrue(nearby is Result.Success)
         val nearbyOffer = (nearby as Result.Success).data.single()
         assertEquals("Leche 1L", nearbyOffer.name)
+        assertEquals("Abarrotes", nearbyOffer.category)
         assertEquals(15.0, nearbyOffer.discountPrice, 0.01)
         assertEquals(8, nearbyOffer.unitsLeft)
+
+        assertEquals("1", server.takeRequest().requestUrl?.queryParameter("page"))
+        val secondPageJson = nearbyJson.replace("\"page\":1", "\"page\":2").replace("\"totalCount\":1", "\"totalCount\":41")
+        server.enqueue(MockResponse().setResponseCode(200).setBody(secondPageJson))
+        val query = NearbyOffersQuery(UserLocation(20.0536, -99.3436), radiusKm = 2.0, page = 2)
+        assertEquals(3, repo.fetchNearbyOffersPage(query).getOrNull()?.nextPage)
+        assertEquals("2", server.takeRequest().requestUrl?.queryParameter("page"))
 
         val updatedJson = "{\"id\":\"o_near\",\"merchantId\":\"m_1\",\"title\":\"Leche 1L\"," +
             "\"description\":\"Leche entera\",\"originalPrice\":30.0,\"discountPercentage\":50," +
@@ -128,6 +141,59 @@ class PublishingApiTest {
         val updated = repo.updateOfferStock(nearbyOffer, 5)
         assertTrue(updated is Result.Success)
         assertEquals(5, (updated as Result.Success).data.unitsLeft)
+    }
+
+    @Test
+    fun merchantInventoryPreservesReportedViewsAndOmitsUnknownMetrics() = runTest {
+        val rows = listOf(",\"viewCount\":12", ",\"viewCount\":0", "", ",\"viewCount\":null", ",\"viewCount\":-1")
+            .mapIndexed { index, metric -> """{"id":"o$index","title":"Pan","originalPrice":10$metric}""" }
+        server.enqueue(MockResponse().setBody(rows.joinToString(prefix = "[", postfix = "]")))
+        val repository = OffersRepositoryImpl(mockk<OfferDao>(), client.offersApi)
+
+        val inventory = repository.fetchMerchantOffers().getOrNull().orEmpty()
+        assertEquals(listOf(12, 0, null, null, null), inventory.map { it.viewCount })
+    }
+
+    @Test
+    fun merchantInventoryReadsOwnOffersAndDoesNotUseSharedCacheOnFailure() = runTest {
+        val dao = mockk<OfferDao>()
+        val repo = OffersRepositoryImpl(dao, client.offersApi)
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """[{"id":"o1","title":"Pan","originalPrice":100.0,"discountedPrice":50.0,"stock":2,"status":"Paused"}]"""
+            )
+        )
+
+        val inventory = repo.fetchMerchantOffers(status = "Paused").getOrNull().orEmpty()
+        assertEquals(OfferLifecycleStatus.PAUSED, inventory.single().status)
+        val request = server.takeRequest()
+        assertEquals("/api/v1/merchants/my-offers", request.requestUrl?.encodedPath)
+        assertEquals("Paused", request.requestUrl?.queryParameter("status"))
+
+        server.enqueue(MockResponse().setResponseCode(403))
+        val failure = repo.fetchMerchantOffers() as Result.Failure
+        assertTrue(failure.error is AppError.Forbidden)
+        verify { dao wasNot Called }
+    }
+
+    @Test
+    fun merchantPausesOfferAndCachesServerResponseOffCallerThread() = runTest {
+        val dao = mockk<OfferDao>(relaxed = true)
+        val caller = Thread.currentThread()
+        val writer = AtomicReference<Thread>()
+        every { dao.insertOffer(any()) } answers { writer.set(Thread.currentThread()) }
+        val pausedOfferJson = """{"id":"o1","title":"Pan","originalPrice":100.0,"discountedPrice":50.0,"stock":2,"status":"Paused"}"""
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pausedOfferJson))
+
+        val result = OffersRepositoryImpl(dao, client.offersApi).changeOfferStatus("o1", OfferLifecycleStatus.PAUSED)
+
+        assertEquals(OfferLifecycleStatus.PAUSED, result.getOrNull()?.status)
+        val request = server.takeRequest()
+        assertEquals("PUT", request.method)
+        assertEquals("/api/v1/offers/o1/status", request.path)
+        assertTrue(request.body.readUtf8().contains("\"newStatus\":\"Paused\""))
+        verify(exactly = 1) { dao.insertOffer(match { it.id == "o1" && it.unitsLeft == 2 }) }
+        assertNotSame(caller, writer.get())
     }
 
     @Test
@@ -142,8 +208,11 @@ class PublishingApiTest {
     }
 
     @Test
-    fun offerCreated201_preservesStockInRoomAndSendsUtc() = runTest {
+    fun offerCreated201_persistsStockOffCallerThreadAndSendsUtcAndCategoryCode() = runTest {
         val offerDao = mockk<OfferDao>(relaxed = true)
+        val caller = Thread.currentThread()
+        val writer = AtomicReference<Thread>()
+        every { offerDao.insertOffer(any()) } answers { writer.set(Thread.currentThread()) }
         server.enqueue(
             MockResponse().setResponseCode(201).setBody(
                 """{"id":"o1","title":"Pan","originalPrice":100.0,"discountPrice":60.0,"stock":17,"merchantId":"shop-1","expiresAt":"2026-12-01T20:00:00Z"}"""
@@ -155,7 +224,10 @@ class PublishingApiTest {
         verify { offerDao.insertOffer(match { it.unitsLeft == 17 && it.merchantId == "shop-1" }) }
         val request = server.takeRequest()
         assertEquals("/api/v1/offers", request.path)
-        assertTrue(request.body.readUtf8().contains("1970-01-01T00:33:20Z"))
+        val requestBody = request.body.readUtf8()
+        assertTrue(requestBody.contains("1970-01-01T00:33:20Z"))
+        assertTrue(requestBody.contains("\"category\":\"Bakery\""))
+        assertNotSame(caller, writer.get())
         val created = (result as Result.Success).data
         assertEquals(17, created.toEntity().toDomain().unitsLeft)
         assertEquals(created.expirationDate, created.toEntity().toDomain().expirationDate)
@@ -244,11 +316,38 @@ class PublishingApiTest {
     fun offlineFeed_usesOnlyCacheForTheSameQuery() = runTest {
         val api = mockk<FeedApiService>()
         coEvery { api.nearby(any(), any(), any(), any(), any()) } throws IOException("offline")
-        every { dao.getPage("20.0:-99.0:2000:20", 1) } returns listOf(FeedPostEntity("post-1", "20.0:-99.0:2000:20", 1, 0, postJson))
+        val key = "20.0:-99.0:2000:20"
+        every { dao.getPage(key, 1) } returns listOf(
+            FeedPostEntity("broken", key, 1, 0, "{invalid"),
+            FeedPostEntity("post-1", key, 1, 1, postJson)
+        )
         val result = FeedRepositoryImpl(api, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Success
         assertTrue(result.data.isCached)
         assertFalse(result.data.hasMore)
         assertEquals("post-1", result.data.posts.single().id)
+    }
+
+    @Test
+    fun nearbyFeed_stillDisplaysServerPageWhenCacheWriteFails() = runTest {
+        every { dao.replacePage(any(), any(), any()) } throws IllegalStateException("Database unavailable")
+        server.enqueue(MockResponse().setBody("""{"posts":[$postJson],"page":1,"hasMore":true}"""))
+
+        val page = (FeedRepositoryImpl(client.feedApi, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Success).data
+
+        assertEquals("post-1", page.posts.single().id)
+        assertTrue(page.hasMore)
+        assertFalse(page.isCached)
+    }
+
+    @Test
+    fun offlineFeed_preservesNetworkFailureWhenCacheReadFails() = runTest {
+        val api = mockk<FeedApiService>()
+        coEvery { api.nearby(any(), any(), any(), any(), any()) } throws IOException("offline")
+        every { dao.getPage(any(), any()) } throws IllegalStateException("Database unavailable")
+
+        val result = FeedRepositoryImpl(api, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Failure
+
+        assertTrue(result.error is AppError.Network)
     }
 
     @Test

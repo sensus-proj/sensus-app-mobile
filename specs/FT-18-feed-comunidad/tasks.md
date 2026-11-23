@@ -52,3 +52,11 @@
 - 4 pruebas Compose nuevas compiladas, ejecución en dispositivo pendiente. No se generaron APK/AAB.
 - SAST disponible: 66 reglas, 0 hallazgos. La configuración completa no puede validarse porque el paquete remoto p/mobile devuelve 404; no se omite, sustituye ni modifica CI, y no se declara suite DevSecOps completa aprobada.
 - T18.16 sigue pendiente: backend main 01dad6e no registra feed; specs 024/026 pendientes. Informe en app/build/reports/community-backend-diagnosis.md. Sin commit/push ni despliegue.
+
+## Avance en movil_Rocio — 2026-11-21
+
+- Se verificó backend main 1c27253: FeedEndpoints publica /feed/offers y CommunityEndpoints publica /community/friends-activity. Las rutas del feed geolocalizado y de creación de publicaciones de FT-18 no están registradas allí.
+- Una consulta GET sin credenciales con coordenadas públicas a /api/v1/feed/nearby en AWS respondió 503. Esa respuesta no permite validar el contrato desplegado. No se enviaron publicaciones.
+- En la revisión posterior, AWS respondió HTTP 404 a `GET /api/v1/feed/nearby`, mientras que ofertas cercanas y ajustes de usuario respondieron HTTP 401 a peticiones sin credenciales. T18.16 sigue pendiente de validar el feed autenticado y su contrato desplegado.
+- Se retiró la dependencia residual de datos de amigos de ejemplo en CommunityViewModel. Una falla de caché ya no invalida una página remota válida, y al leer offline se descartan filas con JSON corrupto sin perder las válidas. Se conserva el error de red si la caché no se puede leer.
+- Validación local: 453 pruebas unitarias sin fallos, Kover Debug 80.79 %, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.

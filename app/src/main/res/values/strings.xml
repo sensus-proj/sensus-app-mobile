@@ -2,4 +2,24 @@
     <string name="app_name">Sensus</string>
     <string name="community_feed_unavailable">El servicio de comunidad no está disponible en el servidor. Inténtalo más tarde.</string>
     <string name="community_publish_unavailable">El servidor no tiene disponible el servicio de publicaciones. Tu borrador se conserva; inténtalo más tarde.</string>
+    <string name="nearby_radius_title">Distancia de búsqueda</string>
+    <string name="nearby_radius_meters">Metros</string>
+    <string name="nearby_radius_kilometers">Kilómetros</string>
+    <string name="nearby_radius_guest_fixed">Radio fijo de %1$d km en modo invitado</string>
+    <string name="nearby_radius_sign_in">Inicia sesión para cambiar el radio</string>
+    <string name="nearby_radius_apply">Aplicar distancia</string>
+    <string name="nearby_location_map_center">Usar centro del mapa</string>
+    <string name="nearby_location_title">Ubicación de búsqueda</string>
+    <string name="nearby_location_explanation">Las ofertas se buscarán alrededor del centro del mapa. Para elegir otro punto, vuelve y mueve el mapa.</string>
+    <string name="nearby_location_confirm">Buscar en esta zona</string>
+    <string name="nearby_retry_page">Reintentar cargar más ofertas</string>
+    <string name="nearby_cached_offers">No se pudieron actualizar las ofertas. Estás viendo los datos guardados.</string>
+    <string name="merchant_inventory_active">Activas</string>
+    <string name="merchant_inventory_paused">Pausadas</string>
+    <string name="merchant_inventory_finished">Finalizadas</string>
+    <string name="merchant_inventory_filter_count">%1$s (%2$d)</string>
+    <string name="merchant_inventory_empty_paused">Sin ofertas en pausa</string>
+    <string name="merchant_inventory_empty_paused_hint">Las ofertas pausadas aparecen aquí para que puedas gestionarlas.</string>
+    <string name="merchant_inventory_empty_finished">Sin ofertas finalizadas</string>
+    <string name="merchant_inventory_empty_finished_hint">Las ofertas expiradas, agotadas o dadas de baja se muestran en este historial.</string>
 </resources>

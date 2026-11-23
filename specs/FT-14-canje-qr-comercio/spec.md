@@ -43,4 +43,4 @@ Ante timeout la operación puede haberse aplicado: no hay reenvío automático n
 Implementación local autorizada; validación integral pendiente de integración principal.
 
 ## Captura con cámara
-El comercio puede leer el QR para editar el folio antes de confirmar explícitamente el canje. La captura manual sigue disponible.
+El comercio puede leer el QR para revisar y editar el folio antes de confirmar explícitamente el canje. El backend codifica el mismo folio firmado en el QR. La lectura muestra un aviso de revisión y no realiza ninguna petición. Una lectura vacía descarta el folio anterior. La captura manual sigue disponible.

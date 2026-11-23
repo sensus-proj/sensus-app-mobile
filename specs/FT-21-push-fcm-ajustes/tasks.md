@@ -20,8 +20,8 @@ Las tareas históricas de rutas no publicadas se sustituyen por este alcance rat
 
 ## Prerrequisitos / deuda posterior (sin cierre total)
 
-- [ ] Aprovisionar recursos Android oficiales de Firebase por equipo de despliegue; sin secretos/configuración fabricados.
-- [ ] Servicio receptor, canales, renovación y ciclo login/logout con contratos publicados. Se atiende en `FT-39-push-recepcion-ubicacion` (2026-11-19); RF-21-06 cambia: el `deviceId` ahora es un UUID por instalación, no el ID de Firebase Installations.
+- [x] Aprovisionar recursos Android oficiales de Firebase por equipo de despliegue; `app/google-services.json` presente en local (ignorado por git, 2026-11-22). CI compila sin él (el plugin solo se aplica si el archivo existe); el release a Play necesita aportarlo.
+- [x] Servicio receptor, canales, renovación y ciclo login/logout con contratos publicados (implementado en FT-39; E2E en teléfono se sigue en FT-39). Se atiende en `FT-39-push-recepcion-ubicacion` (2026-11-19); RF-21-06 cambia: el `deviceId` ahora es un UUID por instalación, no el ID de Firebase Installations.
 - [ ] Bandeja local cifrada cuando exista alcance/contrato acordado; no inventar API inbox ni marcado remoto.
 - [ ] Main concilia memoria y documentación compartida; ejecuta CHECKLIST_PR, seguridad y cobertura antes de merge.
 ## Corrección posterior al gate inicial
@@ -34,3 +34,10 @@ Las tareas históricas de rutas no publicadas se sustituyen por este alcance rat
 ## Evidencia de integración principal — 2026-11-14
 
 257 pruebas unitarias globales sin fallos, Kover regenerado 82.82%; compileDebugKotlin, compileDebugAndroidTestSources, lint, detekt, ktlintCheck y cinco scripts Python PASS. Las frases «pendiente por main» anteriores describen el traspaso histórico y quedan resueltas para estas validaciones locales. POST_NOTIFICATIONS declarado y pruebas compartidas adaptadas. GET/PUT settings publicados confirmados con OPTIONS 405 Allow GET,PUT; device-token con GET 405 Allow PUT. Fuente Firebase SDK real con guardas de sesión y sin registros de tokens. Firebase Messaging 24.1.2 oficial compatible con Room 2.6.1; 26.0.2 produjo incompatibilidad de metadata y no se utiliza. Sin cambios de Kotlin, Room, umbrales o CI. La configuración Firebase oficial sigue ausente; no se inventa ni se declara recepción/renovación completa. Compose solo compilado.
+
+## Avance en movil_Rocio — 2026-11-21
+
+- El caso de uso compartido comprueba si Android permite notificaciones antes de pedir el token al SDK y después de obtenerlo, antes del PUT. La activación manual, la renovación y los reintentos quedan sujetos a la misma comprobación.
+- La UI muestra el mensaje de permiso si el sistema bloquea las notificaciones y conserva las preferencias ya cargadas. Se añadieron regresiones de bloqueo previo, revocación durante la obtención del token y mapeo de error en el ViewModel.
+- El archivo local app/google-services.json existe y está ignorado por Git. No se leyó ni se modificó su contenido. Aún falta verificar registro y entrega en un dispositivo con el proyecto y backend de despliegue.
+- Validación local del 2026-11-22 con 456 pruebas unitarias y 0 fallos, Kover Debug 80.80%, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.

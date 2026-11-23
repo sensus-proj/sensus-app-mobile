@@ -41,7 +41,8 @@ data class OfferDto(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val distanceMeters: Double? = null,
-    val version: Int = 1
+    val version: Int = 1,
+    val viewCount: Int? = null
 )
 
 /** Respuesta paginada de `GET /api/v1/offers/nearby` (Spec 007). */

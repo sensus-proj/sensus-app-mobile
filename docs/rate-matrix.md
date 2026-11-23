@@ -34,6 +34,7 @@
 | Feed de promociones e intereses | `GET /api/v1/feed/offers`, `GET`/`PUT /api/v1/users/me/interests` | 15 s | 1 / 0 | 20 | Propuesto (FT-30) |
 | Detalle de oferta y registro de vista | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/view` | 20 s | 0 | — | Cliente oficial sanitizado (FT-12; sin reintento automático de escritura) |
 | Apartado, canje y republicación | `POST /api/v1/offers/{id}/claim`, `POST /api/v1/offers/claims/{code}/redeem`, `POST /api/v1/offers/{id}/republish` | 20 s | 0 | — | Cliente oficial sanitizado (FT-13/14/16; sin reintento automático de escritura) |
+| Mis reservas y cancelación | `GET /api/v1/offers/claims`, `PATCH /api/v1/offers/claims/{id}/cancel` | 20 s | 0 | — | Cliente FT-13 integrado (2026-11-22); rutas pendientes de publicación backend. Sin reintento automático de la cancelación |
 | Consulta/edición ajustes y registro dispositivo | `GET`/`PUT /api/v1/users/settings`, `PUT /api/v1/users/device-token` | 15 s | 0 | — | Cliente oficial sanitizado (FT-21; token FCM real, no se registra en logs). FT-39: si el registro responde 503 (FCM no disponible) se reintenta a los 30 s, 2 min y 10 min, y otra vez al abrir la app |
 | Ubicación para ofertas cercanas | `PUT`/`DELETE /api/v1/users/notification-location` | 15 s | 0 | — | Cliente FT-39: sin reintento inmediato; se renueva al volver a la app si pasaron 6 h |
 | Device token y settings push | `PUT /api/v1/users/device-token`, `PUT /api/v1/users/settings` | 15 s | 1 | — | Propuesto (FT-21) |

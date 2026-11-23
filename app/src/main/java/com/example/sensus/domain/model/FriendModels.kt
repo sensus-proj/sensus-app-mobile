@@ -141,7 +141,7 @@ object FriendInviteCodec {
 
     private fun parseFromUri(raw: String): ParsedFriendInvite? {
         val uri = parseSafeUri(raw)?.takeIf(::isInviteUri) ?: return null
-        val queryParams = parseQueryParams(uri.rawQuery.orEmpty())
+        val queryParams = parseQueryParams(uri.rawQuery.orEmpty()) ?: return null
         val rawCode = queryParams["code"]?.trim()?.uppercase().orEmpty()
         return if (validCodeRegex.matches(rawCode)) {
             val rawName = queryParams["name"]?.trim()?.takeIf { it.isNotBlank() }
@@ -158,27 +158,29 @@ object FriendInviteCodec {
     }
 
     private fun isInviteUri(uri: URI): Boolean {
-        val scheme = uri.scheme?.lowercase() ?: return false
-        val isAppScheme = scheme == "sensus" && uri.host.equals("invitacion", ignoreCase = true)
+        if (uri.rawUserInfo != null || uri.port != -1) return false
+        val scheme = uri.scheme?.lowercase()
         val path = uri.rawPath.orEmpty()
-        val isLandingInvitePath = path == "/sensus" || path == "/sensus/" || path.startsWith("/sensus/invitacion")
-        val isWebInvite = (scheme == "https" || scheme == "http") &&
-            uri.host.equals("rodnix.com.mx", ignoreCase = true) &&
-            isLandingInvitePath
-        return isAppScheme || isWebInvite
+        return when (scheme) {
+            "sensus" -> uri.host.equals("invitacion", ignoreCase = true) && (path.isEmpty() || path == "/")
+            "https", "http" -> uri.host.equals("rodnix.com.mx", ignoreCase = true) && path in inviteWebPaths
+            else -> false
+        }
     }
 
-    private fun parseQueryParams(rawQuery: String): Map<String, String> {
-        if (rawQuery.isBlank()) return emptyMap()
-        return rawQuery.split("&").mapNotNull { pair ->
-            val idx = pair.indexOf('=')
-            if (idx <= 0) {
-                null
-            } else {
-                val key = URLDecoder.decode(pair.substring(0, idx), Charsets.UTF_8.name())
-                val value = URLDecoder.decode(pair.substring(idx + 1), Charsets.UTF_8.name())
-                key to value
+    private fun parseQueryParams(rawQuery: String): Map<String, String>? {
+        val params = mutableMapOf<String, String>()
+        for (pair in rawQuery.split("&")) {
+            val separator = pair.indexOf('=')
+            if (separator <= 0) continue
+            val key = URLDecoder.decode(pair.substring(0, separator), Charsets.UTF_8.name())
+            if (key == "code" || key == "name") {
+                val decoded = URLDecoder.decode(pair.substring(separator + 1), Charsets.UTF_8.name())
+                if (params.put(key, decoded) != null) return null
             }
-        }.toMap()
+        }
+        return params
     }
+
+    private val inviteWebPaths = setOf("/sensus", "/sensus/", "/sensus/invitacion", "/sensus/invitacion/")
 }

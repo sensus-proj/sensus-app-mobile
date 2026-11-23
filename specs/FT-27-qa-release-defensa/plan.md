@@ -8,6 +8,7 @@
 1. **Cobertura y pruebas E2E.** Ejecutar la suite completa unitaria (JUnit5 + MockK + Turbine), integración SQLCipher y flujos E2E Compose (`Auth`, `Discovery`, `Reserva QR`, `Canje Comercio`, `Comunidad`, `Baja de cuenta`) con Kover `>= 80%`.
 2. **Auditoría OWASP MASVS / ASVS L2.** Verificar todos los controles V1..V14 en `docs/asvs-l2-checklist.md` con evidencia trazable.
 3. **Acta de aceptación.** Conciliar `specs/README.md`, `docs/endpoints-internos.md`, `docs/rate-matrix.md` y `Memoria.md` §6 para la defensa del proyecto (20/11–04/12/2026).
+4. Migrar a SQLCipher para Android con soporte de 16 KB. Verificar los segmentos ELF, el empaquetado y la reapertura de una base cifrada existente tras actualizar la app.
 
 ## 2. UI y navegación
 

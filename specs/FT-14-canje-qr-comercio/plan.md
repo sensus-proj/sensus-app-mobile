@@ -16,3 +16,5 @@ Callbacks y Clock agrupados en ClaimsScreenActions (@ComposeUiModel); Screen y C
 
 ## Captura con cámara
 Reutilizar el lector QR y enviar el contenido leído al intent Edit. Verificar que la lectura no dispare Submit.
+
+La pantalla envía la lectura del QR como intención Scan. El ViewModel conserva el folio literal en memoria, indica que está listo para revisión y solo llama al repositorio ante confirmación explícita. Se cubren la lectura previa al POST, la edición manual y el bloqueo de intentos duplicados.

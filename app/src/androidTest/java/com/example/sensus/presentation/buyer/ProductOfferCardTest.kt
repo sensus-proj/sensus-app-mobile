@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.sensus.R
+import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.theme.SensusTheme
 import org.junit.Assert.assertEquals
@@ -27,6 +28,20 @@ import org.junit.runner.RunWith
 class ProductOfferCardTest {
     @get:Rule
     val compose = createComposeRule()
+
+    @Test
+    fun cardOnlyShowsVerificationAndStatusFromTheMerchantProfile() {
+        val offer = ProductOffer("offer", "Pan", "Tienda", "Panadería", 10.0, 5.0, 50, 2, 100)
+        val profile = mutableStateOf<MerchantProfile?>(null)
+        compose.setContent { SensusTheme { ProductOfferCard(offer.copy(merchantProfile = profile.value), {}) } }
+        compose.onNodeWithText("Verificado").assertDoesNotExist()
+        compose.onNodeWithText("Cerrado ahora").assertDoesNotExist()
+        compose.runOnIdle {
+            profile.value = MerchantProfile(nombreComercial = "Tienda", direccion = "", codigoPostal = "", activo = false, isVerified = true)
+        }
+        compose.onNodeWithText("Verificado").assertExists()
+        compose.onNodeWithText("Cerrado ahora").assertExists()
+    }
 
     @Test
     fun compactOffer_keepsPriceVisibleAndSaveIndependentFromOpeningDetails() {

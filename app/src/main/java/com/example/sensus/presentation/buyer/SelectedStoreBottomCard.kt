@@ -68,6 +68,8 @@ import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedButtonColors
 import java.util.Locale
 
+private const val STORE_PREVIEW_OFFER_LIMIT = 2
+
 private const val STORE_CARD_ACTIVE_ALPHA = 0.14f
 private const val MATCHING_LIST_MAX_HEIGHT_DP = 172
 private const val OVERVIEW_CATEGORY_LIMIT = 3
@@ -114,7 +116,7 @@ internal fun SelectedStoreBottomCard(cluster: MapStoreCluster, actions: Selected
                 SelectedStoreCatalogOverview(cluster = cluster)
             } else {
                 SelectedStoreCategoryOffersList(
-                    offers = cluster.matchingOffers,
+                    offers = cluster.matchingOffers.take(STORE_PREVIEW_OFFER_LIMIT),
                     onOfferClick = actions.onOfferClick,
                     savedOfferIds = actions.savedOfferIds,
                     onToggleSaveOffer = actions.onToggleSaveOffer
@@ -154,6 +156,7 @@ private fun SelectedStoreHeaderRow(cluster: MapStoreCluster) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                MerchantOpenStatusText(profile = cluster.merchantProfile)
             }
         }
         Spacer(modifier = Modifier.width(8.dp))

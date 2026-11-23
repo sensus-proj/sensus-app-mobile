@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import com.example.sensus.domain.model.GuestRadiusPolicy
+import com.example.sensus.domain.model.OfferDiscoveryFilters
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UserLocation
@@ -16,7 +17,11 @@ data class BuyerHomeViewState(
     val isGuest: Boolean = false,
     val selectedRadiusKm: Float = GuestRadiusPolicy.GUEST_MAX_RADIUS_KM,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val nextPage: Int? = null,
+    val pageLoadFailed: Boolean = false,
+    val usingCachedOffers: Boolean = false,
+    val filters: OfferDiscoveryFilters = OfferDiscoveryFilters()
 ) : ViewState
 
 sealed interface BuyerHomeViewIntent : ViewIntent {
@@ -25,6 +30,8 @@ sealed interface BuyerHomeViewIntent : ViewIntent {
     data class RadiusSelected(val radiusKm: Float) : BuyerHomeViewIntent
     data object RefreshLocation : BuyerHomeViewIntent
     data object RefreshOffers : BuyerHomeViewIntent
+    data class ChangeFilters(val filters: OfferDiscoveryFilters) : BuyerHomeViewIntent
+    data object LoadNextPage : BuyerHomeViewIntent
 }
 
 sealed interface BuyerHomeViewEffect : ViewEffect {

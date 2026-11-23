@@ -78,20 +78,31 @@ class MerchantViewModelsTest {
     }
 
     @Test
-    fun merchantDashboard_loadsStoreAndOffers() {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
-        val offersRepo = mockk<OffersRepository>(relaxed = true)
-        coEvery { storeRepo.getSampleStore() } returns MerchantStore(name = "Mi Tienda")
-        coEvery { offersRepo.getOffers() } returns listOf(
-            ProductOffer("1", "Offer 1", "Mi Tienda", "Todo", 10.0, 5.0, 50, 10, 100)
-        )
+    fun merchantDashboardSeparatesFinishedOffersAndReportsInventoryFailure() = runTest {
+        val offersRepo = mockk<OffersRepository>()
+        val getMyMerchant = mockk<GetMyMerchantUseCase>()
+        val active = ProductOffer("active", "Pan", "Tienda", "Panadería", 10.0, 5.0, 50, 3, 100)
+        val paused = active.copy(id = "paused", status = OfferLifecycleStatus.PAUSED)
+        val soldOut = active.copy(id = "soldOut", unitsLeft = 0, status = OfferLifecycleStatus.SOLD_OUT)
+        val expired = active.copy(id = "expired", status = OfferLifecycleStatus.EXPIRED)
+        coEvery { getMyMerchant() } returns Result.Failure(AppError.Network())
+        coEvery { offersRepo.fetchMerchantOffers() } returns Result.Success(listOf(active, paused, soldOut, expired))
 
-        val vm = MerchantDashboardViewModel(storeRepo, offersRepo)
-        assertEquals("Mi Tienda", vm.viewState.value.store.name)
-        assertEquals(1, vm.viewState.value.activeStoreOffers.size)
+        val vm = MerchantDashboardViewModel(offersRepo, getMyMerchant)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(listOf(active), vm.viewState.value.filteredOffers)
+        assertFalse(vm.viewState.value.hasMerchantProfile)
 
+        vm.dispatchIntent(MerchantDashboardViewIntent.SelectOfferFilter(MerchantOfferFilter.PAUSED))
+        assertEquals(listOf(paused), vm.viewState.value.filteredOffers)
+        vm.dispatchIntent(MerchantDashboardViewIntent.SelectOfferFilter(MerchantOfferFilter.FINISHED))
+        assertEquals(listOf(soldOut, expired), vm.viewState.value.filteredOffers)
+
+        coEvery { offersRepo.fetchMerchantOffers() } returns Result.Failure(AppError.Network("Sin conexión"))
         vm.dispatchIntent(MerchantDashboardViewIntent.Refresh)
-        assertEquals("Mi Tienda", vm.viewState.value.store.name)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.viewState.value.allStoreOffers.isEmpty())
+        assertEquals("Sin conexión", vm.viewState.value.errorMessage)
     }
 
     @Test
@@ -148,10 +159,10 @@ class MerchantViewModelsTest {
             longitud = -99.3436
         )
         coEvery { storeRepo.getSampleStore() } returns MerchantStore(name = "Sample")
-        coEvery { offersRepo.getOffers() } returns emptyList()
+        coEvery { offersRepo.fetchMerchantOffers() } returns Result.Success(emptyList())
         coEvery { getMyMerchantUseCase() } returns Result.Success(realMerchant)
 
-        val dashVm = MerchantDashboardViewModel(storeRepo, offersRepo, getMyMerchantUseCase)
+        val dashVm = MerchantDashboardViewModel(offersRepo, getMyMerchantUseCase)
         val profileVm = MerchantProfileViewModel(storeRepo, updateUseCase, getMyMerchantUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -285,19 +296,16 @@ class MerchantViewModelsTest {
 
     @Test
     fun merchantDashboard_adjustingStockToZeroPausesOffer_andDoesNotRevivePausedOnRefresh() = runTest {
-        val storeRepo = mockk<StoreRepository>(relaxed = true)
         val offersRepo = mockk<OffersRepository>()
         val getMyMerchantUseCase = mockk<GetMyMerchantUseCase>()
         val activeOffer = ProductOffer("o_1", "Pan Dulce", "Mi Tienda", "Panadería", 40.0, 20.0, 50, 5, 0)
         val pausedOffer = activeOffer.copy(unitsLeft = 0, status = OfferLifecycleStatus.PAUSED)
 
-        coEvery { storeRepo.getSampleStore() } returns MerchantStore(name = "Mi Tienda")
         coEvery { getMyMerchantUseCase() } returns Result.Failure(AppError.Network("offline"))
-        coEvery { offersRepo.getOffers() } returns listOf(activeOffer)
         coEvery { offersRepo.fetchMerchantOffers() } returns Result.Success(listOf(activeOffer))
         coEvery { offersRepo.updateOfferStock(activeOffer, 0) } returns Result.Success(pausedOffer)
 
-        val vm = MerchantDashboardViewModel(storeRepo, offersRepo, getMyMerchantUseCase)
+        val vm = MerchantDashboardViewModel(offersRepo, getMyMerchantUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.viewState.value.activeStoreOffers.size)
 

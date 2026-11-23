@@ -57,8 +57,9 @@ abstract class NotificationsModule {
         fun registerDevice(
             provider: NotificationsPushDeviceProvider,
             repository: NotificationsRepository,
-            session: SessionRepository
-        ): NotificationsRegisterDeviceUseCase = NotificationsRegisterDeviceUseCase(provider, repository, session)
+            session: SessionRepository,
+            permission: NotificationPermissionChecker
+        ): NotificationsRegisterDeviceUseCase = NotificationsRegisterDeviceUseCase(provider, repository, session, permission)
 
         @Provides
         fun location(

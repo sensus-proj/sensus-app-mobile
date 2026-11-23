@@ -96,23 +96,31 @@ fun MerchantSalesContent(state: MerchantSalesViewState, onIntent: (MerchantSales
             enabled = !state.loading && state.input.isNotBlank() && state.result == null,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
         ) { Text(stringResource(R.string.claims_redeem)) }
-        if (state.loading) CircularProgressIndicator()
-        state.error?.let { Text(claimsErrorText(it), color = SensusRed) }
-        state.result?.let {
-            Text(stringResource(R.string.claims_redeemed, Instant.ofEpochMilli(it.redeemedAtEpochMs).toString()), color = SensusSuccess)
-        }
+        MerchantSalesStatus(state)
     }
     if (showScanner && !state.loading) {
         QrScannerDialog(
             onQrDecoded = { code ->
                 if (showScanner) {
                     showScanner = false
-                    onIntent(MerchantSalesViewIntent.Edit(code))
+                    onIntent(MerchantSalesViewIntent.Scan(code))
                 }
             },
             onDismiss = { showScanner = false },
             instructions = stringResource(R.string.claims_scan_instructions),
             securePolicy = SecureFlagPolicy.SecureOn
         )
+    }
+}
+
+@Composable
+private fun MerchantSalesStatus(state: MerchantSalesViewState) {
+    if (state.loading) CircularProgressIndicator()
+    if (state.scanned && !state.loading && state.error == null) {
+        Text(stringResource(R.string.claims_scan_ready), style = MaterialTheme.typography.bodyMedium)
+    }
+    state.error?.let { Text(claimsErrorText(it), color = SensusRed) }
+    state.result?.let {
+        Text(stringResource(R.string.claims_redeemed, Instant.ofEpochMilli(it.redeemedAtEpochMs).toString()), color = SensusSuccess)
     }
 }

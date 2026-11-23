@@ -52,22 +52,22 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Validar rama autorizada (Exclusivamente main o tags)
         run: |
-          if [ "${{ github.ref }}" != "refs/heads/main" ] && [[ "${{ github.ref }}" != refs/tags/v* ]]; then
+          if [ "$GITHUB_REF" != "refs/heads/main" ] && [[ "$GITHUB_REF" != refs/tags/v* ]]; then
             echo "::error::Despliegue rechazado: Solo la rama 'main' (o tags oficiales 'v*.*.*') tiene autorización para desplegar o publicar en Google Play."
             exit 1
           fi
 
       - name: Validar Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
+        uses: gradle/wrapper-validation-action@b5418f5a58f5fd2eb486dd7efb368fe7be7eae45 # v2
 
       - name: Configurar Python 3.12 para compuertas SDD
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
@@ -80,31 +80,28 @@ jobs:
           python scripts/check_secrets.py
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 17
 
       # Cache de Gradle gestionada por setup-gradle (E-07).
       - name: Configurar Gradle y su cache
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Dar permisos de ejecución a gradlew
         run: chmod +x ./gradlew
 
       - name: Escaneo estricto de secretos (Gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Escaneo SAST de seguridad móvil (Semgrep)
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/default
-            p/owasp-top-ten
-            p/kotlin
-            p/java
+        run: |
+          python -m pip install semgrep==1.130.0
+          semgrep scan --error --strict --max-target-bytes=0 \
+            --config p/default --config p/owasp-top-ten --config p/kotlin --config p/java .
 
       - name: Análisis estático (Android Lint, Detekt, Ktlint)
         run: ./gradlew lint detekt ktlintCheck --no-daemon
@@ -112,7 +109,7 @@ jobs:
       - name: Pruebas unitarias y verificación de cobertura Kover (>= 80%)
         run: |
           ./gradlew testDebugUnitTest koverXmlReportDebug koverVerifyDebug --no-daemon
-          python scripts/check_coverage.py --min 80
+          python scripts/check_coverage.py --min 80 --require-report --report app/build/reports/kover/reportDebug.xml
 
       - name: Compilación instrumentada y verificación de build
         run: ./gradlew compileDebugAndroidTestSources compileDebugKotlin compileReleaseKotlin --no-daemon
@@ -129,24 +126,24 @@ jobs:
     environment: play-store-release
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validar rama autorizada para despliegue (Exclusivamente main o tags)
         run: |
-          if [ "${{ github.ref }}" != "refs/heads/main" ] && [[ "${{ github.ref }}" != refs/tags/v* ]]; then
+          if [ "$GITHUB_REF" != "refs/heads/main" ] && [[ "$GITHUB_REF" != refs/tags/v* ]]; then
             echo "::error::Despliegue rechazado: Solo la rama 'main' (o tags oficiales 'v*.*.*') tiene autorización para desplegar o publicar en Google Play."
             exit 1
           fi
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 17
 
       # Cache de Gradle gestionada por setup-gradle (E-07).
       - name: Configurar Gradle y su cache
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Dar permisos de ejecución a gradlew
         run: chmod +x ./gradlew
@@ -221,9 +218,10 @@ jobs:
       - name: Determinar pista, estado y notas BCP-47 para Play Console
         if: steps.check-env.outputs.ready == 'true'
         id: release-config
+        env:
+          TRACK: ${{ inputs.track }}
+          FRACTION: ${{ inputs.user_fraction }}
         run: |
-          TRACK="${{ inputs.track }}"
-          FRACTION="${{ inputs.user_fraction }}"
           if [ -z "$TRACK" ]; then
             TRACK="production"
           fi
@@ -235,7 +233,7 @@ jobs:
             OUT_FRACTION="$FRACTION"
           fi
 
-          WHATSNEW_DIR="${{ runner.temp }}/whatsnew"
+          WHATSNEW_DIR="$RUNNER_TEMP/whatsnew"
           mkdir -p "$WHATSNEW_DIR"
           for f in distribution/whatsnew/whatsnew-*; do
             [ -f "$f" ] || continue
@@ -250,7 +248,7 @@ jobs:
 
       - name: Publicar AAB en Google Play Console
         if: steps.check-env.outputs.ready == 'true'
-        uses: r0adkll/upload-google-play@v1.1.5
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJson: "${{ runner.temp }}/play-service-account.json"
           packageName: "sensus.com"

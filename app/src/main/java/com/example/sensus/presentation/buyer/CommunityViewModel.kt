@@ -26,8 +26,7 @@ class CommunityViewModel @Inject constructor(
     private val createPost: CreateFeedPostUseCase,
     private val locationRepository: LocationRepository,
     private val sessionRepository: SessionRepository,
-    private val offersRepository: OffersRepository,
-    private val storeRepository: com.example.sensus.domain.repository.StoreRepository? = null
+    private val offersRepository: OffersRepository
 ) : MviViewModel<CommunityViewState, CommunityViewIntent, CommunityViewEffect>(CommunityViewState()) {
     /**
      * Dispatcher para el trabajo de E/S. Los tests lo sustituyen por el dispatcher de prueba: un salto de hilo
@@ -40,7 +39,6 @@ class CommunityViewModel @Inject constructor(
     private var feedJob: Job? = null
 
     init {
-        updateState { copy(friends = storeRepository?.getSampleFriends().orEmpty()) }
         viewModelScope.launch {
             sessionRepository.sessionState.collect { session ->
                 updateState {

@@ -234,3 +234,37 @@ relanzar antes de tocar dependencias.
 ## E-08 — El aviso de ofertas cercanas vuelve al iniciar sesión
 
 El cierre de sesión borraba el consentimiento de ubicación y la marca de que el aviso ya se había respondido. El siguiente acceso volvía a mostrarlo. El almacén de instalación conserva ahora la marca del aviso y deja desactivado el envío de ubicación al salir. La activación voluntaria sigue disponible en Preferencias de notificaciones. La prueba de regresión comprueba la limpieza del consentimiento y la conservación de la marca en una nueva instancia del almacén.
+
+## E-09 — Una oferta confirmada podía faltar en la caché de publicación
+
+El POST de creación podía devolver 201 y, aun así, la copia local no guardarse. La revisión de código identificó que el repositorio invocaba el DAO bloqueante de Room desde la corrutina de la pantalla, que normalmente corre en Main, y la protección de caché absorbía el error.
+
+La inserción tras el 201 se ejecuta en Dispatchers.IO. La prueba HTTP comprueba que el DAO reciba la oferta con el stock confirmado y que la escritura ocurra fuera del hilo del llamador. La prueba en dispositivo sigue pendiente.
+
+## E-10 — El inventario del comercio podía incluir ofertas del catálogo público
+
+El panel precargaba la tabla compartida de ofertas y el repositorio devolvía esa misma tabla si fallaba la consulta privada. Además, una consulta privada válida reemplazaba el catálogo público guardado. Ahora el panel muestra resultados de my-offers o un error con reintento. La lectura del inventario no modifica la caché de exploración. Las pruebas de ViewModel y MockWebServer cubren el fallo y verifican que el DAO no se consulte ni se modifique al listar inventario.
+
+## E-11 — Una falla de caché podía impedir mostrar el feed comunitario
+
+El guardado de la página se hacía dentro de la lectura remota y un error de Room convertía una respuesta válida en fallo. En modo offline una lectura fallida o una fila con JSON corrupto podía interrumpir la recuperación.
+
+El cliente usa la página remota aunque no pueda guardarla. Al leer la caché omite las filas dañadas y conserva el error de red si Room no está disponible. Las dos operaciones permanecen en Dispatchers.IO y propagan las cancelaciones.
+
+## E-12 — La activación manual podía intentar registrar el dispositivo con las notificaciones bloqueadas
+
+La pantalla solo comprobaba si debía solicitar el permiso en Android 13 o superior. El registro automático comprobaba además si el sistema permitía notificaciones, pero el caso de uso compartido no aplicaba esa regla.
+
+La activación manual y automática consultan ahora el permiso efectivo antes del SDK y antes de registrar. La UI muestra un mensaje de permiso sin borrar las preferencias. Las pruebas cubren el bloqueo previo y la revocación durante la consulta del token.
+
+## E-13 — SQLCipher legado impide aprobar la compatibilidad con páginas de 16 KB
+
+Android Studio mostró un aviso de incompatibilidad al instalar la APK. Los segmentos `PT_LOAD` de `libsqlcipher.so` del artefacto legado tenían alineación de 4096 bytes en ARM64 y x86_64.
+
+Se migró a `sqlcipher-android` 4.20.0 y se verificó la alineación a 16384 bytes en ambas arquitecturas en el AAR. Para confirmar la corrección en release, verificar el empaquetado y que la candidata abra la base existente al actualizar sobre una instalación anterior.
+
+## E-14 — Firebase puede interrumpir una suite instrumentada con Hilt
+
+En el vivo V2341, Firebase inició `SensusMessagingService` durante la suite. La inyección automática al crear el servicio intentó acceder al componente de Hilt de una prueba desde un servicio de aplicación y abortó el proceso.
+
+El servicio obtiene la sincronización de tokens desde `SensusApp` cuando recibe el token. En el proceso instrumentado, `HiltTestApplication` permite ejecutar las pruebas sin iniciar esa sincronización contra la sesión de la app real.

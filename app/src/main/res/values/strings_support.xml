@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ft23_cancellation_title">Vigencia de los apartados</string>
+    <string name="ft23_cancellation_summary">Cada apartado tiene una fecha límite de canje. Si no lo canjeas dentro del plazo, el apartado vence.</string>
+    <string name="ft23_rights_title">Tus derechos ARCO</string>
+    <string name="ft23_rights_summary">Conforme a la LFPDPPP puedes solicitar el acceso, la rectificación, la cancelación u oposición al tratamiento de tus datos personales. El procedimiento y los medios de contacto están en el Aviso de Privacidad oficial.</string>
+    <string name="ft23_account_title">Eliminación de cuenta</string>
+    <string name="ft23_account_summary">Puedes eliminar tu cuenta en cualquier momento desde Perfil. Al hacerlo se cierra tu sesión y se borran los datos guardados en este dispositivo.</string>
+    <string name="ft23_privacy_title">Intereses y personalización del feed</string>
+    <string name="ft23_privacy_summary">Las categorías de interés que eliges y las interacciones con ofertas, como vistas, aperturas y apartados, se usan para ordenar el feed de promociones y medir su calidad. Las interacciones se seudonimizan y se conservan durante 180 días. Consulta el aviso completo para conocer tus opciones de privacidad.</string>
+    <string name="ft23_guest_title">Modo invitado · 2 km</string>
+    <string name="ft23_guest_description">Crea una cuenta para ampliar tu radio y participar en Comunidad.</string>
+    <string name="ft23_guest_action">Crear cuenta</string>
+</resources>

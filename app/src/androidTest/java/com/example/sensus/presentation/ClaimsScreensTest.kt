@@ -93,6 +93,22 @@ class ClaimsScreensTest {
     }
 
     @Test
+    fun merchantReviewsScannedCodeBeforeConfirming() {
+        val code = "Ab.signed"
+        val intents = mutableListOf<MerchantSalesViewIntent>()
+        compose.setContent {
+            MaterialTheme { MerchantSalesContent(MerchantSalesViewState(input = code, scanned = true), { intents.add(it) }) }
+        }
+
+        compose.onNodeWithText(code).assertExists()
+        compose.onNodeWithText("QR leído. Revisa el folio y confirma el canje.").assertExists()
+        compose.runOnIdle { assertEquals(emptyList<MerchantSalesViewIntent>(), intents) }
+
+        compose.onNodeWithText("Validar y canjear").performClick()
+        compose.runOnIdle { assertEquals(listOf(MerchantSalesViewIntent.Submit(code)), intents) }
+    }
+
+    @Test
     fun merchantFailureHasNoConfirmation() {
         compose.setContent {
             MaterialTheme { MerchantSalesContent(MerchantSalesViewState(error = AppError.Forbidden()), {}) }

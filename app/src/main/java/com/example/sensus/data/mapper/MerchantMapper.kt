@@ -27,7 +27,9 @@ object MerchantMapper {
             longitud = longitud,
             horarios = mappedHorarios,
             fotoFachadaUrl = fotoFachadaUrl,
-            activo = activo
+            activo = activo,
+            isVerified = isVerified,
+            paymentMethods = paymentMethods.orEmpty().map(String::trim).filter(String::isNotEmpty).distinct()
         )
     }
 

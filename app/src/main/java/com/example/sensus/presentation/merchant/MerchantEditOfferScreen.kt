@@ -115,9 +115,6 @@ fun MerchantEditOfferScreen(
     modifier: Modifier = Modifier
 ) {
     val vmState by viewModel.viewState.collectAsStateWithLifecycle()
-    val effectiveOffer = vmState.currentOffer?.takeIf { it.id == offer.id } ?: offer
-    var form by remember(offer.id) { mutableStateOf(initialEditForm(offer)) }
-    var showArchiveConfirm by remember { mutableStateOf(false) }
 
     LaunchedEffect(offer.id) {
         viewModel.dispatchIntent(MerchantEditOfferViewIntent.Initialize(offer))
@@ -132,6 +129,21 @@ fun MerchantEditOfferScreen(
         }
     }
 
+    MerchantEditOfferContent(offer, vmState, onNavigateBack, viewModel::dispatchIntent, modifier)
+}
+
+@Composable
+internal fun MerchantEditOfferContent(
+    offer: ProductOffer,
+    vmState: MerchantEditOfferViewState,
+    onNavigateBack: () -> Unit,
+    onIntent: (MerchantEditOfferViewIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val effectiveOffer = vmState.currentOffer?.takeIf { it.id == offer.id } ?: offer
+    var form by remember(offer.id) { mutableStateOf(initialEditForm(offer)) }
+    var pendingStatus by remember(offer.id, effectiveOffer.status) { mutableStateOf<OfferLifecycleStatus?>(null) }
+
     EditOfferScrollContent(
         offer = effectiveOffer,
         form = form,
@@ -140,35 +152,38 @@ fun MerchantEditOfferScreen(
             onNavigateBack = onNavigateBack,
             onFormChange = { updated ->
                 form = updated
-                viewModel.dispatchIntent(MerchantEditOfferViewIntent.FieldEdited)
+                onIntent(MerchantEditOfferViewIntent.FieldEdited)
             },
             onToggleStatus = { nextStatus ->
-                viewModel.dispatchIntent(MerchantEditOfferViewIntent.ChangeStatus(effectiveOffer, nextStatus))
+                if (nextStatus == OfferLifecycleStatus.PAUSED) {
+                    pendingStatus = nextStatus
+                } else {
+                    onIntent(MerchantEditOfferViewIntent.ChangeStatus(effectiveOffer, nextStatus))
+                }
             },
-            onRequestArchive = { showArchiveConfirm = true },
+            onRequestArchive = { pendingStatus = OfferLifecycleStatus.ARCHIVED },
             onRepublish = {
-                viewModel.dispatchIntent(
+                onIntent(
                     MerchantEditOfferViewIntent.Republish(
-                        RepublishOfferInput(effectiveOffer.id, System.currentTimeMillis() + REPUBLISH_START_LEAD_MILLIS, form.expiresAtMillis, form.stockCount)
+                        RepublishOfferInput(offer.id, System.currentTimeMillis() + REPUBLISH_START_LEAD_MILLIS, form.expiresAtMillis, form.stockCount)
                     )
                 )
             },
             onSaveChanges = {
-                viewModel.dispatchIntent(MerchantEditOfferViewIntent.SaveChanges(buildUpdateOfferInput(effectiveOffer, form)))
+                onIntent(MerchantEditOfferViewIntent.SaveChanges(buildUpdateOfferInput(effectiveOffer, form)))
             }
         ),
         modifier = modifier
     )
 
-    if (showArchiveConfirm) {
-        ArchiveConfirmationDialog(
+    pendingStatus?.let { status ->
+        OfferStatusConfirmationDialog(
             offerName = effectiveOffer.name,
-            onDismiss = { showArchiveConfirm = false },
+            status = status,
+            onDismiss = { pendingStatus = null },
             onConfirm = {
-                showArchiveConfirm = false
-                viewModel.dispatchIntent(
-                    MerchantEditOfferViewIntent.ChangeStatus(effectiveOffer, OfferLifecycleStatus.ARCHIVED)
-                )
+                pendingStatus = null
+                onIntent(MerchantEditOfferViewIntent.ChangeStatus(effectiveOffer, status))
             }
         )
     }
@@ -492,19 +507,27 @@ private fun SaveOfferChangesButton(isSaving: Boolean, enabled: Boolean, onClick:
 }
 
 @Composable
-private fun ArchiveConfirmationDialog(offerName: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+private fun OfferStatusConfirmationDialog(offerName: String, status: OfferLifecycleStatus, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    val isPause = status == OfferLifecycleStatus.PAUSED
+    val title = if (isPause) R.string.merchant_pause_confirm_title else R.string.merchant_archive_confirm_title
+    val message = if (isPause) R.string.merchant_pause_confirm_message else R.string.merchant_archive_confirm_message
+    val action = if (isPause) R.string.merchant_pause_confirm_action else R.string.merchant_archive_confirm_action
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Dar de baja promoción", fontWeight = FontWeight.Bold) },
-        text = { Text(text = "¿Seguro que deseas dar de baja \"$offerName\"? Ya no volverá a mostrarse al público.") },
+        title = { Text(text = stringResource(title), fontWeight = FontWeight.Bold) },
+        text = { Text(text = stringResource(message, offerName)) },
         confirmButton = {
-            Button(shape = SensusButtonShape, onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = StatusRed)) {
-                Text(text = "Sí, dar de baja", color = Color.White)
+            Button(
+                shape = SensusButtonShape,
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = if (isPause) SensusPurple else StatusRed)
+            ) {
+                Text(text = stringResource(action), color = Color.White)
             }
         },
         dismissButton = {
             TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) {
-                Text(text = "Cancelar", color = SensusTextMuted)
+                Text(text = stringResource(R.string.publishing_cancel), color = SensusTextMuted)
             }
         }
     )

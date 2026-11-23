@@ -17,7 +17,7 @@ Actualmente `BuyerMapScreen` y `BuyerHomeScreen` consumen ofertas locales genera
 
 | ID | Requisito |
 |---|---|
-| RF-11-01 | `GET /api/v1/offers/nearby` recibe `lat`, `lng`, `radiusMeters`, `page`, `pageSize` (20 por defecto, máx. 100) y opcionales `category`, `sort`. |
+| RF-11-01 | `GET /api/v1/offers/nearby` recibe `lat`, `lng`, `radiusKm`, `page`, `pageSize` (20 por defecto, máx. 100) y `category` opcional. El backend ordena por distancia y exige un mínimo de 1 km a compradores autenticados. Para radios menores se consulta 1 km y se aplica el radio seleccionado en el mapa y en la lista. |
 | RF-11-02 | En sesión autenticada, `RadiusSelectorModal` soporta modo Metros (`100, 200, 300, 400, 500 m`) y Kilómetros (`1, 2, 3, 4, 5 km`), persistiendo siempre en metros en perfil/preferencias (`radio_preferido_m`). En modo invitado fija `radiusMeters = 2000` bloqueado. |
 | RF-11-03 | `BuyerMapScreen` (`P-07`) carga OSMDroid centrado en la ubicación del usuario (marcador gatito), dibuja el radio en metros y muestra pines diferenciados para comercios abiertos (morado) y cerrados; agrupa pines cercanos (*clustering*) cuando hay alta densidad. |
 | RF-11-04 | Al tocar un pin en el mapa se abre la hoja inferior de vista previa (`P-09`, `C-13`) con nombre del comercio, estado calculado (`Abierto ahora` / `Cerrado ahora`), distancia y sus 2 ofertas principales. |
@@ -55,7 +55,7 @@ presentation/common/
 
 ## 5. Criterios de aceptacion
 
-- **Given** usuario autenticado en mapa con radio 3 km **When** abre la app o mueve el slider **Then** se consulta `GET /api/v1/offers/nearby` con `radiusMeters = 3000` y se actualizan pines y lista.
+- **Given** usuario autenticado en mapa con radio 3 km **When** abre la app o mueve el slider **Then** se consulta `GET /api/v1/offers/nearby` con `radiusKm = 3.0` y se actualizan pines y lista.
 - **Given** modo invitado **When** abre `RadiusSelectorModal` **Then** el radio está bloqueado en `2000 m` y el caso de uso rechaza/normaliza cualquier radio distinto.
 - **Given** un usuario toca un pin de comercio en el mapa **When** pulsa el marcador **Then** se despliega la hoja `P-09` con datos del comercio y sus 2 ofertas principales.
 - **Given** dispositivo sin red con ofertas previas cacheadas **When** abre inicio **Then** muestra ofertas de `OfferDao` sin usar `MockDataProvider`.
@@ -78,3 +78,8 @@ presentation/common/
 | Estado | Revisor | Fecha | Evidencia |
 |---|---|---|---|
 | Borrador | — | — | Pendiente de ejecución |
+
+
+### Integración Android de perfil público
+
+Inicio cruza las ofertas por merchantId con el id de GET /merchants/nearby. Calcula el estado a partir de los horarios publicados y muestra Verificado únicamente ante una confirmación explícita del perfil. El backend actual no publica la verificación. El cliente admite isVerified como extensión opcional, pendiente de ratificación y prueba con backend.

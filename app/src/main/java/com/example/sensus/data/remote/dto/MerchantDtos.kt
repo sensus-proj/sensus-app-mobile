@@ -44,7 +44,9 @@ data class ComercioDto(
     val activo: Boolean = true,
     val fechaRegistro: String? = null,
     val horarios: List<HorarioDiaDto>? = null,
-    val fotoFachadaUrl: String? = null
+    val fotoFachadaUrl: String? = null,
+    val isVerified: Boolean? = null,
+    val paymentMethods: List<String>? = null
 )
 
 @Serializable

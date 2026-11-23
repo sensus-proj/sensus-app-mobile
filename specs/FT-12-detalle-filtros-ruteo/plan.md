@@ -55,3 +55,8 @@ Ver `tasks.md`.
 ### Adaptación al contrato publicado — 2026-11-14
 
 OfferDetailsApiService + OfferDetailsRepositoryImpl/OfferDetailsRepository y GetOfferDetailUseCase/RegisterOfferViewUseCase. Binding Hilt en OfferDetailsModule con NetworkClient.offerDetailsApi (mismo servidor/autenticación, sin logger de cuerpos). ProductDetailViewModel entrega detalle/estado y registra vista una vez por oferta en la vida del ViewModel, mientras el backend deduplica por usuario/día. ProductDetailScreen consume con collectAsStateWithLifecycle y acciones solo cuando hay detalle confirmado; fallo de view no bloquea lectura. Reintento explícito de GET. Modelos de data mapean exclusivamente los campos reales; no se añaden contratos de favoritos ni comercio público.
+
+
+### Integración Android de perfil público
+
+El filtro Abierto ahora usa las ofertas cargadas cuyo horario publicado incluye el minuto actual. El detalle consulta el perfil cercano al punto de la oferta y exige coincidencia de merchantId. Muestra el horario de hoy y los métodos de pago explícitos. El contrato actual no publica métodos de pago. El cliente admite paymentMethods como extensión opcional pendiente de ratificación y prueba con backend.

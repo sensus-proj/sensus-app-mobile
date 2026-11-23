@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
@@ -54,11 +55,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.sensus.R
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.presentation.common.AppearanceSettings
 import com.example.sensus.presentation.common.ComposeUiModel
@@ -91,7 +94,9 @@ data class BuyerProfileCallbacks(
     val onLogoutClick: () -> Unit = {},
     val onDeleteAccountClick: () -> Unit = {},
     val onTermsClick: () -> Unit = {},
+    val onHelpSupportClick: () -> Unit = {},
     val onHistoryClick: () -> Unit = {},
+    val onMyClaimsClick: () -> Unit = {},
     val onGuestActionRequired: () -> Unit = {}
 )
 
@@ -196,8 +201,7 @@ private fun BuyerProfileListContent(
             BuyerSettingsOptionsCard(
                 isGuest = isGuest,
                 onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
-                onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
-                onTermsClick = callbacks.onTermsClick
+                callbacks = callbacks
             )
         }
         item { AppearanceSettings() }
@@ -373,14 +377,21 @@ private fun MerchantToggleLabelContent(
 }
 
 @Composable
-private fun BuyerSettingsOptionsCard(isGuest: Boolean, onEditClick: () -> Unit, onHistoryClick: () -> Unit, onTermsClick: () -> Unit) {
+private fun BuyerSettingsOptionsCard(isGuest: Boolean, onEditClick: () -> Unit, callbacks: BuyerProfileCallbacks) {
+    val guarded: (() -> Unit) -> () -> Unit = { action -> { if (isGuest) callbacks.onGuestActionRequired() else action() } }
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = onEditClick)
-            ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = onHistoryClick)
+            ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = guarded(callbacks.onHistoryClick))
+            ProfileMenuOption(
+                icon = Icons.Default.ConfirmationNumber,
+                title = stringResource(R.string.my_claims_title),
+                isLocked = isGuest,
+                onClick = guarded(callbacks.onMyClaimsClick)
+            )
             ProfileMenuOption(icon = Icons.Default.NotificationsNone, title = "Preferencias de notificaciones", onClick = {})
-            ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = {})
-            ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = onTermsClick)
+            ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = callbacks.onHelpSupportClick)
+            ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = callbacks.onTermsClick)
         }
     }
 }

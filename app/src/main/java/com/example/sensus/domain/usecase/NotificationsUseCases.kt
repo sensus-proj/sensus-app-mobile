@@ -5,6 +5,7 @@ import com.example.sensus.common.Result
 import com.example.sensus.domain.model.NotificationsPreferences
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.repository.LocationRepository
+import com.example.sensus.domain.repository.NotificationPermissionChecker
 import com.example.sensus.domain.repository.NotificationsLocalStore
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.example.sensus.domain.repository.NotificationsRepository
@@ -39,14 +40,26 @@ class NotificationsUpdateSettingsUseCase(
 class NotificationsRegisterDeviceUseCase(
     private val provider: NotificationsPushDeviceProvider,
     private val repository: NotificationsRepository,
-    private val session: SessionRepository
+    private val session: SessionRepository,
+    private val permission: NotificationPermissionChecker
 ) {
     /** [token] llega desde `onNewToken`; si es `null` se pide al SDK de Firebase. */
     suspend operator fun invoke(token: String? = null): Result<Unit> = withNotificationsSession(session) { isCurrent ->
+        if (!permission.canPostNotifications()) return@withNotificationsSession permissionDenied()
         when (val result = provider.getDevice(token)) {
             is Result.Failure -> result
-            is Result.Success -> if (isCurrent()) repository.registerDevice(result.data) else Result.Failure(AppError.Unauthorized())
+            is Result.Success -> when {
+                !isCurrent() -> Result.Failure(AppError.Unauthorized())
+                !permission.canPostNotifications() -> permissionDenied()
+                else -> repository.registerDevice(result.data)
+            }
         }
+    }
+
+    private fun permissionDenied(): Result<Nothing> = Result.Failure(AppError.Forbidden(PERMISSION_REQUIRED))
+
+    companion object {
+        const val PERMISSION_REQUIRED = "Notification permission required"
     }
 }
 

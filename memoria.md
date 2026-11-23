@@ -1051,3 +1051,146 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 
 - El feed por intereses conserva FT-30. La recepción de notificaciones push y la ubicación para ofertas cercanas pasan a FT-39. Se renumeraron sus requisitos y tareas y se actualizaron el índice, la continuación de FT-21 y los contratos relacionados.
 - Los gates de estructura SDD, capas, endpoints y secretos pasaron. La revisión de identificadores en las specs locales confirmó que el feed y push tienen requisitos distintos.
+
+### FT-11 — Paginación de Inicio, radio y ubicación manual (2026-11-21)
+
+- Adoptado el contrato por número de página de la Spec 007 del backend (snapshot 01dad6e). Se consultan hasta 20 ofertas por página desde Inicio; las páginas adicionales se acumulan en la caché y las lecturas sin conexión conservan el respaldo local.
+- Invitado con radio fijo de 2 km. Para compradores autenticados se ofrecen 100 a 500 m y 1 a 5 km y se guardan en metros en Room cifrado. Los radios menores de 1 km se filtran en el cliente debido al mínimo del endpoint.
+- El mapa permite buscar desde su centro cuando el GPS o el permiso no están disponibles. La vista previa usa las dos primeras ofertas del comercio.
+- Validación local: 440 pruebas unitarias sin fallos, compilación Debug e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde. Kover Debug 80.48 %. Quedan pendientes la ejecución en dispositivo, la validación con el backend desplegado y el cierre de las tarjetas.
+
+### FT-12 — Disponibilidad del detalle y filtros locales (2026-11-21)
+
+- El detalle distingue pocas unidades, agotada y vencida. Las acciones que crean un apartado o agregan a la bolsa vuelven a comprobar la vigencia.
+- Inicio conserva el precio máximo, el descuento mínimo y el orden en su estado MVI y aplica esos criterios a las páginas cargadas o al catálogo de caché.
+- Se preservan la consulta de detalle, el registro de vistas y el ruteo. Quedan por verificar horarios, métodos de pago y filtros globales con el backend y por ejecutar las pruebas instrumentadas en dispositivo.
+- Validación local de FT-12: 443 pruebas unitarias sin fallos y cobertura Kover Debug de 80.52 %. Compilaron la app y las pruebas instrumentadas. Lint, Detekt, ktlint y gates Python en verde.
+
+### FT-13 — Conciliación de la bolsa al confirmar (2026-11-21)
+
+- Una reserva nueva confirmada por el servidor retira una sola unidad de la misma oferta en la bolsa, aunque se haya iniciado desde el detalle. Se conservan las demás unidades y artículos. Los fallos, la cancelación local y la reapertura del QR confirmado no modifican la bolsa.
+- Se consultó backend main 1c27253. El GET por claimId requiere un ID conocido y el detalle de oferta solo indica si existe un apartado activo. Siguen pendientes el listado, la cancelación y la recuperación de QR sin ID conocido tras reiniciar.
+- Validación local: 446 pruebas unitarias sin fallos y cobertura Kover Debug de 80.60 %. Compilaron la app y las pruebas instrumentadas. Lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-14 — Revisión del folio escaneado y confirmación de canje (2026-11-21)
+
+- Se mantuvo el lector Camera2/ZXing con ventana segura y la captura manual. Scan carga el folio firmado en el estado MVI para revisión. El botón de canje sigue siendo la acción que invoca el backend.
+- El servicio HmacClaimCodeService del backend entrega el mismo texto como código y QR. La app conserva el folio literal y el éxito sigue condicionado a la confirmación del servidor. Prueba física de cámara y canje real pendientes.
+- Validación local: 448 pruebas unitarias sin fallos, Kover Debug 80.66 %, compilación Android e instrumentada, lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-15 — Contrato de publicación y guardado local (2026-11-21)
+
+- Se incorporó el catálogo OfferCategory desde 0643cca al flujo de publicación de movil_Rocio. La app envía el código y usa el nombre visible en el listado, también con respuestas anteriores.
+- El dominio exige una foto y una categoría específica antes de cualquier carga. Si vence la fecha durante la subida, se bloquea el POST de creación.
+- Se corrigió E-09: el repositorio intenta guardar en Room la oferta confirmada desde Dispatchers.IO. Se conservan la moderación previa y las respuestas del servidor como fuente de verdad.
+- Validación local: 449 pruebas unitarias sin fallos, Kover Debug 80.72 %, compilación de app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-16 — Inventario propio y pestaña Finalizadas (2026-11-21)
+
+- El panel usa el perfil real y el inventario privado. Se retiraron la tienda de ejemplo, sus reseñas y canjes de ejemplo, y el uso del catálogo público como respaldo de inventario (E-10).
+- Activas, Pausadas y Finalizadas usan los mismos criterios para mostrar y contar. El canje, la edición, el ajuste de stock y la republicación conservan sus entradas existentes.
+- GET my-offers devuelve una lista sin paginación ni vistas y canjes por oferta. La consulta privada ya no reemplaza la caché del comprador. El inventario offline propio y las métricas necesitan un contrato y persistencia separados.
+- E-09 también se corrigió en edición, cambio de estado y republicación. Las tres escrituras de la respuesta confirmada se hacen en Dispatchers.IO.
+- Validación local: 451 pruebas unitarias sin fallos y Kover Debug de 80.80 %. Gradle compiló la app y las pruebas instrumentadas. Lint, Detekt, ktlint y los cinco gates Python pasaron. Las pruebas de inventario propio y pausa usan MockWebServer.
+
+### FT-18 — Disponibilidad del contrato y resiliencia de la caché (2026-11-21)
+
+- Backend main 1c27253 registra promociones y actividad de amigos, con rutas distintas de las de FT-18. AWS respondió 503 al GET sin credenciales de publicaciones cercanas. Sigue pendiente T18.16.
+- Se corrigió E-11. Las páginas remotas válidas se muestran ante fallos de guardado, y la caché conserva las filas legibles ante JSON corrupto. Se quitó el estado residual de amigos de ejemplo de CommunityViewModel.
+- Validación local: 453 pruebas unitarias sin fallos, Kover Debug 80.79 %, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-21 — Permiso efectivo antes de registrar el dispositivo (2026-11-21)
+
+- E-12: la activación desde Preferencias y el registro automático de FT-39 comparten la comprobación de Android antes y después de obtener el token. Si el sistema bloquea el registro, se muestra el mensaje de permiso.
+- Se confirmó que existe una configuración Firebase local ignorada por Git. Sigue pendiente la prueba en teléfono de registro, recepción, renovación y cierre de sesión con el entorno de despliegue.
+- Validación local del 2026-11-22 con 456 pruebas unitarias y 0 fallos, Kover Debug 80.80%, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-23 — Centro de ayuda, privacidad offline y modo invitado (2026-11-22)
+
+- Integración selectiva desde main del centro de ayuda y el banner. Perfil abre la FAQ y el banner reutiliza el diálogo de acceso en modo invitado.
+- Los términos incluyen en recursos Android un resumen de la vigencia del apartado y la personalización del feed. Se conserva el enlace al aviso de privacidad oficial. Pendientes el aviso actualizado en la landing, la conciliación del texto completo y la prueba en dispositivo.
+- Validación local: 456 pruebas unitarias con 0 fallos, Kover Debug 80.05%, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-25 — Validación de invitaciones (2026-11-22)
+
+- El lector admite códigos manuales y enlaces con rutas de invitación exactas. Rechaza enlaces con parámetros de invitación repetidos, información de usuario en la autoridad o puertos explícitos. La asociación App Links de la landing sigue sin verificarse.
+- Validación local: 458 pruebas unitarias con 0 fallos, Kover Debug 80.10%, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+### FT-27 — Revisión QA de la candidata 1.4.0 (2026-11-22)
+
+- Se actualizaron las notas es-419 y la referencia al tag oficial v1.4.0.
+- El flujo remoto de escáneres contiene configuraciones que toleran fallos y OSV descarta su estado de salida. El cierre permanece bloqueado por la constitución §4.7. La suite instrumentada en dispositivo y los escáneres remotos necesitan evidencia sobre la candidata.
+- Validación local de la candidata: 458 pruebas sin fallos, Kover Debug 80.10 %, compilación Debug, Release e instrumentada, lint, Detekt, ktlint y cinco gates Python en verde. Semgrep reporta un hallazgo bloqueante en la actividad exportada de entrada. Sigue abierto T27.6.
+
+- FT-27, revisión de dispositivo 2026-11-22. Android Studio confirmó instalación en vivo V2341 y avisó por alineación de 16 KB. La inspección de ELF Debug señala libsqlcipher.so (PT_LOAD 4096 bytes en arm64-v8a y x86_64). Pendiente verificar compatibilidad del paquete final.
+
+### Prueba manual en vivo V2341 con Android 16 (2026-11-22)
+
+- FT-11 y FT-12. Se observaron el mapa, un marcador, las opciones de distancia en metros y kilómetros, el catálogo, el panel de filtros y el detalle de una oferta guardada. Falló la actualización del catálogo y el detalle mostró `Service Unavailable`.
+- FT-13 y FT-14. El apartado estaba deshabilitado en el detalle y el historial mostraba cero elementos guardados. Al abrir el escáner comercial, la pantalla duplicada quedó negra. Pendientes el apartado y el canje de extremo a extremo.
+- FT-15 y FT-16. Abrió el formulario de Nueva Oferta. El inventario mostró las pestañas Activas, Pausadas y Finalizadas con cero resultados y `Service Unavailable`. Pendientes publicación y gestión con datos del servidor.
+- FT-18 y FT-21. Comunidad mostró `Service Unavailable`. Abrieron las preferencias de notificaciones y apareció un error de carga. Pendientes el feed y las pruebas de registro y entrega push.
+- FT-23 y FT-25. Se abrió una respuesta de la FAQ, los términos incluidos en la app y el QR de invitación. Pendientes el recorrido en modo invitado, la validación de los enlaces externos y la solicitud entre dos cuentas.
+- FT-27. Esta prueba fue manual y de lectura. Quedan pendientes la suite instrumentada en el dispositivo y los bloqueos de seguridad y compatibilidad registrados arriba.
+
+### FT-27 — Actualización de SQLCipher para páginas de 16 KB (2026-11-22)
+
+- Se migró el cliente Android a `net.zetetic:sqlcipher-android:4.20.0` y se adaptaron la fábrica de Room y las pruebas instrumentadas. El AAR descargado presenta tres segmentos `PT_LOAD` de 16384 bytes en ARM64 y x86_64.
+- Pendientes la instalación sobre una versión anterior con base cifrada existente, la suite instrumentada y la comprobación del empaquetado de la candidata.
+- El endpoint de ofertas cercanas respondió HTTP 401 a una petición sin credenciales. Android Studio reconectó el vivo, que estaba en la pantalla de bloqueo. La prueba autenticada sigue pendiente.
+- Ajustes de usuario respondió HTTP 401 y feed cercano respondió HTTP 404 sin credenciales. Las consultas al aviso público de privacidad y a `assetlinks.json` agotaron el tiempo de conexión.
+- Validación local con la dependencia nueva. Compilación Debug, Release e instrumentadas, lint, Detekt, ktlint, Kover y los cinco gates Python en verde. Debug registró 458 pruebas unitarias sin fallos y cobertura de líneas de 80.10 %.
+
+### Segunda prueba manual autenticada en vivo V2341 (2026-11-22)
+
+- FT-11 y FT-12. El catálogo y el detalle cargaron sin los errores de actualización de la primera ronda. Se observaron precio, existencias y datos del comercio.
+- FT-13 y FT-14. El detalle detectó un apartado existente. La vista del apartado indicó que su código no podía recuperarse en la sesión actual porque el servidor aún no publica esa consulta. Quedó pendiente el canje con un QR válido.
+- FT-16. El inventario cargó una oferta activa y una finalizada. La oferta expirada abrió la gestión con stock, vigencia y acción de republicación. La prueba no modificó el inventario.
+- FT-18 y FT-21. Comunidad mostró que el servicio sigue sin estar disponible en el servidor. Las preferencias de notificaciones cargaron sus valores y el selector de radio. Quedaron pendientes guardar cambios de prueba y verificar una entrega push.
+
+### FT-12 y FT-27 — Validación de filtros y gates bloqueantes (2026-11-22)
+
+- Se añadió un caso Compose para validar el rechazo de un descuento fuera de rango y la aplicación de precio, descuento y orden. Compilaron la app y las pruebas instrumentadas. Pasaron lint, Detekt, ktlint y Kover Debug (80.10 %).
+- Los flujos de CI preservan los códigos de error de los escáneres, fijan las acciones por SHA y requieren un XML Kover medible. El lector rechaza DTD. Actionlint aprobó los tres flujos.
+- Semgrep sobre todo el repositorio pasó de 69 a 1 hallazgo. Sigue pendiente la revisión de `MainActivity` exportada. El escáner se ejecutó con los cuatro conjuntos de reglas de CI y conservó su salida bloqueante.
+
+- En el vivo V2341 pasaron las 60 pruebas instrumentadas por ADB después de corregir el arranque de `SensusMessagingService` durante las pruebas Hilt (E-14). La compilación Release, lint, Detekt, ktlint y los cinco gates Python pasaron de nuevo. Kover Debug registró 80.12 %.
+- La APK Debug compilada pasó `zipalign -c -P 16 4` y sus dos bibliotecas de 64 bits mostraron segmentos ELF alineados a 16384 bytes en ARM64 y x86_64. El dispositivo de prueba usa páginas de 4 KB.
+- La ejecución previa por Gradle retiró Sensus al limpiar las APK de pruebas. Se reinstaló la candidata y se confirmó arranque correcto con una base recién creada. En el vivo se observó el mapa en modo invitado con radio fijo de 2 km y el banner de FT-23. La sesión anterior y su base local no quedaron disponibles para validar la reapertura.
+
+- FT-27 endureció la entrada de restablecimiento a los enlaces que emite el backend. Los enlaces HTTP, los destinos con autoridad o ruta distinta y los tokens duplicados o malformados se rechazan antes de navegar. Pasaron compilación Debug/Release/instrumentada, pruebas unitarias, análisis estático y los cinco gates locales con Kover de 80.20 %.
+- FT-23 y FT-25. La landing agotó el tiempo de conexión al consultar privacidad y `assetlinks.json`. Android siguió reportando el estado `1024` después de solicitar la reverificación normal del dominio.
+- FT-27. La nueva ejecución de Semgrep conserva un hallazgo bloqueante por la declaración de `MainActivity` como actividad pública. Los cambios no suprimen el hallazgo.
+
+### Validación autenticada de radio y filtros (2026-11-22)
+
+- FT-11. En el vivo V2341 se aplicó un radio de 100 m desde el mapa y se restauró el radio inicial de 2 km. La etiqueta y el área del mapa reflejaron la selección.
+- FT-12. Tras cargar el catálogo con la sesión autenticada, se aplicaron por separado la categoría Limpieza y Hogar y el precio máximo de 1 MXN. Ambos mostraron el estado sin coincidencias. Al limpiar el filtro, volvió a aparecer la oferta cercana.
+- FT-13 a FT-16. El comercio cargó dos ofertas activas y el catálogo mostró una oferta de Queso. Al abrirla con la cuenta principal, la app detectó un apartado activo cuyo QR no estaba disponible en esa sesión. Se corrigió el mensaje obsoleto sobre la disponibilidad de la consulta en el servidor. No se creó un apartado ni se modificó el inventario.
+
+### FT-11, FT-12, FT-16 y FT-23 — Cierre local de pendientes del cliente (2026-11-22)
+
+- FT-11/FT-12: `MerchantOpenStatus` calcula "Abierto ahora" y el horario de hoy con los horarios publicados por `GET /merchants/nearby`; la vista previa P-09 (`SelectedStoreBottomCard`) lo muestra. Sin horario publicado para el día no se muestra estado. Las tarjetas de Inicio y el detalle siguen sin estado ni métodos de pago porque `/offers/nearby` y el detalle no traen esos datos.
+- FT-16: `MerchantOfferMetrics` resume el inventario de `GET /merchants/my-offers` en el panel (activas, piezas disponibles y ofertas con 3 piezas o menos). El contador de vistas por oferta espera que el backend publique `viewCount` en `my-offers`.
+- FT-23: `TermsScreen` agrega sin conexión los derechos ARCO y la eliminación de cuenta.
+- Pruebas nuevas: `MerchantOpenStatusAndMetricsTest`, paginación de `BuyerHomeViewModel`, `SelectedStorePreviewTest` (P-09) y casos legales en `SupportScreensTest`. Las instrumentadas se compilaron y el equipo verificó los cambios en dispositivo el 2026-11-22.
+- Validación local: 466 pruebas unitarias sin fallos, Kover Debug 80.27 %, compilación de app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde. Sin APK/AAB.
+
+### FT-16 — Confirmación de pausa y pruebas de edición (2026-11-22)
+
+- La pantalla Gestionar promoción solicita confirmación antes de enviar el cambio a PAUSED. Cancelar descarta la acción. Se conserva la confirmación para dar de baja.
+- `MerchantEditOfferContentTest` comprueba el stock enviado al guardar, la cancelación y el envío de la pausa confirmada. Pasaron las compilaciones Debug, Release e instrumentada, las 466 pruebas unitarias, Kover, lint, Detekt, ktlint y los gates de estructura, capas, contratos y secretos.
+- T16.10 quedó verificada en el V2341 con `MerchantEditOfferContentTest` (2/2). Se generaron las APK Debug y de pruebas con autorización expresa y se instalaron como actualizaciones por ADB, sin desinstalar ni borrar datos. D8 emitió avisos de reescritura de metadatos Kotlin durante el empaquetado, que terminó correctamente. Evidencia en `app/build/reports/ft16-merchant-compose-device.txt`.
+- T16.7 continúa a la espera de `viewCount` en `my-offers`. La APK Debug de esta revisión pasó `zipalign -c -P 16 4`.
+- FT-27: Semgrep ejecutó los cuatro conjuntos de reglas de CI y mantuvo un hallazgo bloqueante en `MainActivity` exportada. La APK Debug preexistente pasó de nuevo `zipalign -c -P 16 4`. El V2341 conectado usa páginas de 4 KB y sigue pendiente verificar el paquete final y una base cifrada anterior.
+- FT-23 y FT-25: agotaron el tiempo de conexión las consultas HTTPS al aviso de privacidad y a `assetlinks.json`. El V2341 sigue reportando estado 1024 de App Links para `rodnix.com.mx`.
+
+### FT-11, FT-12, FT-13 y FT-16 — Perfil público, Mis reservas y vistas por oferta (2026-11-22)
+
+- FT-11 (T11.12): las tarjetas de Inicio cruzan `merchantId` con `GET /merchants/nearby` y muestran "Abierto ahora"/"Cerrado ahora" según el horario publicado. "Verificado" solo aparece con `isVerified = true` explícito; el backend aún no publica ese campo (extensión opcional del cliente, pendiente de ratificar).
+- FT-12 (T12.7, T12.8): el detalle muestra estado, horario semanal y `paymentMethods` del comercio con el mismo `merchantId`; el filtro C-35 incluye "Abierto ahora". `paymentMethods` aún no lo publica el backend.
+- FT-13: nueva pantalla MVI "Mis reservas" (Perfil) con listado, QR de reservas activas y cancelación confirmada. `GET /offers/claims` y `PATCH /offers/claims/{id}/cancel` siguen el contrato propuesto de `docs/endpoints-internos.md`; `sensus-back` (main f42ca81, Back_Rocio 77944e2, Back_Rodrigo fee4bf0) no las publica todavía, por lo que la pantalla muestra "no encontrado" hasta que existan. `restoreClaim` consulta el listado cuando el índice cifrado no conoce el ID, guarda el ID recuperado y no repite el POST.
+- FT-16 (T16.7): contador de vistas por oferta en el inventario con `viewCount` opcional (incluido cero). Edición y pausa probadas en teléfono.
+- Pruebas nuevas: `MyClaimsRepositoryTest`, `MyClaimsViewModelTest`, `MyClaimsScreenTest` (compilada, sin ejecutar en dispositivo). Sin APK/AAB.
+- Ajustes de gates: `ProductDetailScrollSection` y `BuyerHomeScreen` se dividieron (`MerchantScheduleAndPayments`, `rememberFilteredHomeOffers`) para respetar complejidad y longitud de Detekt. El cierre con atrás de "Mis reservas" vive en `dismissSecondaryOverlay`.
+- Validación local: 485 pruebas unitarias sin fallos, Kover Debug 80.74 %, compilación de app e instrumentadas, lint (0 errores), Detekt, ktlint y cinco gates Python en verde. Una primera ejecución de lint en paralelo con Detekt/ktlint falló internamente ("Unexpected failure during lint analysis"); en solitario pasó.

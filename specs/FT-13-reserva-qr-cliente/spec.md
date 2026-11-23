@@ -27,7 +27,8 @@ ClaimOfferScreen y MerchantSalesScreen con contratos y ViewModels MVI separados.
 
 ## 5. Criterios de aceptación
 Solo HTTP 200 con DTO completo permite éxito. Error o sesión ausente no producen código ni confirmación.
-El comprador confirma una unidad. Comercio captura código literal y ve confirmación solo del servidor.
+El comprador confirma una unidad. Tras la primera confirmación válida del servidor, se retira una unidad de esa oferta si está en la bolsa y se conservan las demás. Una carga fallida o la reapertura de un QR confirmado dejan la bolsa sin cambios.
+Comercio captura código literal y ve confirmación solo del servidor.
 
 ## 6. Plan de pruebas
 JUnit4 dominio/API/repositorio/ViewModels y Compose en archivos Claims nuevos.
@@ -41,11 +42,11 @@ No se utilizan SecurePreferences, disco, SavedStateHandle ni nuevas rutas para r
 ## 7. Riesgos, límites y deuda
 Listado y cancelación pendientes de publicación backend; no se declaran rutas para ellos.
 Sin cámara porque esta slice no añade dependencias. ZXing core y cliente sanitizado a cargo de integración principal.
-Sin cambio de MainAppContainer, ActiveApartadoScreen ni carrito. Sin persistencia offline del código en esta slice.
+La bolsa se actualiza en memoria al confirmar la reserva. Sin persistencia offline del código en esta slice.
 Ante timeout la operación puede haberse aplicado: no hay reenvío automático ni certeza local.
 
 ## Aprobación
 Implementación local autorizada; validación integral pendiente de integración principal.
 
-Tras reiniciar el proceso o recrear el ViewModel se pierde la caché en memoria; sin endpoint GET publicado no puede recuperarse el código.
+Tras reiniciar el proceso o recrear el ViewModel se pierde la caché en memoria. El backend main 1c27253 incluye una consulta de reserva por claimId, pero el detalle de oferta solo devuelve hasActiveClaim. El detalle no permite descubrir un ID que tampoco esté en el índice local.
 MAIN debe pasar ClaimsScreenActions(expectExisting = true) cuando el detalle indique hasActiveClaim.

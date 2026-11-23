@@ -48,3 +48,5 @@
 ## Tareas
 
 Ver `tasks.md`.
+
+Al integrar FT-15 en movil_Rocio, la validación previa a la carga exige foto y categoría del catálogo. La vigencia se vuelve a comprobar después de subir la foto. La operación confirmada por HTTP 201 intenta actualizar Room desde Dispatchers.IO.
