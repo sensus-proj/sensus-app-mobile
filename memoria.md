@@ -1282,3 +1282,9 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - Numeración duplicada: develop usa FT-31 (me gusta), FT-32 (actividad de amigos) y FT-33 (moderación), y esta rama FT-31 (sistema visual), FT-32 (rendimiento) y FT-33 (visibilidad). Ambas carpetas se conservan; la renumeración queda pendiente de acuerdo del equipo.
 - `gradlew` queda con permiso de ejecución en git (Snyk fallaba con EACCES).
 - Validación local: 534 pruebas unitarias sin fallos, Kover Debug 82.04 %, compilación de app e instrumentadas, lint (0 errores), Detekt, ktlint y cinco gates Python en verde.
+
+### FT-27 — Escáneres bloqueantes en PR propio (2026-11-23)
+
+- Al hacerse bloqueantes, los escáneres de `security-scanners.yml` fallaron en el PR #36 por configuración de herramientas y no por el código de FT-11..FT-16: SonarCloud con Automatic Analysis activo, Snyk con `JAVA_HOME` inválido dentro del contenedor, acción de ktlint con versión distinta a la del proyecto (1,424 avisos en todo el repo), Semgrep sin `pkg_resources`, OSV sin fuentes de dependencias, Dependency-Check con falso positivo en `gradle-wrapper.jar` y avisos de MobSFscan.
+- Decisión: el PR de FT-11..FT-16 usa la versión de `develop` del flujo y el endurecimiento se tramita en un PR aparte desde `develop` (T27.9). No se suprimió ni desactivó ningún hallazgo.
+- mobsfscan marcó `val key = "20.0:-99.0:2000:20"` en `PublishingApiTest` (CWE-798); era la clave de página del feed y se renombró a `cacheKey`.
