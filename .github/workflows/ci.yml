@@ -218,24 +218,33 @@ jobs:
           SENSUS_COMMIT_SHA: ${{ github.sha }}
           SENSUS_EVENT_NAME: ${{ github.event_name }}
           SENSUS_EVENT_ACTOR: ${{ github.actor }}
+          # Resultados por env y no inline: Semgrep no parsea ${{ }} dentro del script (falla --strict).
+          RESULT_WRAPPER: ${{ needs.validate-wrapper.result }}
+          RESULT_SDD: ${{ needs.sdd-gates.result }}
+          RESULT_SECURITY: ${{ needs.security-scan.result }}
+          RESULT_STATIC: ${{ needs.static-analysis.result }}
+          RESULT_UNIT: ${{ needs.unit-test.result }}
+          RESULT_MUTATION: ${{ needs.mutation-test.result }}
+          RESULT_INSTRUMENTATION: ${{ needs.instrumentation-compile.result }}
         run: |
-          echo "# 🚀 Apartado de CI/CD — Resumen de Pipeline Sensus Mobile" >> $GITHUB_STEP_SUMMARY
+          status() { if [ "$1" = "success" ]; then echo "APROBADO"; else echo "FALLIDO"; fi; }
+          echo "# Apartado de CI/CD — Resumen de Pipeline Sensus Mobile" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Este tablero resume el estado y cumplimiento de calidad de la ejecución actual en GitHub Actions." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Matriz de Compuertas de Integración Continua" >> $GITHUB_STEP_SUMMARY
+          echo "### Matriz de Compuertas de Integración Continua" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Etapa del Pipeline | Estado | Herramienta / Validador | Control |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **1. Gradle Wrapper** | ${{ needs.validate-wrapper.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`gradle-wrapper-validation\` | Checksum oficial |" >> $GITHUB_STEP_SUMMARY
-          echo "| **2. Compuertas SDD & Capas** | ${{ needs.sdd-gates.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`check_*.py\` (5 scripts) | Clean Architecture & 0 Secretos |" >> $GITHUB_STEP_SUMMARY
-          echo "| **3. SAST Semántico** | ${{ needs.security-scan.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`CodeQL (Java/Kotlin)\` | OWASP Mobile Top 10 |" >> $GITHUB_STEP_SUMMARY
-          echo "| **4. Análisis Estático** | ${{ needs.static-analysis.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`Android SDK Lint\` | Correctitud y accesibilidad |" >> $GITHUB_STEP_SUMMARY
-          echo "| **5. Pruebas Unitarias** | ${{ needs.unit-test.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`JUnit 5 + MockK + Turbine\` | Umbral de cobertura >= 80% |" >> $GITHUB_STEP_SUMMARY
-          echo "| **6. Pruebas de Mutación** | ${{ needs.mutation-test.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`PITest 1.17.1\` | Umbral de mutación en dominio |" >> $GITHUB_STEP_SUMMARY
-          echo "| **7. Compilación Instrumentada** | ${{ needs.instrumentation-compile.result == 'success' && '✅ APROBADO' || '❌ FALLIDO' }} | \`AndroidTest Sources\` | Pruebas de integración E2E |" >> $GITHUB_STEP_SUMMARY
+          echo "| **1. Gradle Wrapper** | $(status "$RESULT_WRAPPER") | \`gradle-wrapper-validation\` | Checksum oficial |" >> $GITHUB_STEP_SUMMARY
+          echo "| **2. Compuertas SDD & Capas** | $(status "$RESULT_SDD") | \`check_*.py\` (5 scripts) | Clean Architecture & 0 Secretos |" >> $GITHUB_STEP_SUMMARY
+          echo "| **3. SAST Semántico** | $(status "$RESULT_SECURITY") | \`CodeQL (Java/Kotlin)\` | OWASP Mobile Top 10 |" >> $GITHUB_STEP_SUMMARY
+          echo "| **4. Análisis Estático** | $(status "$RESULT_STATIC") | \`Android SDK Lint\` | Correctitud y accesibilidad |" >> $GITHUB_STEP_SUMMARY
+          echo "| **5. Pruebas Unitarias** | $(status "$RESULT_UNIT") | \`JUnit 5 + MockK + Turbine\` | Umbral de cobertura >= 80% |" >> $GITHUB_STEP_SUMMARY
+          echo "| **6. Pruebas de Mutación** | $(status "$RESULT_MUTATION") | \`PITest 1.17.1\` | Umbral de mutación en dominio |" >> $GITHUB_STEP_SUMMARY
+          echo "| **7. Compilación Instrumentada** | $(status "$RESULT_INSTRUMENTATION") | \`AndroidTest Sources\` | Pruebas de integración E2E |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🏷️ Metadatos de la Ejecución" >> $GITHUB_STEP_SUMMARY
+          echo "### Metadatos de la Ejecución" >> $GITHUB_STEP_SUMMARY
           printf -- '- **Rama:** `%s`\n' "$SENSUS_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
           printf -- '- **Commit:** `%s`\n' "$SENSUS_COMMIT_SHA" >> "$GITHUB_STEP_SUMMARY"
           printf -- '- **Evento:** `%s` por `%s`\n' "$SENSUS_EVENT_NAME" "$SENSUS_EVENT_ACTOR" >> "$GITHUB_STEP_SUMMARY"

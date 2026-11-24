@@ -193,8 +193,8 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           PLAY_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > "${{ runner.temp }}/release.keystore"
-          echo "$PLAY_ACCOUNT_JSON" > "${{ runner.temp }}/play-service-account.json"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          echo "$PLAY_ACCOUNT_JSON" > "$RUNNER_TEMP/play-service-account.json"
 
       - name: Calcular versionCode incremental para Play Console
         if: steps.check-env.outputs.ready == 'true'
@@ -262,18 +262,23 @@ jobs:
       - name: Limpieza higiénica de credenciales efímeras
         if: always()
         run: |
-          rm -f "${{ runner.temp }}/release.keystore"
-          rm -f "${{ runner.temp }}/play-service-account.json"
+          rm -f "$RUNNER_TEMP/release.keystore"
+          rm -f "$RUNNER_TEMP/play-service-account.json"
 
       - name: Resumen de Despliegue en Step Summary
         if: always()
+        env:
+          ENV_READY: ${{ steps.check-env.outputs.ready }}
+          RELEASE_TRACK: ${{ steps.release-config.outputs.track }}
+          RELEASE_STATUS: ${{ steps.release-config.outputs.status }}
+          RELEASE_VERSION_CODE: ${{ steps.version-config.outputs.version_code }}
         run: |
-          echo "### 🚀 Estado del Despliegue a Google Play Console" >> $GITHUB_STEP_SUMMARY
+          echo "### Estado del Despliegue a Google Play Console" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Compuertas de Calidad (Quality Gate):** ✅ APROBADO (Bloqueo terminante si algo falla)" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check-env.outputs.ready }}" = "true" ]; then
-            echo "- **Publicación en Google Play:** 🟢 PUBLICADO exitosamente en la pista \`${{ steps.release-config.outputs.track }}\` (estado \`${{ steps.release-config.outputs.status }}\`, versionCode \`${{ steps.version-config.outputs.version_code }}\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Compuertas de Calidad (Quality Gate):** APROBADO (Bloqueo terminante si algo falla)" >> $GITHUB_STEP_SUMMARY
+          if [ "$ENV_READY" = "true" ]; then
+            echo "- **Publicación en Google Play:** PUBLICADO exitosamente en la pista \`$RELEASE_TRACK\` (estado \`$RELEASE_STATUS\`, versionCode \`$RELEASE_VERSION_CODE\`)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- **Publicación en Google Play:** ⏸️ EN PAUSA (Entorno no aprovisionado o dry_run)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Publicación en Google Play:** EN PAUSA (Entorno no aprovisionado o dry_run)" >> $GITHUB_STEP_SUMMARY
             echo "- **Detalle:** El pipeline CI/CD está 100% preparado." >> $GITHUB_STEP_SUMMARY
           fi
