@@ -1,13 +1,16 @@
 package com.example.sensus.presentation
 
+import app.cash.turbine.test
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.usecase.LoginUseCase
 import com.example.sensus.domain.usecase.StartGuestSessionUseCase
+import com.example.sensus.presentation.auth.LoginViewEffect
 import com.example.sensus.presentation.auth.LoginViewIntent
 import com.example.sensus.presentation.auth.LoginViewModel
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +21,8 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -70,10 +75,14 @@ class LoginViewModelTest {
         viewModel.dispatchIntent(LoginViewIntent.EmailChanged("test@example.com"))
         viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("secret123"))
         viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
+        viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
+        viewModel.dispatchIntent(LoginViewIntent.StartGuestSession)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(viewModel.viewState.value.isLoading)
+        coVerify(exactly = 1) { loginUseCase("test@example.com", "secret123") }
+        coVerify(exactly = 0) { startGuestSessionUseCase() }
     }
 
     @Test
@@ -97,9 +106,44 @@ class LoginViewModelTest {
 
         val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
         viewModel.dispatchIntent(LoginViewIntent.StartGuestSession)
+        viewModel.dispatchIntent(LoginViewIntent.StartGuestSession)
+        viewModel.dispatchIntent(LoginViewIntent.SubmitLogin)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(viewModel.viewState.value.isGuestLoading)
+        coVerify(exactly = 1) { startGuestSessionUseCase() }
+        coVerify(exactly = 0) { loginUseCase(any(), any()) }
+    }
+
+    @Test
+    fun guestFailureReturnsToIdleAndClearsErrorOnEdit() = runTest(testDispatcher) {
+        val error = "No se pudo abrir la sesión de invitado."
+        coEvery { startGuestSessionUseCase() } returns Result.Failure(AppError.Validation(error))
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+
+        viewModel.viewEffect.test {
+            viewModel.dispatchIntent(LoginViewIntent.StartGuestSession)
+            assertTrue(viewModel.viewState.value.isGuestLoading)
+            assertEquals(LoginViewEffect.ShowToast(error), awaitItem())
+            assertFalse(viewModel.viewState.value.isGuestLoading)
+            assertEquals(error, viewModel.viewState.value.errorMessage)
+
+            viewModel.dispatchIntent(LoginViewIntent.DismissError)
+            assertNull(viewModel.viewState.value.errorMessage)
+        }
+    }
+
+    @Test
+    fun togglingPasswordVisibilityKeepsTheEnteredPassword() {
+        val viewModel = LoginViewModel(loginUseCase, startGuestSessionUseCase)
+        viewModel.dispatchIntent(LoginViewIntent.PasswordChanged("secret123"))
+        viewModel.dispatchIntent(LoginViewIntent.TogglePasswordVisibility)
+
+        assertTrue(viewModel.viewState.value.isPasswordVisible)
+        assertEquals("secret123", viewModel.viewState.value.password)
+
+        viewModel.dispatchIntent(LoginViewIntent.TogglePasswordVisibility)
+        assertFalse(viewModel.viewState.value.isPasswordVisible)
     }
 }

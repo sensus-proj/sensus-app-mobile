@@ -71,6 +71,8 @@ data class ProductOffer(
     val status: OfferLifecycleStatus = OfferLifecycleStatus.ACTIVE,
     val version: Int = 1,
     val expiresAtMillis: Long? = null,
+    val viewCount: Int? = null,
+    val merchantProfile: MerchantProfile? = null,
     val likesCount: Int = 0,
     val isLikedByMe: Boolean = false
 ) {

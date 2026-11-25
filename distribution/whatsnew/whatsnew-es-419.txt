@@ -1,4 +1,5 @@
-• Sensi IA: tu asistente de ahorro encuentra ofertas cercanas y las muestra en tarjetas con precio, vigencia y botones para apartar, ver el detalle o llegar a la tienda.
-• Respuestas del asistente con formato claro: negritas y listas.
-• Mapa con distancia personalizable (50 m a 5 km; 2 km en modo invitado) y vista preferida guardada de forma cifrada.
-• Mayor privacidad: sin registros de red en la versión final. Mejoras de estabilidad y rendimiento.
+• Explora ofertas cercanas en el mapa con radios de 100 a 500 m o de 1 a 5 km. El modo invitado usa 2 km.
+• Revisa la disponibilidad, filtra por precio y descuento, y aparta con QR.
+• Los comercios pueden revisar el folio escaneado antes de canjear y consultar sus ofertas activas, pausadas y finalizadas.
+• Consulta el centro de ayuda sin conexión y administra tus preferencias de notificaciones.
+• Sensi IA muestra ofertas cercanas en tarjetas con precio y vigencia.

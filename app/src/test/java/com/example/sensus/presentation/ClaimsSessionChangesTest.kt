@@ -1,13 +1,16 @@
 package com.example.sensus.presentation
 
+import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.ClaimRedemption
 import com.example.sensus.domain.model.OfferClaim
+import com.example.sensus.domain.repository.CartRepository
 import com.example.sensus.domain.repository.ClaimsRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.CreateClaimUseCase
 import com.example.sensus.domain.usecase.RedeemClaimUseCase
+import com.example.sensus.domain.usecase.RestoreClaimUseCase
 import com.example.sensus.presentation.buyer.ClaimOfferViewIntent
 import com.example.sensus.presentation.buyer.ClaimOfferViewModel
 import com.example.sensus.presentation.merchant.MerchantSalesViewIntent
@@ -32,6 +35,7 @@ import org.junit.Test
 class ClaimsSessionChangesTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<ClaimsRepository>()
+    private val cart = mockk<CartRepository>(relaxed = true)
     private val sessions = mockk<SessionRepository>()
     private val initial = SessionState(isSessionActive = true, activeToken = "test", activeEmail = "test@example.invalid")
     private val session = MutableStateFlow(initial)
@@ -42,6 +46,7 @@ class ClaimsSessionChangesTest {
     fun setup() {
         Dispatchers.setMain(dispatcher)
         every { sessions.sessionState } returns session
+        coEvery { repository.restoreClaim(any()) } returns Result.Failure(AppError.NotFound())
         coEvery { repository.createClaim("offer") } returns Result.Success(claim)
         coEvery { repository.redeemClaim("code") } returns Result.Success(redemption)
     }
@@ -51,7 +56,7 @@ class ClaimsSessionChangesTest {
 
     @Test
     fun locationTermsAndProfileSyncPreserveBothConfirmedResults() = runTest(dispatcher) {
-        val buyer = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions)
+        val buyer = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
         val merchant = MerchantSalesViewModel(RedeemClaimUseCase(repository), sessions)
         dispatcher.scheduler.runCurrent()
         buyer.processIntent(ClaimOfferViewIntent.Submit("offer"))
@@ -72,7 +77,7 @@ class ClaimsSessionChangesTest {
             initial.copy(isGuest = true),
             initial.copy(isMerchantRegistered = true)
         )
-        val buyer = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions)
+        val buyer = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
         val merchant = MerchantSalesViewModel(RedeemClaimUseCase(repository), sessions)
         dispatcher.scheduler.runCurrent()
         for (changed in changes) {

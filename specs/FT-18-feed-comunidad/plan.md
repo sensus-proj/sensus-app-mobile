@@ -31,3 +31,5 @@ Backend main 01dad6e contiene contratos borrador y tareas pendientes de specs 02
 ## Tareas
 
 Ver tasks.md T18.12..T18.16.
+
+La caché del feed es accesoria a la respuesta remota. Su lectura y escritura ocurren en Dispatchers.IO, preservan la cancelación y aíslan los fallos de Room y las filas con contenido corrupto.

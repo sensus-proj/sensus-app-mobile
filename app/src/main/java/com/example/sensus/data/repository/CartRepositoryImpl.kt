@@ -27,6 +27,10 @@ class CartRepositoryImpl : CartRepository {
         CartManager.removeItem(offerId)
     }
 
+    override fun removeReservedUnit(offerId: String) {
+        CartManager.removeReservedUnit(offerId)
+    }
+
     override fun clearCart() {
         CartManager.clearCart()
     }

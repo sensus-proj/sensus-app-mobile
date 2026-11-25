@@ -84,6 +84,27 @@ class FriendsRepositoryImplTest {
     }
 
     @Test
+    fun inviteCodecRejectsAmbiguousCodesAndNonInvitePaths() {
+        listOf(
+            "https://rodnix.com.mx/sensus?code=SNS-123456&code=SNS-ABCDEF",
+            "sensus://invitacion?code=SNS-123456&%63ode=SNS-ABCDEF",
+            "https://rodnix.com.mx/sensus/invitacion-extra?code=SNS-123456",
+            "sensus://invitacion/other?code=SNS-123456",
+            "https://guest@rodnix.com.mx/sensus?code=SNS-123456",
+            "https://rodnix.com.mx:8080/sensus?code=SNS-123456"
+        ).forEach { assertNull(FriendInviteCodec.parseInvite(it)) }
+    }
+
+    @Test
+    fun inviteCodecKeepsOfficialLinksWithEncodedNamesAndTrackingParameters() {
+        val url = "https://rodnix.com.mx/sensus/invitacion/?code=sns-123456&utm_source=share&name=Mar%C3%ADa+P%C3%A9rez"
+        val invite = FriendInviteCodec.parseInvite(url)
+        assertEquals("SNS-123456", invite?.inviteCode)
+        assertEquals("María Pérez", invite?.displayName)
+        assertEquals("SNS-123456", FriendInviteCodec.parseInvite("sns-123456")?.inviteCode)
+    }
+
+    @Test
     fun inviteCodecGeneratesDeterministicCodeAndParsesWebAndCustomUrls() {
         val code = FriendInviteCodec.generateInviteCode("maria@sensus.com", "Maria Perez")
         assertTrue(code.startsWith("SNS-"))

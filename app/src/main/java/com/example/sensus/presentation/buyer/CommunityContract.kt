@@ -19,7 +19,6 @@ data class ReportTargetUi(
 )
 
 data class CommunityViewState(
-    val friends: List<com.example.sensus.domain.model.FriendShare> = emptyList(),
     val posts: List<FeedPost> = emptyList(),
     val currentUserName: String = "Usuario Sensus",
     val isGuest: Boolean = true,

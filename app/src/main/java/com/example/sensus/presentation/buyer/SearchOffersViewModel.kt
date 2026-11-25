@@ -3,6 +3,7 @@ package com.example.sensus.presentation.buyer
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.GuestRadiusPolicy
+import com.example.sensus.domain.model.OfferAlternativeItem
 import com.example.sensus.domain.model.OfferSearchRequest
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -162,43 +163,49 @@ class SearchOffersViewModel @Inject constructor(
         }
     }
 
-    private suspend fun resolveAlternativesIfEmpty(isEmptyResults: Boolean, referenceOfferId: String?, trimmedQuery: String, lat: Double, lng: Double) = when {
-        !isEmptyResults || trimmedQuery.isEmpty() -> emptyList()
-        !referenceOfferId.isNullOrBlank() -> {
-            when (val altRes = getOfferAlternativesUseCase(referenceOfferId, DEFAULT_ALTERNATIVES_LIMIT)) {
-                is Result.Success -> altRes.data
-                is Result.Failure -> emptyList()
-            }
+    private suspend fun resolveAlternativesIfEmpty(
+        isEmptyResults: Boolean,
+        referenceOfferId: String?,
+        trimmedQuery: String,
+        lat: Double,
+        lng: Double
+    ): List<OfferAlternativeItem> {
+        if (!isEmptyResults || trimmedQuery.isEmpty()) return emptyList()
+        if (referenceOfferId.isNullOrBlank()) return nearbyAlternatives(lat, lng)
+        return when (val altRes = getOfferAlternativesUseCase(referenceOfferId, DEFAULT_ALTERNATIVES_LIMIT)) {
+            is Result.Success -> altRes.data
+            is Result.Failure -> emptyList()
         }
-        else -> {
-            val fallback = searchOffersUseCase(
-                OfferSearchRequest(
-                    query = null,
-                    latitude = lat,
-                    longitude = lng,
-                    radiusKm = viewState.value.radiusKm,
-                    pageSize = DEFAULT_ALTERNATIVES_LIMIT
-                )
+    }
+
+    private suspend fun nearbyAlternatives(lat: Double, lng: Double): List<OfferAlternativeItem> {
+        val fallback = searchOffersUseCase(
+            OfferSearchRequest(
+                query = null,
+                latitude = lat,
+                longitude = lng,
+                radiusKm = viewState.value.radiusKm,
+                pageSize = DEFAULT_ALTERNATIVES_LIMIT
             )
-            when (fallback) {
-                is Result.Success -> fallback.data.items.map { item ->
-                    com.example.sensus.domain.model.OfferAlternativeItem(
-                        offerId = item.offerId,
-                        title = item.title,
-                        categoryCode = item.categoryCode.orEmpty(),
-                        categoryDisplayName = item.categoryDisplayName,
-                        imageUrl = item.imageUrl,
-                        originalPrice = item.originalPrice,
-                        finalPrice = item.finalPrice,
-                        stock = item.stock,
-                        distanceMeters = item.distanceMeters,
-                        expiresAtUtc = item.expiresAtUtc,
-                        merchantId = item.merchantId,
-                        merchantName = item.merchantName
-                    )
-                }
-                is Result.Failure -> emptyList()
+        )
+        return when (fallback) {
+            is Result.Success -> fallback.data.items.map { item ->
+                OfferAlternativeItem(
+                    offerId = item.offerId,
+                    title = item.title,
+                    categoryCode = item.categoryCode.orEmpty(),
+                    categoryDisplayName = item.categoryDisplayName,
+                    imageUrl = item.imageUrl,
+                    originalPrice = item.originalPrice,
+                    finalPrice = item.finalPrice,
+                    stock = item.stock,
+                    distanceMeters = item.distanceMeters,
+                    expiresAtUtc = item.expiresAtUtc,
+                    merchantId = item.merchantId,
+                    merchantName = item.merchantName
+                )
             }
+            is Result.Failure -> emptyList()
         }
     }
 

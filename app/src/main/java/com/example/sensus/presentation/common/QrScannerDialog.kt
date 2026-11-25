@@ -60,17 +60,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.content.ContextCompat
+import com.example.sensus.R
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
@@ -99,7 +107,12 @@ private data class QrScannerCallbacks(
 )
 
 @Composable
-fun QrScannerDialog(onQrDecoded: (String) -> Unit, onDismiss: () -> Unit) {
+fun QrScannerDialog(
+    onQrDecoded: (String) -> Unit,
+    onDismiss: () -> Unit,
+    instructions: String = stringResource(R.string.community_scan_instructions),
+    securePolicy: SecureFlagPolicy = SecureFlagPolicy.Inherit
+) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -132,6 +145,8 @@ fun QrScannerDialog(onQrDecoded: (String) -> Unit, onDismiss: () -> Unit) {
     QrScannerDialogContent(
         hasCameraPermission = hasCameraPermission,
         scanError = scanError,
+        instructions = instructions,
+        securePolicy = securePolicy,
         callbacks = QrScannerCallbacks(
             onQrDecoded = onQrDecoded,
             onRequestPermission = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
@@ -143,19 +158,25 @@ fun QrScannerDialog(onQrDecoded: (String) -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun QrScannerDialogContent(hasCameraPermission: Boolean, scanError: String?, callbacks: QrScannerCallbacks) {
-    Dialog(onDismissRequest = callbacks.onDismiss) {
+private fun QrScannerDialogContent(
+    hasCameraPermission: Boolean,
+    scanError: String?,
+    instructions: String,
+    securePolicy: SecureFlagPolicy,
+    callbacks: QrScannerCallbacks
+) {
+    Dialog(onDismissRequest = callbacks.onDismiss, properties = DialogProperties(securePolicy = securePolicy)) {
         Surface(
             shape = RoundedCornerShape(DIALOG_CORNER_DP.dp),
-            color = Color.White,
+            color = SensusSurface,
             shadowElevation = 12.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 QrScannerHeader(onDismiss = callbacks.onDismiss)
                 Text(
-                    text = "Apunta la cámara al código QR de tu amigo o elige una captura de galería.",
-                    fontSize = 12.sp,
+                    text = instructions,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
                 QrScannerPreviewBox(
@@ -168,14 +189,15 @@ private fun QrScannerDialogContent(hasCameraPermission: Boolean, scanError: Stri
                     Text(text = scanError, fontSize = 11.sp, color = SensusRed)
                 }
                 OutlinedButton(
+                    colors = sensusOutlinedButtonColors(),
                     onClick = callbacks.onPickGallery,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = SensusButtonShape,
                     border = BorderStroke(1.dp, SensusPurple),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+                    Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Elegir imagen QR de galería", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                    Text(text = "Elegir imagen QR de galería", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
                 }
             }
         }
@@ -186,7 +208,7 @@ private fun QrScannerDialogContent(hasCameraPermission: Boolean, scanError: Stri
 private fun QrScannerHeader(onDismiss: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusPurple)
+            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusVioletInk)
             Text(text = "Escanear QR", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         }
         IconButton(onClick = onDismiss, modifier = Modifier.size(40.dp)) {
@@ -219,14 +241,14 @@ private fun QrScannerPreviewBox(
             )
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(42.dp))
+                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(42.dp))
                 Text(text = "Permiso de cámara requerido", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
                 Button(
                     onClick = onRequestPermission,
                     colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = SensusButtonShape
                 ) {
-                    Text(text = "Permitir cámara", fontSize = 12.sp, color = Color.White)
+                    Text(text = "Permitir cámara", fontSize = 13.sp, color = Color.White)
                 }
             }
         }

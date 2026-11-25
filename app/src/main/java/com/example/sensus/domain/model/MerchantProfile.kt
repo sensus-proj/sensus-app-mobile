@@ -26,6 +26,8 @@ data class MerchantProfile(
     val horarios: List<HorarioDia> = emptyList(),
     val fotoFachadaUrl: String? = null,
     val activo: Boolean = true,
+    val isVerified: Boolean? = null,
+    val paymentMethods: List<String> = emptyList(),
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0
 )

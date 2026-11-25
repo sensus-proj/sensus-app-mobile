@@ -10,7 +10,7 @@ import com.example.sensus.data.local.db.entity.OfferEntity
 import com.example.sensus.data.local.db.entity.PendingSyncEntity
 import com.example.sensus.data.local.db.entity.UserPreferenceEntity
 import com.example.sensus.data.local.db.entity.UserSessionEntity
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -33,7 +33,8 @@ class EncryptedDatabaseIntegrationTest {
         context = ApplicationProvider.getApplicationContext()
         context.deleteDatabase(testDbFile)
 
-        val factory = SupportFactory(testPassphrase)
+        System.loadLibrary("sqlcipher")
+        val factory = SupportOpenHelperFactory(testPassphrase)
         db = Room.databaseBuilder(context, SensusDatabase::class.java, testDbFile)
             .openHelperFactory(factory)
             .addMigrations(DatabaseFactory.MIGRATION_1_2)

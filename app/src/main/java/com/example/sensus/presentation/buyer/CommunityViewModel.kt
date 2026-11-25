@@ -41,7 +41,6 @@ class CommunityViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val sessionRepository: SessionRepository,
     private val offersRepository: OffersRepository,
-    private val storeRepository: com.example.sensus.domain.repository.StoreRepository? = null,
     private val togglePostLikeUseCase: TogglePostLikeUseCase? = null,
     private val getCommentsUseCase: GetFeedCommentsUseCase? = null,
     private val addCommentUseCase: AddFeedCommentUseCase? = null,
@@ -56,7 +55,6 @@ class CommunityViewModel @Inject constructor(
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     init {
-        updateState { copy(friends = storeRepository?.getSampleFriends().orEmpty()) }
         viewModelScope.launch {
             sessionRepository.sessionState.collect { session ->
                 updateState {

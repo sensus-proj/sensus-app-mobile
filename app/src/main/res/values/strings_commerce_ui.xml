@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="commerce_retry">Reintentar</string>
+    <string name="commerce_buyer_title">Ofertas cerca de ti</string>
+    <string name="commerce_buyer_intro">Descubre excedentes de comercios locales.</string>
+    <string name="commerce_buyer_results">Ofertas por cercanía (%1$d)</string>
+    <string name="commerce_buyer_empty">No hay ofertas que coincidan</string>
+    <string name="commerce_buyer_empty_hint">Prueba otra búsqueda, categoría o distancia.</string>
+    <string name="commerce_offer_details">Ver detalle de la oferta</string>
+    <string name="commerce_login_intro">Ofertas de comercios locales.</string>
+    <string name="commerce_merchant_offers">Gestionar ofertas (%1$d)</string>
+</resources>

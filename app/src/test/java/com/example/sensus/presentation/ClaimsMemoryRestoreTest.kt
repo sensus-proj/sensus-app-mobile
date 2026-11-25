@@ -1,12 +1,15 @@
 package com.example.sensus.presentation
 
 import app.cash.turbine.test
+import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.OfferClaim
+import com.example.sensus.domain.repository.CartRepository
 import com.example.sensus.domain.repository.ClaimsRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.usecase.CreateClaimUseCase
+import com.example.sensus.domain.usecase.RestoreClaimUseCase
 import com.example.sensus.presentation.buyer.ClaimOfferViewEffect
 import com.example.sensus.presentation.buyer.ClaimOfferViewIntent
 import com.example.sensus.presentation.buyer.ClaimOfferViewModel
@@ -14,6 +17,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +37,7 @@ import org.junit.Test
 class ClaimsMemoryRestoreTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<ClaimsRepository>()
+    private val cart = mockk<CartRepository>(relaxed = true)
     private val sessions = mockk<SessionRepository>()
     private val session = MutableStateFlow(SessionState(isSessionActive = true, activeToken = "test"))
     private val claim = OfferClaim("claim", "offer", "server-code", "server-payload", Long.MAX_VALUE)
@@ -41,6 +46,7 @@ class ClaimsMemoryRestoreTest {
     fun setup() {
         Dispatchers.setMain(dispatcher)
         every { sessions.sessionState } returns session
+        coEvery { repository.restoreClaim(any()) } returns Result.Failure(AppError.NotFound())
         coEvery { repository.createClaim("offer") } returns Result.Success(claim)
     }
 
@@ -49,7 +55,7 @@ class ClaimsMemoryRestoreTest {
 
     @Test
     fun switchingOffersRestoresCodeWithoutPostOrRepeatingConfirmationEffect() = runTest(dispatcher) {
-        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions)
+        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
         dispatcher.scheduler.runCurrent()
         vm.viewEffect.test {
             vm.processIntent(ClaimOfferViewIntent.Initialize("offer"))
@@ -67,11 +73,23 @@ class ClaimsMemoryRestoreTest {
         }
         coVerify(exactly = 1) { repository.createClaim("offer") }
         coVerify(exactly = 0) { repository.createClaim("other") }
+        verify(exactly = 1) { cart.removeReservedUnit(any()) }
+    }
+
+    @Test
+    fun freshViewModelRestoresExistingClaimWithoutRemovingStockOrCreatingAnotherClaim() = runTest(dispatcher) {
+        coEvery { repository.restoreClaim("offer") } returns Result.Success(claim)
+        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
+        vm.processIntent(ClaimOfferViewIntent.Initialize("offer", expectExisting = true))
+        dispatcher.scheduler.runCurrent()
+        assertEquals(claim, vm.viewState.value.result)
+        coVerify(exactly = 0) { repository.createClaim(any()) }
+        verify(exactly = 0) { cart.removeReservedUnit(any()) }
     }
 
     @Test
     fun expectedClaimWithoutMemoryNeverPostsEvenAfterSameOfferReentry() = runTest(dispatcher) {
-        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions)
+        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
         dispatcher.scheduler.runCurrent()
         vm.processIntent(ClaimOfferViewIntent.Initialize("offer", expectExisting = true))
         assertTrue(vm.viewState.value.existingCodeUnavailable)
@@ -89,7 +107,7 @@ class ClaimsMemoryRestoreTest {
 
     @Test
     fun authenticationIdentityChangeClearsCachedCodes() = runTest(dispatcher) {
-        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions)
+        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
         dispatcher.scheduler.runCurrent()
         vm.processIntent(ClaimOfferViewIntent.Submit("offer"))
         dispatcher.scheduler.runCurrent()
@@ -105,7 +123,7 @@ class ClaimsMemoryRestoreTest {
 
     @Test
     fun ordinarySessionSyncPreservesCachedCodeAcrossOffers() = runTest(dispatcher) {
-        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions)
+        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
         dispatcher.scheduler.runCurrent()
         vm.processIntent(ClaimOfferViewIntent.Submit("offer"))
         dispatcher.scheduler.runCurrent()

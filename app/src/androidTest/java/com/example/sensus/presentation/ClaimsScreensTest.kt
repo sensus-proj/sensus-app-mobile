@@ -1,6 +1,8 @@
 package com.example.sensus.presentation
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -76,6 +78,34 @@ class ClaimsScreensTest {
         compose.runOnIdle { assertEquals(MerchantSalesViewIntent.Edit("Ab.signed"), intents.last()) }
         compose.onNodeWithText("Validar y canjear").assertIsNotEnabled()
         compose.onNodeWithText("Canje confirmado por el servidor", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun merchantCanScanOnlyWhenRedemptionIsIdle() {
+        val loading = mutableStateOf(false)
+        compose.setContent {
+            MaterialTheme { MerchantSalesContent(MerchantSalesViewState(loading = loading.value), {}) }
+        }
+        compose.onNodeWithText("Escanear QR del cliente").assertIsEnabled()
+        compose.runOnIdle { loading.value = true }
+        compose.onNodeWithText("Escanear QR del cliente").assertIsNotEnabled()
+        compose.onNodeWithText("Código del cliente").assertExists()
+    }
+
+    @Test
+    fun merchantReviewsScannedCodeBeforeConfirming() {
+        val code = "Ab.signed"
+        val intents = mutableListOf<MerchantSalesViewIntent>()
+        compose.setContent {
+            MaterialTheme { MerchantSalesContent(MerchantSalesViewState(input = code, scanned = true), { intents.add(it) }) }
+        }
+
+        compose.onNodeWithText(code).assertExists()
+        compose.onNodeWithText("QR leído. Revisa el folio y confirma el canje.").assertExists()
+        compose.runOnIdle { assertEquals(emptyList<MerchantSalesViewIntent>(), intents) }
+
+        compose.onNodeWithText("Validar y canjear").performClick()
+        compose.runOnIdle { assertEquals(listOf(MerchantSalesViewIntent.Submit(code)), intents) }
     }
 
     @Test

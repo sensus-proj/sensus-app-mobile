@@ -78,12 +78,11 @@ class CommunityViewModelInteractionsTest {
         locations,
         session,
         offers,
-        null,
-        toggleLike,
-        getComments,
-        addComment,
-        deletePost,
-        submitReport
+        togglePostLikeUseCase = toggleLike,
+        getCommentsUseCase = getComments,
+        addCommentUseCase = addComment,
+        deletePostUseCase = deletePost,
+        submitReportUseCase = submitReport
     ).also { it.ioDispatcher = dispatcher }
 
     @Test

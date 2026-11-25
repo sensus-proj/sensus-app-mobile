@@ -79,13 +79,18 @@ import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.FriendRequestNotifier
 import com.example.sensus.presentation.common.QrScannerDialog
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import com.example.sensus.theme.sensusTextButtonColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -413,7 +418,7 @@ private fun FriendsCommunityBody(
         modifier = modifier
             .fillMaxSize()
             .background(SensusBackground),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = BOTTOM_NAV_CLEARANCE_DP.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 6.dp, bottom = BOTTOM_NAV_CLEARANCE_DP.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item { CommunityHeader(onRefresh = callbacks.onRefresh) }
@@ -458,13 +463,13 @@ private fun CommunityHeader(onRefresh: () -> Unit = {}) {
                         .background(SensusPurple.copy(alpha = TINT_ALPHA)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Amigos y QR", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = "Amigos y QR", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             }
             IconButton(onClick = onRefresh) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Actualizar amigos", tint = SensusPurple)
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Actualizar amigos", tint = SensusVioletInk)
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -480,7 +485,7 @@ private fun CommunityHeader(onRefresh: () -> Unit = {}) {
 private fun CommunityInviteCard(inviteCode: String, callbacks: FriendsScreenCallbacks) {
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -489,23 +494,24 @@ private fun CommunityInviteCard(inviteCode: String, callbacks: FriendsScreenCall
             InviteCodePill(inviteCode = inviteCode, onCopyCode = callbacks.onCopyCode)
             InviteCardActions(onShareCode = callbacks.onShareInvite, onShowQr = callbacks.onShowQr)
             OutlinedButton(
+                colors = sensusOutlinedButtonColors(),
                 onClick = callbacks.onOpenScanner,
-                shape = RoundedCornerShape(12.dp),
+                shape = SensusButtonShape,
                 border = BorderStroke(1.dp, SensusPurple),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Escanear QR de un amigo", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                Text(text = "Escanear QR de un amigo", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
             }
-            TextButton(onClick = callbacks.onShowAddFriend, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            TextButton(colors = sensusTextButtonColors(), onClick = callbacks.onShowAddFriend, modifier = Modifier.fillMaxWidth()) {
+                Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Agregar con código o enlace",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = SensusPurple
+                    color = SensusVioletInk
                 )
             }
         }
@@ -518,11 +524,11 @@ private fun InviteCardTitle() {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(SensusPurple.copy(alpha = TINT_ALPHA)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Default.GroupAdd, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(22.dp))
+            Icon(imageVector = Icons.Default.GroupAdd, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(22.dp))
         }
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -535,7 +541,7 @@ private fun InviteCardTitle() {
 @Composable
 private fun InviteCodePill(inviteCode: String, onCopyCode: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = SensusBackground,
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = Modifier.fillMaxWidth()
@@ -546,17 +552,17 @@ private fun InviteCodePill(inviteCode: String, onCopyCode: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(text = "Tu código de invitación", fontSize = 10.sp, color = SensusTextSecondary)
+                Text(text = "Tu código de invitación", fontSize = 11.sp, color = SensusTextSecondary)
                 Text(
                     text = inviteCode,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SensusPurple,
+                    fontWeight = FontWeight.Bold,
+                    color = SensusVioletInk,
                     letterSpacing = 1.sp
                 )
             }
             IconButton(onClick = onCopyCode, modifier = Modifier.size(48.dp)) {
-                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copiar código", tint = SensusPurple, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copiar código", tint = SensusVioletInk, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -567,26 +573,26 @@ private fun InviteCardActions(onShareCode: () -> Unit, onShowQr: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(
             onClick = onShareCode,
-            shape = RoundedCornerShape(12.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             modifier = Modifier.weight(SHARE_BUTTON_WEIGHT),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
         ) {
             Icon(imageVector = Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Compartir invitación", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(text = "Compartir invitación", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
         OutlinedButton(
             onClick = onShowQr,
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = SensusPurple),
+            shape = SensusButtonShape,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = SensusVioletInk),
             border = BorderStroke(1.dp, SensusPurple),
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
         ) {
-            Icon(imageVector = Icons.Default.QrCode, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.QrCode, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "Mi QR", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Mi QR", fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -604,7 +610,7 @@ private fun CommunityActivityHeader(friendsCount: Int) {
                 text = "$friendsCount conectados",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = SensusPurple,
+                color = SensusVioletInk,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
             )
         }
@@ -615,7 +621,7 @@ private fun CommunityActivityHeader(friendsCount: Int) {
 private fun EmptyFriendsCard(onOpenScanner: () -> Unit) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -624,15 +630,15 @@ private fun EmptyFriendsCard(onOpenScanner: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(32.dp))
-            Text(text = "Aún no tienes vecinos conectados", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Icon(imageVector = Icons.Default.Group, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(32.dp))
+            Text(text = "Aún no tienes vecinos conectados", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Text(
                 text = "Escanea el QR de un amigo o compártele tu enlace de invitación para conectarse aquí.",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary
             )
-            TextButton(onClick = onOpenScanner) {
-                Text(text = "Escanear primer QR", color = SensusPurple, fontWeight = FontWeight.Bold)
+            TextButton(colors = sensusTextButtonColors(), onClick = onOpenScanner) {
+                Text(text = "Escanear primer QR", color = SensusVioletInk, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -643,7 +649,7 @@ private fun FriendShareCard(friend: FriendRowItem, onClick: (() -> Unit)? = null
     val cardModifier = if (onClick != null) Modifier.fillMaxWidth().clickable(onClick = onClick) else Modifier.fillMaxWidth()
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = cardModifier
     ) {
@@ -656,7 +662,7 @@ private fun FriendShareCard(friend: FriendRowItem, onClick: (() -> Unit)? = null
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = friend.name,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = SensusTextPrimary,
                     maxLines = 1,
@@ -664,7 +670,7 @@ private fun FriendShareCard(friend: FriendRowItem, onClick: (() -> Unit)? = null
                 )
                 Text(
                     text = if (onClick != null) "Toca para ver ofertas compartidas" else friend.subtitle,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -716,20 +722,20 @@ private fun AddFriendDialog(onDismiss: () -> Unit, onOpenScanner: () -> Unit, on
                         onAddCode(clean)
                     }
                 },
-                shape = RoundedCornerShape(10.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)
             ) {
                 Text("Agregar", fontWeight = FontWeight.Bold, color = Color.White)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) } }
+        dismissButton = { TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) } }
     )
 }
 
 @Composable
 private fun AddFriendDialogBody(friendInput: String, inputError: String?, onInputChanged: (String) -> Unit, onOpenScanner: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(text = "Pega el enlace o código de invitación, o escanea su código QR:", fontSize = 12.sp, color = SensusTextSecondary)
+        Text(text = "Pega el enlace o código de invitación, o escanea su código QR:", fontSize = 13.sp, color = SensusTextSecondary)
         OutlinedTextField(
             value = friendInput,
             onValueChange = onInputChanged,
@@ -746,13 +752,13 @@ private fun AddFriendDialogBody(friendInput: String, inputError: String?, onInpu
         }
         Button(
             onClick = onOpenScanner,
-            shape = RoundedCornerShape(10.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple.copy(alpha = TINT_ALPHA)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Abrir cámara para escanear QR", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+            Text(text = "Abrir cámara para escanear QR", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
         }
     }
 }

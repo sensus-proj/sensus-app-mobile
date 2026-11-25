@@ -45,6 +45,8 @@ class SecurePreferences private constructor(preferencesFactory: () -> SharedPref
     fun getUserEmail(): String? = prefs.getString(KEY_USER_EMAIL, null)
     fun getUserPhoto(): String? = prefs.getString(KEY_USER_PHOTO, null)?.takeIf { it.isNotBlank() }
 
+    val claimIndex = EncryptedClaimIndex { prefs as? EncryptedSharedPreferences }
+
     fun getAuthToken(): String? = prefs.getString(KEY_AUTH_TOKEN, null)
 
     fun saveSessionType(type: SessionType) {

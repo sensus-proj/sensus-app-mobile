@@ -12,6 +12,7 @@ object CartManager {
     private val _cart = MutableStateFlow(StoreCart())
     val cart: StateFlow<StoreCart> = _cart.asStateFlow()
 
+    @Synchronized
     fun addToCart(offer: ProductOffer, quantity: Int = 1): AddToCartResult {
         val current = _cart.value
         if (!current.isEmpty && current.storeName != null && !current.storeName.equals(offer.storeName, ignoreCase = true)) {
@@ -39,6 +40,7 @@ object CartManager {
         return AddToCartResult.Success
     }
 
+    @Synchronized
     fun replaceCart(offer: ProductOffer, quantity: Int = 1) {
         _cart.value = StoreCart(
             storeName = offer.storeName,
@@ -49,6 +51,7 @@ object CartManager {
         )
     }
 
+    @Synchronized
     fun updateQuantity(offerId: String, newQuantity: Int) {
         val current = _cart.value
         if (newQuantity <= 0) {
@@ -65,12 +68,20 @@ object CartManager {
         _cart.value = if (updatedItems.isEmpty()) StoreCart() else current.copy(items = updatedItems)
     }
 
+    @Synchronized
     fun removeItem(offerId: String) {
         val current = _cart.value
         val updatedItems = current.items.filterNot { it.offer.id == offerId }
         _cart.value = if (updatedItems.isEmpty()) StoreCart() else current.copy(items = updatedItems)
     }
 
+    @Synchronized
+    fun removeReservedUnit(offerId: String) {
+        val reserved = _cart.value.items.firstOrNull { it.offer.id == offerId } ?: return
+        updateQuantity(offerId, reserved.quantity - 1)
+    }
+
+    @Synchronized
     fun clearCart() {
         _cart.value = StoreCart()
     }

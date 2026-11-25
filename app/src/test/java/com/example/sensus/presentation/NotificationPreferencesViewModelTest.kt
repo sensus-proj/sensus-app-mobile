@@ -4,6 +4,7 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.NotificationsDevice
 import com.example.sensus.domain.model.NotificationsPreferences
+import com.example.sensus.domain.repository.NotificationPermissionChecker
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.example.sensus.domain.repository.NotificationsRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -40,6 +41,7 @@ class NotificationPreferencesViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<NotificationsRepository>()
     private val provider = mockk<NotificationsPushDeviceProvider>()
+    private val permission = mockk<NotificationPermissionChecker> { every { canPostNotifications() } returns true }
     private val session = mockk<SessionRepository> {
         every { sessionState } returns MutableStateFlow(
             SessionState(isSessionActive = true, activeToken = java.util.UUID.randomUUID().toString())
@@ -61,7 +63,8 @@ class NotificationPreferencesViewModelTest {
     private fun viewModel() = NotificationsViewModel(
         NotificationsGetSettingsUseCase(repository, session),
         NotificationsUpdateSettingsUseCase(repository, session),
-        NotificationsRegisterDeviceUseCase(provider, repository, session)
+        NotificationsRegisterDeviceUseCase(provider, repository, session, permission),
+        io.mockk.mockk<com.example.sensus.domain.usecase.NotificationsLocationUseCase>(relaxed = true)
     )
 
     @Test
@@ -117,6 +120,22 @@ class NotificationPreferencesViewModelTest {
         assertEquals(NotificationsError.FIREBASE, vm.viewState.value.error)
         assertFalse(vm.viewState.value.isRegistering)
         coVerify(exactly = 1) { provider.getDevice() }
+        coVerify(exactly = 0) { repository.registerDevice(any()) }
+    }
+
+    @Test
+    fun blockedAndroidNotificationsShowPermissionErrorAndKeepPreferences() = runTest(dispatcher) {
+        every { permission.canPostNotifications() } returns false
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.processIntent(NotificationsViewIntent.ActivateDevice)
+        advanceUntilIdle()
+
+        assertEquals(NotificationsError.PERMISSION, vm.viewState.value.error)
+        assertEquals(settings, vm.viewState.value.savedPreferences)
+        assertFalse(vm.viewState.value.isRegistering)
+        coVerify(exactly = 0) { provider.getDevice(any()) }
         coVerify(exactly = 0) { repository.registerDevice(any()) }
     }
 

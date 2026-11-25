@@ -49,8 +49,12 @@
 
 ## Tareas
 
+Para SE-045, deserializar el contador opcional `viewCount` de cada fila de inventario, validar su rango en el mapper y presentarlo en su tarjeta. Conservar compatibilidad con respuestas anteriores. Cubrir con MockWebServer valores positivos, cero, ausentes, nulos y negativos.
+
 Ver `tasks.md`.
 
 ## Slice REPUBLISH publicada — 2026-11-14
 
 Contrato confirmado en OfferEndpoints.cs (solo lectura): POST /api/v1/offers/{id}/republish, cuerpo newStartsAt/newEndsAt/newStock, HTTP 200 OfferDto. GET oficial reportado por coordinación: 405 Allow POST; no acredita mutación autenticada E2E. Esta slice sustituye la mención a republicar agotadas: solo EXPIRED/ARCHIVED; ACTIVE, PAUSED y SOLD_OUT excluidas. No modifica precio, descripción ni imagen. Inicio futuro con margen de un minuto, fin editable posterior al inicio y stock > 0. Dominio puro, repositorio remoto sin reintentos añadidos, caché con respuesta confirmada, Hilt y MVI. Error conserva formulario. No cambia URL, interceptor ni cliente oficial.
+
+El panel obtiene el perfil real y el inventario propio sin precargar el catálogo público. Las pestañas usan la misma regla para filtrar y contar. Las ofertas agotadas, expiradas o dadas de baja quedan en Finalizadas. El GET propio no reemplaza la caché de exploración del comprador. Queda pendiente sincronizar un inventario propio offline separado del catálogo público.

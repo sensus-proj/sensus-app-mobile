@@ -4,12 +4,12 @@ import android.content.Context
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.push.NotificationsFirebaseDeviceProvider
+import com.example.sensus.domain.repository.NotificationsLocalStore
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseException
-import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import io.mockk.every
 import io.mockk.mockk
@@ -29,60 +29,67 @@ import org.junit.Test
 
 class NotificationPreferencesFirebaseProviderTest {
     private val context = mockk<Context>()
+    private val store = mockk<NotificationsLocalStore> {
+        every { installationId() } returns "8b0f6f2e-0000-4000-8000-000000000001"
+    }
+
+    private fun provider() = NotificationsFirebaseDeviceProvider(context, store)
 
     @Before
     fun setup() {
         mockkStatic(FirebaseApp::class)
         mockkStatic(FirebaseMessaging::class)
-        mockkStatic(FirebaseInstallations::class)
     }
 
     @After
     fun teardown() {
         unmockkStatic(FirebaseApp::class)
         unmockkStatic(FirebaseMessaging::class)
-        unmockkStatic(FirebaseInstallations::class)
     }
 
     @Test
     fun absentResourcesReturnExplicitUnavailableWithoutMessaging() = runTest {
         every { FirebaseApp.initializeApp(context) } returns null
         val expected = Result.Failure(AppError.NotFound(NotificationsPushDeviceProvider.CONFIGURATION_UNAVAILABLE))
-        assertEquals(expected, NotificationsFirebaseDeviceProvider(context).getDevice())
+        assertEquals(expected, provider().getDevice())
         verify(exactly = 0) { FirebaseMessaging.getInstance() }
     }
 
     @Test
-    fun configuredAppUsesInstallationsIdAndMessagingToken() = runTest {
-        val app = mockk<FirebaseApp>()
-        val installations = mockk<FirebaseInstallations>()
+    fun configuredAppUsesStableInstallationIdAndMessagingToken() = runTest {
         val messaging = mockk<FirebaseMessaging>()
-        every { FirebaseApp.initializeApp(context) } returns app
-        every { FirebaseInstallations.getInstance(app) } returns installations
+        every { FirebaseApp.initializeApp(context) } returns mockk()
         every { FirebaseMessaging.getInstance() } returns messaging
-        every { installations.id } returns successfulTask("installation-from-sdk")
         every { messaging.token } returns successfulTask("token-issued-by-sdk-fixture")
-        val result = NotificationsFirebaseDeviceProvider(context).getDevice()
+        val result = provider().getDevice()
         assertTrue(result is Result.Success)
         val device = (result as Result.Success).data
-        assertEquals("installation-from-sdk", device.deviceId)
+        assertEquals("8b0f6f2e-0000-4000-8000-000000000001", device.deviceId)
         assertEquals("token-issued-by-sdk-fixture", device.token)
+    }
+
+    @Test
+    fun tokenFromOnNewTokenIsUsedWithoutAskingTheSdk() = runTest {
+        every { FirebaseApp.initializeApp(context) } returns mockk()
+        val result = provider().getDevice("rotated-token-fixture")
+        assertEquals("rotated-token-fixture", (result as Result.Success).data.token)
+        verify(exactly = 0) { FirebaseMessaging.getInstance() }
     }
 
     @Test
     fun sdkFailureIsSanitizedAndDoesNotReturnCredentials() = runTest {
         every { FirebaseApp.initializeApp(context) } throws IllegalStateException("private-sdk-detail")
-        assertEquals(Result.Failure(AppError.Generic()), NotificationsFirebaseDeviceProvider(context).getDevice())
+        assertEquals(Result.Failure(AppError.Generic()), provider().getDevice())
     }
 
     @Test
     fun transportAndFirebaseFailuresAreMappedWithoutExposingSdkDetails() = runTest {
         every { FirebaseApp.initializeApp(context) } throws IOException("private-transport-detail")
-        assertEquals(Result.Failure(AppError.Network()), NotificationsFirebaseDeviceProvider(context).getDevice())
+        assertEquals(Result.Failure(AppError.Network()), provider().getDevice())
         every { FirebaseApp.initializeApp(context) } throws mockk<FirebaseException>(relaxed = true)
-        assertEquals(Result.Failure(AppError.Generic()), NotificationsFirebaseDeviceProvider(context).getDevice())
+        assertEquals(Result.Failure(AppError.Generic()), provider().getDevice())
         every { FirebaseApp.initializeApp(context) } throws IllegalArgumentException("private-config-detail")
-        assertEquals(Result.Failure(AppError.Generic()), NotificationsFirebaseDeviceProvider(context).getDevice())
+        assertEquals(Result.Failure(AppError.Generic()), provider().getDevice())
     }
 
     @Test
@@ -90,12 +97,13 @@ class NotificationPreferencesFirebaseProviderTest {
         val cancellation = CancellationException("cancelled")
         every { FirebaseApp.initializeApp(context) } throws cancellation
         try {
-            NotificationsFirebaseDeviceProvider(context).getDevice()
+            provider().getDevice()
             fail("Cancellation must propagate")
         } catch (actual: CancellationException) {
             assertSame(cancellation, actual)
         }
     }
+
     private fun successfulTask(value: String): Task<String> {
         val task = mockk<Task<String>>(relaxed = true)
         every { task.addOnSuccessListener(any<OnSuccessListener<String>>()) } answers {

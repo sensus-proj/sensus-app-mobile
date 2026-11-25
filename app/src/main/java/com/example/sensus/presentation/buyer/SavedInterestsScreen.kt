@@ -61,15 +61,19 @@ import com.example.sensus.R
 import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import java.util.Locale
 
 private const val CARD_CORNER_DP = 16
@@ -159,18 +163,18 @@ private fun SavedInterestsTopBar(totalCount: Int, onNavigateBack: () -> Unit) {
             Column {
                 Text(
                     text = stringResource(R.string.saved_interests_title),
-                    fontSize = 18.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = SensusTextPrimary
                 )
                 Text(
                     text = "$totalCount elemento(s) guardados",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = SensusSurface)
     )
 }
 
@@ -190,7 +194,7 @@ private fun SavedInterestsBody(state: SavedInterestsViewState, actions: SavedInt
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(visibleOffers, key = { "offer_${it.id}" }) { offer ->
@@ -214,7 +218,7 @@ private fun SavedInterestsBody(state: SavedInterestsViewState, actions: SavedInt
 @Composable
 private fun SavedInterestsFilterRow(selectedTab: SavedInterestFilterTab, onSelectTab: (SavedInterestFilterTab) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         val tabs = listOf(
@@ -227,7 +231,7 @@ private fun SavedInterestsFilterRow(selectedTab: SavedInterestFilterTab, onSelec
             FilterChip(
                 selected = selected,
                 onClick = { onSelectTab(tab) },
-                label = { Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                label = { Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = SensusPurple,
                     selectedLabelColor = Color.White
@@ -241,7 +245,7 @@ private fun SavedInterestsFilterRow(selectedTab: SavedInterestFilterTab, onSelec
 private fun SavedOfferCard(offer: ProductOffer, onClick: () -> Unit, onRemoveClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(CARD_CORNER_DP.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
@@ -261,11 +265,11 @@ private fun SavedOfferCard(offer: ProductOffer, onClick: () -> Unit, onRemoveCli
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(14.dp))
+                    Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = offer.storeName,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = SensusTextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -284,7 +288,7 @@ private fun SavedOfferCard(offer: ProductOffer, onClick: () -> Unit, onRemoveCli
                 Icon(
                     imageVector = Icons.Filled.PushPin,
                     contentDescription = stringResource(R.string.saved_interests_unpin),
-                    tint = SensusPurple
+                    tint = SensusVioletInk
                 )
             }
         }
@@ -308,7 +312,7 @@ private fun SavedOfferThumbnail(offer: ProductOffer) {
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Icon(imageVector = Icons.Default.Storefront, contentDescription = offer.name, tint = SensusPurple, modifier = Modifier.size(28.dp))
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = offer.name, tint = SensusVioletInk, modifier = Modifier.size(28.dp))
         }
         Surface(
             color = SensusDiscountTag,
@@ -317,8 +321,8 @@ private fun SavedOfferThumbnail(offer: ProductOffer) {
         ) {
             Text(
                 text = "-${offer.discountPercent}%",
-                color = Color.White,
-                fontSize = 10.sp,
+                color = Ink,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             )
@@ -331,9 +335,9 @@ private fun SavedOfferPricesRow(offer: ProductOffer) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "$${String.format(Locale.US, "%.2f", offer.discountPrice)} MXN",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = SensusPurple
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = SensusVioletInk
         )
         Text(
             text = "$${String.format(Locale.US, "%.0f", offer.originalPrice)}",
@@ -344,7 +348,7 @@ private fun SavedOfferPricesRow(offer: ProductOffer) {
         Surface(color = SensusSuccess.copy(alpha = STOCK_BG_ALPHA), shape = RoundedCornerShape(6.dp)) {
             Text(
                 text = stringResource(R.string.saved_interests_open_offer),
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = SensusSuccess,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -357,7 +361,7 @@ private fun SavedOfferPricesRow(offer: ProductOffer) {
 private fun SavedPostCard(post: FeedPost, onMerchantClick: (String) -> Unit, onRemoveClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(CARD_CORNER_DP.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -367,12 +371,12 @@ private fun SavedPostCard(post: FeedPost, onMerchantClick: (String) -> Unit, onR
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = post.authorName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = post.authorName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 IconButton(onClick = onRemoveClick, modifier = Modifier.size(32.dp)) {
                     Icon(
                         imageVector = Icons.Filled.PushPin,
                         contentDescription = stringResource(R.string.saved_interests_unpin),
-                        tint = SensusPurple,
+                        tint = SensusVioletInk,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -399,8 +403,8 @@ private fun SavedPostCard(post: FeedPost, onMerchantClick: (String) -> Unit, onR
                 post.merchantId?.let { id ->
                     Text(
                         text = post.merchantName ?: stringResource(R.string.community_merchant_offers),
-                        color = SensusPurple,
-                        fontSize = 12.sp,
+                        color = SensusVioletInk,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clickable { onMerchantClick(id) }
                     )
@@ -428,13 +432,13 @@ private fun SavedInterestsEmptyState(onExploreOffers: () -> Unit, modifier: Modi
                 Icon(
                     imageVector = Icons.Outlined.PushPin,
                     contentDescription = null,
-                    tint = SensusPurple,
+                    tint = SensusVioletInk,
                     modifier = Modifier.size(32.dp)
                 )
             }
             Text(
                 text = stringResource(R.string.saved_interests_empty_title),
-                fontSize = 17.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary
             )
@@ -447,7 +451,7 @@ private fun SavedInterestsEmptyState(onExploreOffers: () -> Unit, modifier: Modi
             Button(
                 onClick = onExploreOffers,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                shape = RoundedCornerShape(12.dp)
+                shape = SensusButtonShape
             ) {
                 Text(text = stringResource(R.string.saved_interests_explore), color = Color.White, fontWeight = FontWeight.SemiBold)
             }

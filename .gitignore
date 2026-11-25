@@ -17,6 +17,7 @@
 # Secretos, firma y MCP local
 keys.properties
 local.properties
+/app/google-services.json
 mcp_config.json
 .agent/mcp_config.json
 .cursor/mcp.json
@@ -38,3 +39,6 @@ signing/
 # Entorno dual
 .agent/skills/
 sensus-back/
+
+# FT-27: lo genera el CI antes de OSV-Scanner (LENIENT, no se versiona)
+/app/gradle.lockfile

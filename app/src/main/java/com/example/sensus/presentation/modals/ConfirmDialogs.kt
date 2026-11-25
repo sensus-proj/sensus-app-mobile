@@ -36,11 +36,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.StatusRed
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
+import com.example.sensus.theme.sensusTextButtonColors
 
 private const val ICON_BG_ALPHA = 0.12f
 private const val OFFLINE_SLATE_HEX = 0xFF64748B
@@ -51,10 +57,10 @@ fun ConfirmLogoutDialog(onDismiss: () -> Unit, onConfirmLogout: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(18.dp),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         icon = { DialogIconBadge(Icons.AutoMirrored.Filled.Logout, SensusPurple, SensusPurple.copy(alpha = ICON_BG_ALPHA)) },
         title = {
-            Text(text = "¿Deseas cerrar sesión?", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "¿Deseas cerrar sesión?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         },
         text = {
             Text(
@@ -64,12 +70,12 @@ fun ConfirmLogoutDialog(onDismiss: () -> Unit, onConfirmLogout: () -> Unit) {
             )
         },
         confirmButton = {
-            Button(onClick = onConfirmLogout, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = SensusRed)) {
+            Button(onClick = onConfirmLogout, shape = SensusButtonShape, colors = ButtonDefaults.buttonColors(containerColor = StatusRed)) {
                 Text("Cerrar sesión", fontWeight = FontWeight.Bold, color = Color.White)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
+            TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
         }
     )
 }
@@ -81,12 +87,12 @@ fun ConfirmDeleteAccountDialog(onDismiss: () -> Unit, onConfirmDeleteWithPasswor
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(18.dp),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         icon = { DialogIconBadge(Icons.Default.DeleteForever, SensusRed, SensusRed.copy(alpha = ICON_BG_ALPHA)) },
         title = {
             Text(
                 text = "¿Eliminar cuenta definitivamente?",
-                fontSize = 17.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary
             )
@@ -104,14 +110,14 @@ fun ConfirmDeleteAccountDialog(onDismiss: () -> Unit, onConfirmDeleteWithPasswor
                     onConfirmDelete?.invoke()
                 },
                 enabled = passwordConfirmation.isNotBlank(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SensusRed)
+                shape = SensusButtonShape,
+                colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
             ) {
                 Text("Eliminar definitivamente", fontWeight = FontWeight.Bold, color = Color.White)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
+            TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
         }
     )
 }
@@ -128,7 +134,7 @@ private fun DeleteAccountDialogBody(passwordConfirmation: String, onPasswordChan
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "Ingresa tu contraseña para confirmar:",
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             color = SensusTextPrimary
         )
@@ -136,10 +142,10 @@ private fun DeleteAccountDialogBody(passwordConfirmation: String, onPasswordChan
         OutlinedTextField(
             value = passwordConfirmation,
             onValueChange = onPasswordChanged,
-            placeholder = { Text("Contraseña actual", fontSize = 12.sp) },
+            placeholder = { Text("Contraseña actual", fontSize = 13.sp) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = sensusOutlinedTextFieldColors(),
             singleLine = true
         )
@@ -160,10 +166,10 @@ fun GuestPromptDialog(onDismiss: () -> Unit, onNavigateToLogin: () -> Unit, onNa
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(18.dp),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         icon = { DialogIconBadge(Icons.Default.Person, SensusPurple, SensusPurple.copy(alpha = ICON_BG_ALPHA)) },
         title = {
-            Text(text = "Inicia sesión para continuar", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Inicia sesión para continuar", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         },
         text = {
             Text(
@@ -174,13 +180,13 @@ fun GuestPromptDialog(onDismiss: () -> Unit, onNavigateToLogin: () -> Unit, onNa
             )
         },
         confirmButton = {
-            Button(onClick = onNavigateToLogin, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
+            Button(onClick = onNavigateToLogin, shape = SensusButtonShape, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
                 Text("Iniciar Sesión", fontWeight = FontWeight.Bold, color = Color.White)
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onNavigateToRegister, shape = RoundedCornerShape(10.dp)) {
-                Text("Registrarme", color = SensusPurple)
+            OutlinedButton(colors = sensusOutlinedButtonColors(), onClick = onNavigateToRegister, shape = SensusButtonShape) {
+                Text("Registrarme", color = SensusVioletInk)
             }
         }
     )
@@ -192,10 +198,10 @@ fun OfflineDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(18.dp),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         icon = { DialogIconBadge(Icons.Default.WifiOff, slateColor, slateColor.copy(alpha = OFFLINE_BG_ALPHA)) },
         title = {
-            Text(text = "Sin conexión a internet", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Sin conexión a internet", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         },
         text = {
             Text(
@@ -206,7 +212,7 @@ fun OfflineDialog(onDismiss: () -> Unit) {
             )
         },
         confirmButton = {
-            Button(onClick = onDismiss, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
+            Button(onClick = onDismiss, shape = SensusButtonShape, colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)) {
                 Text("Entendido", fontWeight = FontWeight.Bold, color = Color.White)
             }
         }

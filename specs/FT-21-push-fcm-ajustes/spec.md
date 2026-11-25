@@ -14,8 +14,8 @@ Conservar la firma pública y los callbacks de navegación. No presentar una ban
 - RF-21-03: Validar radio entero entre 1 y 50 km. Error de guardado conserva borrador sin afirmar persistencia.
 - RF-21-04: Activar solicita POST_NOTIFICATIONS en API 33+ antes de obtener credenciales SDK.
 - RF-21-05: FirebaseApp.initializeApp(context) usa recursos existentes; null significa configuración no disponible.
-- RF-21-06: Token FirebaseMessaging e ID FirebaseInstallations alimentan PUT `/api/v1/users/device-token`.
-- RF-21-07: Sin permiso o configuración no se registra el dispositivo; sin token manual ni credenciales ficticias.
+- RF-21-06: Token de Firebase Messaging y UUID por instalación alimentan PUT `/api/v1/users/device-token`, de acuerdo con FT-39.
+- RF-21-07: Si Android bloquea las notificaciones o falta configuración de Firebase, no se registra el dispositivo. La activación, la renovación y los reintentos comprueban el permiso antes del SDK y antes del PUT.
 
 ## 3. Requisitos no funcionales
 

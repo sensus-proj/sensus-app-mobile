@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -49,12 +50,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusTheme
+import com.example.sensus.theme.SensusVioletInk
 
 private const val OTP_LENGTH = 4
 private const val SHIELD_BG_ALPHA = 0.12f
@@ -116,24 +120,24 @@ private fun OtpBodySection(phoneNumber: String, otpCode: String, errorMessage: S
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = SensusPurple)
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = SensusVioletInk)
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
         Surface(shape = CircleShape, color = SensusPurple.copy(alpha = SHIELD_BG_ALPHA), modifier = Modifier.size(90.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Shield, contentDescription = "Seguridad", tint = SensusPurple, modifier = Modifier.size(46.dp))
+                Icon(imageVector = Icons.Default.Shield, contentDescription = "Seguridad", tint = SensusVioletInk, modifier = Modifier.size(46.dp))
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
-        Text(text = "Verificación de Seguridad", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+        Text(text = "Verificación de Seguridad", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Ingresa el código de 4 dígitos enviado a\n$phoneNumber",
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             color = SensusTextSecondary,
             textAlign = TextAlign.Center,
-            lineHeight = 20.sp
+            lineHeight = 22.sp
         )
         Spacer(modifier = Modifier.height(36.dp))
         OtpCodeInput(otpCode = otpCode, hasError = errorMessage != null, onCodeChange = onCodeChange)
@@ -150,7 +154,7 @@ private fun OtpBodySection(phoneNumber: String, otpCode: String, errorMessage: S
 private fun OtpResendRow() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
         Text(text = "¿No recibiste el código? ", fontSize = 13.sp, color = SensusTextSecondary)
-        Text(text = "Reenviar en 00:45", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+        Text(text = "Reenviar en 00:45", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
     }
 }
 
@@ -159,11 +163,11 @@ private fun OtpVerifyButton(enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(16.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier
             .fillMaxWidth()
-            .height(54.dp)
+            .heightIn(min = 54.dp)
     ) {
         Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(8.dp))
@@ -202,11 +206,11 @@ private fun OtpDigitCell(char: String, isFocused: Boolean, hasError: Boolean) {
     Box(
         modifier = Modifier
             .size(62.dp)
-            .background(Color.White, RoundedCornerShape(16.dp))
+            .background(SensusSurface, RoundedCornerShape(16.dp))
             .border(width = if (isFocused || hasError) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = char, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = SensusPurple, textAlign = TextAlign.Center)
+        Text(text = char, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk, textAlign = TextAlign.Center)
     }
 }
 

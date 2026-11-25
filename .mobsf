@@ -1,0 +1,9 @@
+---
+# Configuracion de MobSFscan (FT-27).
+# mobsfscan lee targetSdk del AndroidManifest fuente; en este proyecto vive en app/build.gradle.kts
+# (targetSdk = 36) y el escaner asume API 26 por defecto. Con API >= 29 la plataforma ya mitiga
+# StrandHogg 1.0 (singleTask, corregido en API 28) y StrandHogg 2.0 (corregido en API 29), por lo que
+# ambas reglas son falsos positivos verificados. El resto de reglas sigue activo y bloqueante.
+ignore-rules:
+  - android_task_hijacking1
+  - android_task_hijacking2

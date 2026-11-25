@@ -62,14 +62,16 @@ import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.MapLayerStyle
 import com.example.sensus.presentation.common.formatRadiusText
+import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
 private const val SLIDE_OFFSET_DIVISOR = 4
-private const val BORDER_LIGHT_HEX = 0xFFE2E8F0
 private const val NOTICE_BORDER_ALPHA = 0.25f
 private const val LAYER_SELECTED_BG_ALPHA = 0.1f
 private const val DISABLED_ZOOM_ALPHA = 0.35f
@@ -161,15 +163,15 @@ private fun MapSearchField(query: String, onQueryChange: (String) -> Unit, onLis
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text(text = "Buscar en el mapa...", fontSize = 14.sp, color = SensusTextMuted) },
+        placeholder = { Text(text = "Buscar en el mapa...", fontSize = 15.sp, color = SensusTextMuted) },
         leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Buscar", tint = SensusTextSecondary) },
         trailingIcon = {
             IconButton(onClick = onListToggle) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Ver lista", tint = SensusPurple)
+                Icon(imageVector = Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Ver lista", tint = SensusVioletInk)
             }
         },
         shape = RoundedCornerShape(16.dp),
-        colors = sensusOutlinedTextFieldColors(containerColor = Color.White),
+        colors = sensusOutlinedTextFieldColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
     )
@@ -204,7 +206,7 @@ private fun MapRadiusAndCategoriesRow(
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = radiusLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = radiusLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
         }
@@ -212,13 +214,13 @@ private fun MapRadiusAndCategoriesRow(
             val isSelected = selectedCategory == category
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) SensusPurple else Color.White,
+                color = if (isSelected) SensusPurple else SensusSurface,
                 shadowElevation = 2.dp,
                 modifier = Modifier.clickable { onCategoryToggle(category) }
             ) {
                 Text(
                     text = category.displayName,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     color = if (isSelected) Color.White else SensusTextPrimary,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -232,22 +234,22 @@ private fun MapRadiusAndCategoriesRow(
 private fun LocationNoticeBanner(message: String, isGpsOff: Boolean, onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
+        color = SensusSurface,
         shadowElevation = 4.dp,
         border = BorderStroke(1.dp, SensusPurple.copy(alpha = NOTICE_BORDER_ALPHA)),
         modifier = Modifier.padding(end = 8.dp)
     ) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = message, fontSize = 11.sp, color = SensusTextPrimary, lineHeight = 14.sp)
+                Text(text = message, fontSize = 11.sp, color = SensusTextPrimary, lineHeight = 18.sp)
                 if (isGpsOff) {
                     Text(
                         text = "Activar GPS ahora",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = SensusPurple,
+                        color = SensusVioletInk,
                         modifier = Modifier
                             .padding(top = 2.dp)
                             .clickable(onClick = onOpenSettings)
@@ -266,22 +268,22 @@ private fun MapLayersSelector(selectedLayer: MapLayerStyle, showMenu: Boolean, o
     Column(horizontalAlignment = Alignment.End) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = if (showMenu) SensusPurple else Color.White,
+            color = if (showMenu) SensusPurple else SensusSurface,
             shadowElevation = 4.dp,
-            border = BorderStroke(1.dp, if (showMenu) SensusPurple else Color(BORDER_LIGHT_HEX)),
+            border = BorderStroke(1.dp, if (showMenu) SensusPurple else SensusCardBorder),
             modifier = Modifier.clickable(onClick = onToggleMenu)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp)) {
                 Icon(
                     imageVector = Icons.Default.Layers,
                     contentDescription = "Capas del mapa",
-                    tint = if (showMenu) Color.White else SensusPurple,
+                    tint = if (showMenu) Color.White else SensusVioletInk,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
                     text = selectedLayer.title,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (showMenu) Color.White else SensusTextPrimary
                 )
@@ -301,7 +303,7 @@ private fun MapLayersSelector(selectedLayer: MapLayerStyle, showMenu: Boolean, o
 private fun MapLayersDropdownCard(selectedLayer: MapLayerStyle, onSelectLayer: (MapLayerStyle) -> Unit) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         modifier = Modifier
             .padding(top = 6.dp)
@@ -325,7 +327,7 @@ private fun MapLayersDropdownCard(selectedLayer: MapLayerStyle, onSelectLayer: (
 @Composable
 private fun MapLayerOptionRow(layer: MapLayerStyle, selected: Boolean, onSelect: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = if (selected) SensusPurple.copy(alpha = LAYER_SELECTED_BG_ALPHA) else Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
@@ -346,7 +348,7 @@ private fun MapLayerOptionRow(layer: MapLayerStyle, selected: Boolean, onSelect:
             Spacer(modifier = Modifier.width(8.dp))
             MapLayerLabelsColumn(layer = layer, selected = selected, modifier = Modifier.weight(1f))
             if (selected) {
-                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(15.dp))
+                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(15.dp))
             }
         }
     }
@@ -357,11 +359,11 @@ private fun MapLayerLabelsColumn(layer: MapLayerStyle, selected: Boolean, modifi
     Column(modifier = modifier) {
         Text(
             text = layer.title,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             color = if (selected) SensusPurple else SensusTextPrimary
         )
-        Text(text = layer.subtitle, fontSize = 10.sp, color = SensusTextMuted)
+        Text(text = layer.subtitle, fontSize = 11.sp, color = SensusTextMuted)
     }
 }
 
@@ -387,24 +389,24 @@ internal fun BuyerMapRightControls(
     ) {
         Surface(
             shape = RoundedCornerShape(14.dp),
-            color = Color.White,
+            color = SensusSurface,
             shadowElevation = 6.dp,
-            border = BorderStroke(1.dp, Color(BORDER_LIGHT_HEX)),
+            border = BorderStroke(1.dp, SensusCardBorder),
             modifier = Modifier.width(44.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 MapZoomIconButton(Icons.Default.Add, "Acercar mapa", state.canZoomIn, onZoomIn)
-                HorizontalDivider(color = Color(BORDER_LIGHT_HEX), thickness = 1.dp)
+                HorizontalDivider(color = SensusCardBorder, thickness = 1.dp)
                 MapZoomIconButton(Icons.Default.Remove, "Alejar mapa", state.canZoomOut, onZoomOut)
             }
         }
         Surface(
             shape = CircleShape,
-            color = Color.White,
+            color = SensusSurface,
             shadowElevation = 6.dp,
             border = BorderStroke(
                 width = if (state.hasRealLocation) REAL_LOC_BORDER_DP.dp else 1.dp,
-                color = if (state.hasRealLocation) SensusPurple.copy(alpha = REAL_LOCATION_BORDER_ALPHA) else Color(BORDER_LIGHT_HEX)
+                color = if (state.hasRealLocation) SensusPurple.copy(alpha = REAL_LOCATION_BORDER_ALPHA) else SensusCardBorder
             ),
             modifier = Modifier
                 .size(46.dp)
@@ -438,7 +440,7 @@ private fun MapZoomIconButton(icon: ImageVector, description: String, enabled: B
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = SensusPurple,
+            tint = SensusVioletInk,
             modifier = Modifier
                 .size(20.dp)
                 .alpha(if (enabled) 1f else DISABLED_ZOOM_ALPHA)
@@ -449,7 +451,7 @@ private fun MapZoomIconButton(icon: ImageVector, description: String, enabled: B
 @Composable
 internal fun FloatingMapCartPill(itemCount: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         color = SensusPurple,
         shadowElevation = 8.dp,
         modifier = modifier.clickable(onClick = onClick)
@@ -457,7 +459,7 @@ internal fun FloatingMapCartPill(itemCount: Int, onClick: () -> Unit, modifier: 
         Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Bolsa ($itemCount)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Bolsa ($itemCount)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

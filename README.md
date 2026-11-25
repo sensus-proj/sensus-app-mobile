@@ -34,7 +34,7 @@ Aplicacion Android nativa de marketplace dual (Cliente / Comercio) para el resca
 
 # Gates SDD
 python scripts/check_sdd.py
-python scripts/check_layers.py
+python scripts/check_layers.pyn
 python scripts/check_endpoints.py
 python scripts/check_secrets.py
 python scripts/check_coverage.py --min 45

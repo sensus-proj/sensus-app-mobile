@@ -55,11 +55,16 @@ import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
+import com.example.sensus.theme.SensusDisabled
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusTextButtonColors
 import java.util.Locale
 
 private const val INFO_BG_ALPHA = 0.08f
@@ -78,7 +83,7 @@ fun CartBottomSheet(viewModel: CartViewModel = hiltViewModel(), onDismiss: () ->
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
@@ -116,18 +121,18 @@ private fun CartSheetHeader(cart: StoreCart, onClearCart: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = "Bolsa", tint = SensusPurple, modifier = Modifier.size(24.dp))
+            Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = "Bolsa", tint = SensusVioletInk, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(10.dp))
             Column {
-                Text(text = "Bolsa de apartado", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = "Bolsa de apartado", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 cart.storeName?.let { storeName ->
-                    Text(text = storeName, fontSize = 12.sp, color = SensusPurple, fontWeight = FontWeight.SemiBold)
+                    Text(text = storeName, fontSize = 13.sp, color = SensusVioletInk, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
         if (!cart.isEmpty) {
-            TextButton(onClick = onClearCart) {
-                Text(text = "Vaciar", fontSize = 12.sp, color = SensusRed)
+            TextButton(colors = sensusTextButtonColors(), onClick = onClearCart) {
+                Text(text = "Vaciar", fontSize = 13.sp, color = SensusRed)
             }
         }
     }
@@ -142,11 +147,11 @@ private fun EmptyCartContent() {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(56.dp))
+            Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = null, tint = SensusDisabled, modifier = Modifier.size(56.dp))
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = "Tu bolsa de compras está vacía", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = stringResource(R.string.cart_one_unit_contract), fontSize = 12.sp, color = SensusTextMuted)
+            Text(text = stringResource(R.string.cart_one_unit_contract), fontSize = 13.sp, color = SensusTextMuted)
         }
     }
 }
@@ -172,25 +177,25 @@ private fun FilledCartContent(cart: StoreCart, onUpdateQuantity: (String, Int) -
     Spacer(modifier = Modifier.height(16.dp))
     Button(
         onClick = onGenerateQr,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 14.dp)
     ) {
         Icon(imageVector = Icons.Default.QrCode, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = stringResource(R.string.cart_start_claim), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(text = stringResource(R.string.cart_start_claim), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
     Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
 private fun SingleStoreBanner() {
-    Surface(color = SensusPurple.copy(alpha = INFO_BG_ALPHA), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = SensusPurple.copy(alpha = INFO_BG_ALPHA), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = stringResource(R.string.cart_one_unit_contract), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = SensusPurple)
+            Text(text = stringResource(R.string.cart_one_unit_contract), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SensusVioletInk)
         }
     }
 }
@@ -206,14 +211,14 @@ private fun CartItemRowCard(item: CartItem, onUpdateQuantity: (String, Int) -> U
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = item.offer.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = item.offer.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = "$${String.format(Locale.US, "%.2f", item.totalDiscountPrice)} MXN",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SensusPurple
+                        fontWeight = FontWeight.Bold,
+                        color = SensusVioletInk
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -234,20 +239,20 @@ private fun CartQuantityControls(item: CartItem, onUpdateQuantity: (String, Int)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Surface(
             shape = CircleShape,
-            color = Color.White,
+            color = SensusSurface,
             modifier = Modifier
                 .size(30.dp)
                 .clip(CircleShape)
                 .clickable { onUpdateQuantity(item.offer.id, item.quantity - 1) }
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Remove, contentDescription = "Menos", tint = SensusPurple, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.Default.Remove, contentDescription = "Menos", tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             }
         }
         Text(text = "${item.quantity}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         Surface(
             shape = CircleShape,
-            color = Color.White,
+            color = SensusSurface,
             modifier = Modifier
                 .size(30.dp)
                 .clip(CircleShape)
@@ -259,7 +264,7 @@ private fun CartQuantityControls(item: CartItem, onUpdateQuantity: (String, Int)
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Más",
-                    tint = if (item.quantity < item.offer.unitsLeft) SensusPurple else Color.LightGray,
+                    tint = if (item.quantity < item.offer.unitsLeft) SensusPurple else SensusDisabled,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -291,8 +296,8 @@ private fun CartSummaryTotals(cart: StoreCart) {
             Text(
                 text = "$${String.format(Locale.US, "%.2f", cart.totalDiscountPrice)} MXN",
                 fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = SensusPurple
+                fontWeight = FontWeight.Bold,
+                color = SensusVioletInk
             )
         }
     }

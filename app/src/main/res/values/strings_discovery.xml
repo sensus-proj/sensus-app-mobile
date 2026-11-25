@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="merchant_offer_views">Vistas: %1$d</string>
+    <string name="merchant_pause_confirm_title">¿Pausar promoción?</string>
+    <string name="merchant_pause_confirm_message">«%1$s» dejará de mostrarse al público hasta que la reactives.</string>
+    <string name="merchant_pause_confirm_action">Sí, pausar</string>
+    <string name="merchant_archive_confirm_title">Dar de baja promoción</string>
+    <string name="merchant_archive_confirm_message">¿Seguro que deseas dar de baja «%1$s»? Ya no volverá a mostrarse al público.</string>
+    <string name="merchant_archive_confirm_action">Sí, dar de baja</string>
+    <!-- FT-11 / FT-12: estado del comercio calculado con el horario publicado -->
+    <string name="merchant_open_now">Abierto ahora</string>
+    <string name="merchant_closed_now">Cerrado ahora</string>
+    <string name="merchant_status_with_schedule">%1$s · %2$s</string>
+    <!-- FT-16: métricas del inventario -->
+    <string name="merchant_metrics_title">Resumen del inventario</string>
+    <string name="merchant_metrics_active">Activas</string>
+    <string name="merchant_metrics_units">Piezas disponibles</string>
+    <string name="merchant_metrics_low_stock">Con 3 piezas o menos</string>
+    <string name="discovery_verified">Verificado</string>
+    <string name="discovery_payment_methods">Métodos de pago: %1$s</string>
+    <string name="discovery_day_closed">Cerrado</string>
+    <string name="discovery_day_schedule">%1$s: %2$s</string>
+</resources>

@@ -11,6 +11,8 @@
 
 ## Funcionalidad y reglas de negocio
 
+- [ ] Confirmar el contador de vistas por oferta con una respuesta real de inventario que incluya `viewCount`.
+
 - [ ] `GET /api/v1/merchants/me/stats` alimenta KPIs reales en `MerchantDashboardScreen` (`P-30`)
 - [ ] `GET /api/v1/merchants/me/offers` lista inventario paginado por estado en `P-31`
 - [ ] `PATCH /api/v1/offers/{id}/pause`, `/activate`, `/sold-out` y `DELETE` integrados
@@ -52,5 +54,6 @@
 
 - [ ] REPUBLISH: validar compileDebugKotlin, testDebugUnitTest, compileDebugAndroidTestSources, lint/detekt/ktlint, Kover >=80%, gates SDD y seguridad en corrida coordinada main.
 - [ ] Ejecutar Compose y E2E autenticado contra backend oficial; confirmar 409 sin caché ni reintento.
+- [x] Ejecutar en teléfono `MerchantEditOfferContentTest` con una compilación que incluya el diálogo de confirmación de pausa (2026-11-22, 2/2 en V2341).
 
 > Auditoría 2026-11-15 (código contra tareas): `compileDebugKotlin`, `compileDebugAndroidTestSources`, `testDebugUnitTest` (257 pruebas, 0 fallos), `koverVerifyDebug`, `detekt` y `ktlintCheck` verdes; `check_sdd`, `check_layers`, `check_endpoints`, `check_secrets` y `check_coverage --min 80` PASS. `lint` no se ejecutó. Brechas funcionales registradas en `tasks.md`.

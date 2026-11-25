@@ -2,6 +2,7 @@ package com.example.sensus.presentation
 
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.NotificationsPreferences
+import com.example.sensus.domain.repository.NotificationPermissionChecker
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.example.sensus.domain.repository.NotificationsRepository
 import com.example.sensus.domain.repository.SessionRepository
@@ -36,6 +37,7 @@ class NotificationPreferencesConcurrencyTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<NotificationsRepository>()
     private val provider = mockk<NotificationsPushDeviceProvider>()
+    private val permission = mockk<NotificationPermissionChecker> { every { canPostNotifications() } returns true }
     private val session = mockk<SessionRepository> {
         every { sessionState } returns MutableStateFlow(
             SessionState(isSessionActive = true, activeToken = java.util.UUID.randomUUID().toString())
@@ -63,7 +65,8 @@ class NotificationPreferencesConcurrencyTest {
         val vm = NotificationsViewModel(
             NotificationsGetSettingsUseCase(repository, session),
             NotificationsUpdateSettingsUseCase(repository, session),
-            NotificationsRegisterDeviceUseCase(provider, repository, session)
+            NotificationsRegisterDeviceUseCase(provider, repository, session, permission),
+            io.mockk.mockk<com.example.sensus.domain.usecase.NotificationsLocationUseCase>(relaxed = true)
         )
         vm.processIntent(NotificationsViewIntent.Retry)
         vm.processIntent(NotificationsViewIntent.Edit(draft))
@@ -94,7 +97,8 @@ class NotificationPreferencesConcurrencyTest {
         val vm = NotificationsViewModel(
             NotificationsGetSettingsUseCase(repository, session),
             NotificationsUpdateSettingsUseCase(repository, session),
-            NotificationsRegisterDeviceUseCase(provider, repository, session)
+            NotificationsRegisterDeviceUseCase(provider, repository, session, permission),
+            io.mockk.mockk<com.example.sensus.domain.usecase.NotificationsLocationUseCase>(relaxed = true)
         )
         advanceUntilIdle()
         assertEquals(settings, vm.viewState.value.preferences)

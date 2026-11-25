@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
@@ -56,13 +57,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.sensus.R
 import com.example.sensus.domain.model.UserProfile
+import com.example.sensus.presentation.common.AppearanceSettings
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
@@ -70,17 +74,18 @@ import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSuccessBg
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import kotlinx.coroutines.launch
 
 private const val AVATAR_BG_ALPHA = 0.15f
 private const val GUEST_BADGE_ALPHA = 0.12f
 private const val EDIT_BTN_ALPHA = 0.1f
 private const val MERCHANT_CARD_ALPHA = 0.08f
-private const val SWITCH_UNCHECKED_HEX = 0xFFCBD5E1
-private const val LOCKED_BADGE_HEX = 0xFFF1F5F9
 
 @ComposeUiModel
 data class BuyerProfileCallbacks(
@@ -92,9 +97,10 @@ data class BuyerProfileCallbacks(
     val onLogoutClick: () -> Unit = {},
     val onDeleteAccountClick: () -> Unit = {},
     val onTermsClick: () -> Unit = {},
-    val onHistoryClick: () -> Unit = {},
-    val onEditInterestsClick: () -> Unit = {},
     val onHelpSupportClick: () -> Unit = {},
+    val onHistoryClick: () -> Unit = {},
+    val onMyClaimsClick: () -> Unit = {},
+    val onEditInterestsClick: () -> Unit = {},
     val onGuestActionRequired: () -> Unit = {}
 )
 
@@ -203,11 +209,13 @@ private fun BuyerProfileListContent(
                     onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
                     onInterestsClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onEditInterestsClick() },
                     onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
+                    onMyClaimsClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onMyClaimsClick() },
                     onHelpClick = callbacks.onHelpSupportClick,
                     onTermsClick = callbacks.onTermsClick
                 )
             )
         }
+        item { AppearanceSettings() }
         item {
             BuyerAccountActionsCard(
                 isGuest = isGuest,
@@ -232,7 +240,7 @@ private fun ProfileUpdatedSuccessBanner() {
         Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(10.dp))
-            Text(text = "Perfil actualizado exitosamente", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusSuccess)
+            Text(text = "Perfil actualizado exitosamente", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         }
     }
 }
@@ -241,7 +249,7 @@ private fun ProfileUpdatedSuccessBanner() {
 private fun BuyerProfileHeaderCard(summary: ProfileDisplaySummary, isGuest: Boolean, onClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -285,7 +293,7 @@ private fun ProfileAvatarCircle(photoUri: Uri?) {
                 modifier = Modifier.size(64.dp).clip(CircleShape)
             )
         } else {
-            Icon(imageVector = Icons.Default.Person, contentDescription = "Avatar de usuario", tint = SensusPurple, modifier = Modifier.size(36.dp))
+            Icon(imageVector = Icons.Default.Person, contentDescription = "Avatar de usuario", tint = SensusVioletInk, modifier = Modifier.size(36.dp))
         }
     }
 }
@@ -296,15 +304,15 @@ private fun ProfileHeaderActionControl(isGuest: Boolean, onClick: () -> Unit) {
         Surface(shape = RoundedCornerShape(8.dp), color = SensusPurple.copy(alpha = GUEST_BADGE_ALPHA), modifier = Modifier.clickable(onClick = onClick)) {
             Text(
                 text = "Ingresar",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = SensusPurple,
+                color = SensusVioletInk,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
     } else {
         IconButton(onClick = onClick, modifier = Modifier.size(36.dp).clip(CircleShape).background(SensusPurple.copy(alpha = EDIT_BTN_ALPHA))) {
-            Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar perfil", tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar perfil", tint = SensusVioletInk, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -341,7 +349,7 @@ private fun MerchantModeToggleCard(ui: BuyerProfileListUi, isMerchantMode: Boole
                     checkedThumbColor = Color.White,
                     checkedTrackColor = SensusPurple,
                     uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = Color(SWITCH_UNCHECKED_HEX)
+                    uncheckedTrackColor = SensusTextMuted
                 )
             )
         }
@@ -357,7 +365,7 @@ private fun MerchantToggleLabelContent(
     modifier: Modifier = Modifier
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(SensusPurple), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(SensusPurple), contentAlignment = Alignment.Center) {
             Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
@@ -366,16 +374,16 @@ private fun MerchantToggleLabelContent(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = merchantStoreName?.takeIf { it.isNotBlank() } ?: "Mi Comercio en Sensus",
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = SensusPurple
+                        color = SensusVioletInk
                     )
                     Surface(shape = RoundedCornerShape(6.dp), color = if (isStoreOpen) SensusSuccessBg else SensusRedBg) {
                         Text(
                             text = if (isStoreOpen) "Abierta" else "Tienda cerrada",
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isStoreOpen) SensusSuccess else SensusRed,
+                            color = SensusTextPrimary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -386,7 +394,7 @@ private fun MerchantToggleLabelContent(
                     color = SensusTextSecondary
                 )
             } else {
-                Text(text = "Soy Comercio / Vendedor", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+                Text(text = "Soy Comercio / Vendedor", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
                 Text(text = "Publica excedentes y recupera dinero", fontSize = 11.sp, color = SensusTextSecondary)
             }
         }
@@ -398,17 +406,24 @@ private data class BuyerSettingsActions(
     val onEditClick: () -> Unit,
     val onInterestsClick: () -> Unit,
     val onHistoryClick: () -> Unit,
+    val onMyClaimsClick: () -> Unit,
     val onHelpClick: () -> Unit,
     val onTermsClick: () -> Unit
 )
 
 @Composable
 private fun BuyerSettingsOptionsCard(isGuest: Boolean, actions: BuyerSettingsActions) {
-    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = actions.onEditClick)
             ProfileMenuOption(icon = Icons.Default.Tune, title = "Mis intereses de promociones", isLocked = isGuest, onClick = actions.onInterestsClick)
             ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = actions.onHistoryClick)
+            ProfileMenuOption(
+                icon = Icons.Default.ConfirmationNumber,
+                title = stringResource(R.string.my_claims_title),
+                isLocked = isGuest,
+                onClick = actions.onMyClaimsClick
+            )
             ProfileMenuOption(icon = Icons.Default.NotificationsNone, title = "Preferencias de notificaciones", onClick = {})
             ProfileMenuOption(icon = Icons.AutoMirrored.Filled.HelpOutline, title = "Centro de ayuda y soporte", onClick = actions.onHelpClick)
             ProfileMenuOption(icon = Icons.Default.Description, title = "Términos y condiciones legales", onClick = actions.onTermsClick)
@@ -418,7 +433,7 @@ private fun BuyerSettingsOptionsCard(isGuest: Boolean, actions: BuyerSettingsAct
 
 @Composable
 private fun BuyerAccountActionsCard(isGuest: Boolean, onLogoutClick: () -> Unit, onDeleteAccountClick: () -> Unit) {
-    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             ProfileMenuOption(icon = Icons.AutoMirrored.Filled.Logout, title = "Cerrar sesión", tintColor = SensusRed, onClick = onLogoutClick)
             ProfileMenuOption(
@@ -450,10 +465,10 @@ private fun ProfileMenuOption(icon: ImageVector, title: String, tintColor: Color
             Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (isLocked) SensusTextMuted else tintColor)
         }
         if (isLocked) {
-            Surface(shape = RoundedCornerShape(6.dp), color = Color(LOCKED_BADGE_HEX), modifier = Modifier.padding(end = 4.dp)) {
+            Surface(shape = RoundedCornerShape(6.dp), color = SensusVioletBg, modifier = Modifier.padding(end = 4.dp)) {
                 Text(
                     text = "Requiere cuenta",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = SensusTextMuted,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)

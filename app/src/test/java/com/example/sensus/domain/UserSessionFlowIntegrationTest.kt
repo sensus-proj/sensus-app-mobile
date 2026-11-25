@@ -24,6 +24,15 @@ import org.junit.Test
 class UserSessionFlowIntegrationTest {
 
     @Test
+    fun guestSessionRepositoryUsesDefaultRadiusWhenNoneIsSpecified() = runTest {
+        val sessionRepo = mockk<SessionRepository>(relaxed = true)
+
+        sessionRepo.saveGuestSession("guest-token-fixture")
+
+        coVerify(exactly = 1) { sessionRepo.saveGuestSession("guest-token-fixture", 2000) }
+    }
+
+    @Test
     fun `full auth and guest lifecycle integration test`() = runTest {
         val authRepo = mockk<AuthRepository>()
         val sessionRepo = mockk<SessionRepository>(relaxed = true)

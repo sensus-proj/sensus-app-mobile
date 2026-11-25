@@ -35,9 +35,12 @@ Integración principal ejecuta compilación, pruebas, lint, detekt, ktlint y cob
 
 ## 7. Riesgos, límites y deuda
 Listado y cancelación pendientes de publicación backend; no se declaran rutas para ellos.
-Sin cámara porque esta slice no añade dependencias. ZXing core y cliente sanitizado a cargo de integración principal.
+El lector reutiliza Camera2 y ZXing. El resultado de la lectura se puede revisar en el campo de folio antes de enviarlo.
 Sin cambio de MainAppContainer, ActiveApartadoScreen ni carrito. Sin persistencia offline del código en esta slice.
 Ante timeout la operación puede haberse aplicado: no hay reenvío automático ni certeza local.
 
 ## Aprobación
 Implementación local autorizada; validación integral pendiente de integración principal.
+
+## Captura con cámara
+El comercio puede leer el QR para revisar y editar el folio antes de confirmar explícitamente el canje. El backend codifica el mismo folio firmado en el QR. La lectura muestra un aviso de revisión y no realiza ninguna petición. Una lectura vacía descarta el folio anterior. La captura manual sigue disponible.

@@ -45,6 +45,8 @@ data class ComercioDto(
     val fechaRegistro: String? = null,
     val horarios: List<HorarioDiaDto>? = null,
     val fotoFachadaUrl: String? = null,
+    val isVerified: Boolean? = null,
+    val paymentMethods: List<String>? = null,
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0
 )

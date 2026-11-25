@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="sensus_video_matte">#F3B443</color>
 
     <style name="Theme.Sensus" parent="android:Theme.Material.Light.NoActionBar">
         <!-- Soporte para bajorrelieves de pantalla / Display Cutout (Android 9+ / API 28+) -->

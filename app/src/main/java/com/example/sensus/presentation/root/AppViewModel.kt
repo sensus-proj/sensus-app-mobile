@@ -9,12 +9,15 @@ import com.example.sensus.domain.sync.SyncManager
 import com.example.sensus.domain.usecase.GetPreferredMapLayerUseCase
 import com.example.sensus.domain.usecase.LogoutUseCase
 import com.example.sensus.presentation.base.MviViewModel
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val NETWORK_DEBOUNCE_MILLIS = 300L
 
@@ -24,11 +27,12 @@ class AppViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val logoutUseCase: LogoutUseCase,
     private val getPreferredMapLayerUseCase: GetPreferredMapLayerUseCase,
-    private val friendsRepository: FriendsRepository? = null,
+    private val friendsRepository: Lazy<FriendsRepository>? = null,
     private val networkMonitor: NetworkMonitor? = null,
     private val syncManager: SyncManager? = null
 ) : MviViewModel<AppViewState, AppViewIntent, AppViewEffect>(AppViewState()) {
 
+    internal var ioDispatcher = Dispatchers.IO
     private var previousOnlineStatus: Boolean? = null
 
     init {
@@ -153,7 +157,9 @@ class AppViewModel @Inject constructor(
 
     private fun handleFriendInviteDeepLink(inviteUrl: String) {
         viewModelScope.launch {
-            friendsRepository?.queuePendingInvite(inviteUrl)
+            withContext(ioDispatcher) {
+                friendsRepository?.get()?.queuePendingInvite(inviteUrl)
+            }
             val session = sessionRepository.sessionState.value
             updateState {
                 copy(

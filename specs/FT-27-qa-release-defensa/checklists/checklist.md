@@ -12,7 +12,7 @@
 ## Funcionalidad y reglas de negocio
 
 - [ ] 100% de las historias `SE-001..SE-045` trazadas y verificadas con pruebas automatizadas
-- [ ] Kover `>= 80.00%` en `domain/` y `presentation/` verificado por `check_coverage.py --min 80`
+- [x] Kover `>= 80.00%` en `domain/` y `presentation/` verificado por `check_coverage.py --min 80`
 - [x] Cero referencias a `MockDataProvider` en `app/src/main/**`
 - [ ] Controles OWASP ASVS L2 (V1..V14) cerrados con evidencia en `docs/asvs-l2-checklist.md`
 - [ ] `Memoria.md` §6 y `CHECKLIST_PR.md` actualizados para el comité de defensa
@@ -43,9 +43,17 @@
 - [x] `python scripts/check_secrets.py` PASS
 - [x] `python scripts/check_coverage.py --min 80` PASS
 
+- [x] Compilación Kotlin Release de la candidata.
+- [ ] Revisar y resolver el hallazgo Semgrep de MainActivity exportada.
+- [ ] Ejecutar los escáneres remotos con resultado bloqueante sobre el commit de la candidata.
+- [ ] Ejecutar la suite instrumentada en dispositivo sobre la candidata.
+
 ## Cierre SDD
 
 - [ ] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
 - [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
 - [ ] `CHECKLIST_PR.md` completo
-- [ ] Tag `v1.30.0-ft27`
+- [ ] Tag oficial `v1.4.0` tras el cierre de los controles y la autorización de publicación.
+
+- [ ] Verificar el empaquetado de 16 KB de la candidata y la apertura de una base anterior. El AAR de SQLCipher 4.20.0 ya presenta segmentos ELF `PT_LOAD` de 16 KB en ARM64 y x86_64.
+- [x] Verificar la APK Debug generada con `zipalign -c -P 16 4` y la alineación de las bibliotecas de 64 bits incluidas.

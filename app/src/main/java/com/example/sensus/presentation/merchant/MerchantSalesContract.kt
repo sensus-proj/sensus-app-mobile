@@ -10,11 +10,13 @@ data class MerchantSalesViewState(
     val input: String = "",
     val loading: Boolean = false,
     val result: ClaimRedemption? = null,
-    val error: AppError? = null
+    val error: AppError? = null,
+    val scanned: Boolean = false
 ) : ViewState
 
 sealed interface MerchantSalesViewIntent : ViewIntent {
     data class Submit(val value: String) : MerchantSalesViewIntent
+    data class Scan(val value: String) : MerchantSalesViewIntent
     data class Edit(val value: String) : MerchantSalesViewIntent
 }
 

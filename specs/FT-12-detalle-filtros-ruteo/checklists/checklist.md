@@ -51,3 +51,7 @@
 - [ ] Tag `v1.15.0-ft12`
 
 > Auditoría 2026-11-15 (código contra tareas): `compileDebugKotlin`, `compileDebugAndroidTestSources`, `testDebugUnitTest` (257 pruebas, 0 fallos), `koverVerifyDebug`, `detekt` y `ktlintCheck` verdes; `check_sdd`, `check_layers`, `check_endpoints`, `check_secrets` y `check_coverage --min 80` PASS. `lint` no se ejecutó. Brechas funcionales registradas en `tasks.md`.
+
+
+- [x] Integración del cliente Android. El detalle muestra los días con horario publicado y los métodos de pago confirmados por el perfil. El filtro Abierto ahora excluye horarios desconocidos y respeta el cierre y los turnos nocturnos.
+- [ ] Verificar los datos de la extensión opcional con el backend desplegado.

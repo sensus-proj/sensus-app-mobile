@@ -42,6 +42,7 @@ data class OfferDto(
     val longitude: Double? = null,
     val distanceMeters: Double? = null,
     val version: Int = 1,
+    val viewCount: Int? = null,
     val likesCount: Int = 0,
     val isLikedByMe: Boolean = false
 )

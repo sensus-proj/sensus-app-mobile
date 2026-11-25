@@ -6,7 +6,6 @@ import com.example.sensus.presentation.buyer.InterestsPickerScreen
 import com.example.sensus.presentation.buyer.SavedInterestsCallbacks
 import com.example.sensus.presentation.buyer.SavedInterestsScreen
 import com.example.sensus.presentation.buyer.SearchOffersScreen
-import com.example.sensus.presentation.support.HelpFaqScreen
 
 @Composable
 internal fun RenderBuyerUtilityOverlay(state: MainAppState): Boolean {
@@ -26,9 +25,6 @@ internal fun RenderBuyerUtilityOverlay(state: MainAppState): Boolean {
         state.showSearchOffers -> SearchOffersScreen(
             onNavigateBack = { state.showSearchOffers = false },
             onOfferClick = { offer -> state.selectedProductForDetail = offer }
-        )
-        state.showHelpCenter -> HelpFaqScreen(
-            onNavigateBack = { state.showHelpCenter = false }
         )
         else -> return false
     }

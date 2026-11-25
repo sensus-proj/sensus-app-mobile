@@ -1,7 +1,6 @@
 package com.example.sensus.presentation.buyer
 
 import android.content.Context
-import android.graphics.Color as AndroidColor
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -62,17 +62,22 @@ import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.presentation.common.OsmMapUtils
+import com.example.sensus.theme.BrandViolet
+import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
-private const val MAP_BG_HEX = 0xFFE5E7EB
 private const val MIN_ROUTE_ZOOM = 6.0
 private const val ROUTE_STROKE_WIDTH = 10f
 private const val BOUNDING_BOX_MARGIN = 0.002
@@ -98,7 +103,7 @@ fun RouteMapScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(MAP_BG_HEX))
+            .background(SensusBackground)
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -158,9 +163,9 @@ private fun RouteTopOverlay(headerProps: RouteHeaderProps, onNavigateBack: () ->
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(SensusSurface)
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusPurple)
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusVioletInk)
             }
             Spacer(modifier = Modifier.width(12.dp))
             RouteDestinationPill(storeName = headerProps.storeName, address = headerProps.address, modifier = Modifier.weight(1f))
@@ -194,9 +199,9 @@ private fun RouteTopOverlay(headerProps: RouteHeaderProps, onNavigateBack: () ->
 
 @Composable
 private fun RouteDestinationPill(storeName: String, address: String, modifier: Modifier = Modifier) {
-    Surface(shape = RoundedCornerShape(14.dp), color = Color.White, shadowElevation = 2.dp, modifier = modifier) {
+    Surface(shape = RoundedCornerShape(14.dp), color = SensusSurface, shadowElevation = 2.dp, modifier = modifier) {
         Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(text = "Hacia $storeName", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
@@ -212,19 +217,20 @@ private fun RouteBottomOverlay(onOpenGoogleMaps: () -> Unit, onShowQrClick: () -
         NextTurnInstructionCard()
         Spacer(modifier = Modifier.height(12.dp))
         OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
             onClick = onOpenGoogleMaps,
-            shape = RoundedCornerShape(14.dp),
+            shape = SensusButtonShape,
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
-            Icon(imageVector = Icons.Default.Navigation, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+            Icon(imageVector = Icons.Default.Navigation, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Cómo llegar con Google Maps", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
+            Text(text = "Cómo llegar con Google Maps", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
         }
         Spacer(modifier = Modifier.height(10.dp))
         Button(
             onClick = onShowQrClick,
-            shape = RoundedCornerShape(14.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(vertical = 14.dp)
@@ -240,7 +246,7 @@ private fun RouteBottomOverlay(onOpenGoogleMaps: () -> Unit, onShowQrClick: () -
 private fun NextTurnInstructionCard() {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -252,12 +258,12 @@ private fun NextTurnInstructionCard() {
                     .background(SensusPurple.copy(alpha = TURN_ICON_BG_ALPHA)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = Icons.Default.TurnRight, contentDescription = "Giro", tint = SensusPurple, modifier = Modifier.size(24.dp))
+                Icon(imageVector = Icons.Default.TurnRight, contentDescription = "Giro", tint = SensusVioletInk, modifier = Modifier.size(24.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "En 120 metros", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SensusPurple)
-                Text(text = "Gira a la derecha en Av. Juárez", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = "En 120 metros", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
+                Text(text = "Gira a la derecha en Av. Juárez", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Text(
                     text = "El comercio estará a tu izquierda (frente al parque).",
                     fontSize = 11.sp,
@@ -272,7 +278,7 @@ private fun NextTurnInstructionCard() {
 private fun TravelModeChip(icon: ImageVector, label: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) SensusPurple else Color.White,
+        color = if (isSelected) SensusPurple else SensusSurface,
         shadowElevation = 2.dp,
         modifier = modifier.clickable(onClick = onClick)
     ) {
@@ -305,7 +311,7 @@ private fun renderRouteOverlays(mapView: MapView, context: Context, userLocation
     val midLat = (userGeo.latitude + storeGeo.latitude) / 2
 
     val routeLine = Polyline(mapView).apply {
-        outlinePaint.color = AndroidColor.parseColor("#6E4DDB")
+        outlinePaint.color = BrandViolet.toArgb()
         outlinePaint.strokeWidth = ROUTE_STROKE_WIDTH
         addPoint(userGeo)
         addPoint(GeoPoint(midLat, userGeo.longitude))

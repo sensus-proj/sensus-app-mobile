@@ -121,9 +121,8 @@ class DomainRepositoriesDefaultsTest {
                 return Result.Success(sampleOffer)
             }
         }
-        offersRepo.syncOffersFromServer(listOf(sampleOffer))
         assertEquals(1, (offersRepo.fetchNearbyOffers(20.0, -99.0) as Result.Success).data.size)
-        assertEquals(1, (offersRepo.fetchMerchantOffers() as Result.Success).data.size)
+        assertTrue(offersRepo.fetchMerchantOffers() is Result.Failure)
         assertEquals(3, (offersRepo.updateOfferStock(sampleOffer, 3) as Result.Success).data.unitsLeft)
         assertTrue(offersRepo.changeOfferStatus("o-1", OfferLifecycleStatus.PAUSED) is Result.Failure)
 

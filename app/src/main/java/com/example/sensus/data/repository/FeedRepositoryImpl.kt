@@ -18,8 +18,10 @@ import com.example.sensus.domain.model.PagedFeedComments
 import com.example.sensus.domain.model.TogglePostLikeResult
 import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.FeedRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -38,10 +40,7 @@ class FeedRepositoryImpl(
             val response = api.nearby(query.latitude, query.longitude, query.radiusMeters, query.page, query.pageSize)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                val entities = body.posts.mapIndexed { index, dto ->
-                    FeedPostEntity(dto.id, key, query.page, index, Json.encodeToString(dto))
-                }
-                dao.replacePage(key, query.page, entities)
+                savePage(key, query.page, body.posts)
                 Result.Success(PagedFeed(body.posts.map { it.toDomain() }, query.page, body.hasMore))
             } else {
                 Result.Failure(
@@ -55,11 +54,38 @@ class FeedRepositoryImpl(
             }
         }
         if (result is Result.Failure && result.error is AppError.Network) {
-            val cached = dao.getPage(key, query.page).map { Json.decodeFromString<FeedPostDto>(it.payload).toDomain() }
+            val cached = readPage(key, query.page)
             if (cached.isNotEmpty()) Result.Success(PagedFeed(cached, query.page, hasMore = false, isCached = true)) else result
         } else {
             result
         }
+    }
+
+    private fun savePage(key: String, page: Int, posts: List<FeedPostDto>) {
+        try {
+            val entities = posts.mapIndexed { index, dto ->
+                FeedPostEntity(dto.id, key, page, index, Json.encodeToString(dto))
+            }
+            dao.replacePage(key, page, entities)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The server response remains usable when local storage is unavailable.
+        }
+    }
+
+    private fun readPage(key: String, page: Int): List<FeedPost> = try {
+        dao.getPage(key, page).mapNotNull { entry ->
+            try {
+                Json.decodeFromString<FeedPostDto>(entry.payload).toDomain()
+            } catch (_: SerializationException) {
+                null
+            }
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        emptyList()
     }
 
     override suspend fun createPost(input: CreatePostInput, media: UploadedMedia?): Result<FeedPost> = safeNetworkCall("No se pudo publicar.") {

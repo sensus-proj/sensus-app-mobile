@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -50,14 +49,20 @@ import coil.compose.AsyncImage
 import com.example.sensus.domain.model.CitedOffer
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
+import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -85,7 +90,7 @@ internal fun SensiOfferCard(offer: CitedOffer, actions: SensiOfferActions, modif
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = modifier.fillMaxWidth()
@@ -119,8 +124,8 @@ private fun OfferInfo(offer: CitedOffer) {
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = description,
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
             color = SensusTextSecondary,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -162,14 +167,14 @@ private fun OfferButtons(offer: CitedOffer, product: ProductOffer, actions: Sens
     Button(
         onClick = { actions.onApartar(product) },
         enabled = hasStock,
-        shape = RoundedCornerShape(12.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         contentPadding = PaddingValues(vertical = 12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Icon(imageVector = Icons.Default.ShoppingBag, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = if (hasStock) "Apartar" else "Agotado", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(text = if (hasStock) "Apartar" else "Agotado", fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -203,7 +208,7 @@ private fun OfferImage(offer: CitedOffer, discountPercent: Int) {
             Icon(
                 imageVector = Icons.Default.ShoppingBag,
                 contentDescription = null,
-                tint = SensusPurple,
+                tint = SensusVioletInk,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(40.dp)
@@ -219,14 +224,14 @@ private fun OfferImage(offer: CitedOffer, discountPercent: Int) {
         if (discountPercent > 0) {
             Surface(
                 shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomEnd = 12.dp, bottomStart = 0.dp),
-                color = SensusRed,
+                color = SensusDiscountTag,
                 modifier = Modifier.align(Alignment.TopStart)
             ) {
                 Text(
                     text = "-$discountPercent%",
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    color = Ink,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                 )
             }
@@ -240,20 +245,20 @@ private fun MerchantLine(offer: CitedOffer) {
         Icon(
             imageVector = Icons.Default.Store,
             contentDescription = null,
-            tint = SensusPurple,
+            tint = SensusVioletInk,
             modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = offer.merchantName.ifBlank { "Comercio Sensus" },
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = SensusTextSecondary
         )
         offer.distanceKm?.let { km ->
             Text(
                 text = " • ${formatDistance(km)}",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextMuted
             )
         }
@@ -265,9 +270,9 @@ private fun PriceLine(offer: CitedOffer) {
     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "$${money(offer.offerPriceMxn)}",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = SensusPurple
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = SensusVioletInk
         )
         if (offer.regularPriceMxn > offer.offerPriceMxn) {
             Spacer(modifier = Modifier.width(8.dp))
@@ -281,7 +286,7 @@ private fun PriceLine(offer: CitedOffer) {
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "Ahorras $${money(offer.regularPriceMxn - offer.offerPriceMxn)}",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = SensusSuccess,
                 modifier = Modifier.padding(bottom = 2.dp)
@@ -319,17 +324,18 @@ private fun InfoChip(icon: ImageVector, text: String, highlight: Boolean = false
 @Composable
 private fun OutlinedActionButton(text: String, icon: ImageVector?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedButton(
+        colors = sensusOutlinedButtonColors(),
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = SensusButtonShape,
         border = BorderStroke(1.dp, SensusPurple),
         contentPadding = PaddingValues(vertical = 10.dp, horizontal = 8.dp),
         modifier = modifier
     ) {
         icon?.let {
-            Icon(imageVector = it, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+            Icon(imageVector = it, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
         }
-        Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+        Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
     }
 }
 

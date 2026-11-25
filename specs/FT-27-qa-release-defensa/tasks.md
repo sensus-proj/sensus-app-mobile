@@ -5,9 +5,11 @@
 - [x] T27.1 Verificar eliminación definitiva de `MockDataProvider.kt` y cualquier mock residual en `app/src/main` — verif: `python scripts/check_secrets.py`
 - [x] T27.2 Condicionar `HttpLoggingInterceptor` en `NetworkClient.kt` a `NONE` en builds release para evitar fuga de tokens/PII — verif: `./gradlew.bat compileReleaseKotlin`
 - [x] T27.3 Verificar `app/proguard-rules.pro` con SQLCipher, Kotlinx Serialization, Retrofit, OSMDroid, CameraX/ML Kit y ZXing — verif: `./gradlew.bat compileReleaseKotlin`
-- [x] T27.4 Completar y ejecutar suite E2E integral en emulador/dispositivo (`connectedDebugAndroidTest`) — verif: `./gradlew.bat compileDebugAndroidTestSources`
+- [x] T27.4 Ejecutar la suite instrumentada integral en dispositivo — verificado con ADB en vivo V2341, 60/60 casos. Los recorridos autenticados de escritura siguen en las respectivas FT.
 - [x] T27.5 Actualizar `versionCode`, `versionName` y `distribution/whatsnew/whatsnew-es-419.txt` — verif: `./gradlew.bat lint detekt ktlintCheck`
 - [ ] T27.6 Ejecutar todos los escáneres CI (`ci.yml` y `security-scanners.yml`), verificar Kover `>= 80%`, actualizar `Memoria.md` y preparar tag de release — verif: `python scripts/check_coverage.py --min 80`
+- [ ] T27.7 Actualizar SQLCipher para páginas de 16 KB y comprobar la apertura de la base cifrada existente y la alineación del paquete candidato.
+- [x] T27.8 Validar el origen, la ruta y el parámetro de los enlaces de restablecimiento recibidos por la actividad pública. El backend genera enlaces HTTPS y `sensus://reset`; ambas variantes pasan las pruebas. La revisión de manifiesto sigue en T27.6.
 
 ## Evidencia de ejecución (2026-11-17)
 
@@ -19,3 +21,34 @@
   - `AuthFlowE2ETest` abre una sesión de invitado real contra el backend.
 - **T27.5** — `versionName` 1.4.0 y `baseVersionCode` 9 (el CI usa `4 + GITHUB_RUN_NUMBER`). `whatsnew-es-419.txt` actualizado (452 de 500 caracteres) con Sensi IA, tarjetas, Markdown y privacidad.
 - **T27.6 (parcial)** — Gates locales en verde: `ktlintCheck`, `detekt`, `lint`, pruebas unitarias con Kover, `check_sdd`, `check_layers`, `check_endpoints`, `check_secrets` y `check_coverage --min 80`. Los escáneres en la nube (CodeQL, Semgrep, Trivy, mobsfscan, Sonar y los demás) se ejecutan en CI al subir los cambios y quedan por confirmar. Tag propuesto: `v1.4.0-ft27` (no creado).
+
+## Revisión de la candidata en movil_Rocio — 2026-11-22
+
+- Se actualizó whatsnew-es-419.txt para la candidata 1.4.0 (versionCode base 9). El tag propuesto para el release es v1.4.0, alineado con versionName. Un push de tag puede activar el despliegue a Google Play.
+- Se detectó una contradicción con la constitución §4.7: security-scanners.yml usa continue-on-error para varios escáneres y descarta el código de salida de OSV. La candidata queda bloqueada para publicación hasta que el flujo aplique resultados bloqueantes y exista evidencia remota para el mismo commit.
+- La ejecución de dispositivo de 2026-11-17 corresponde a una revisión anterior. La cobertura del canje está presente en ClaimsScreensTest y falta repetir la suite instrumentada y el recorrido real de compra y canje sobre la candidata.
+- Validación local: 458 pruebas unitarias, cero fallos, Kover Debug 80.10 %. Compilación Debug, Release e instrumentada, lint, Detekt, ktlint y cinco gates Python en verde. Sin generación de APK/AAB.
+- Semgrep con p/default, p/owasp-top-ten, p/kotlin y p/java analizó 345 archivos de app/src/main, incluidos los nuevos. Registró un hallazgo bloqueante en AndroidManifest.xml:26 por MainActivity exportada (entrada del launcher y App Links). El escaneo excluyó un archivo por el límite de tamaño de la herramienta. No se suprimió el hallazgo ni se acredita como verde el gate SAST.
+
+## Revisión de dispositivo — 2026-11-22
+
+- Android Studio confirmó la instalación en el vivo V2341 y advirtió incompatibilidad de la APK Debug con páginas de 16 KB. La inspección ELF de los binarios nativos existentes confirmó segmentos PT_LOAD de 4096 bytes en libsqlcipher.so para arm64-v8a y x86_64. libandroidx.graphics.path.so presenta 16384 bytes en ambas. Sigue pendiente resolver SQLCipher y verificar el paquete final de distribución.
+
+- La actualización a SQLCipher 4.20.0 compiló en Debug junto con las pruebas instrumentadas. Los ELF del AAR presentan alineación de 16384 bytes en ARM64 y x86_64. Quedan por comprobar la base cifrada existente en el dispositivo y el empaquetado final.
+
+- Se hicieron bloqueantes los escáneres y la ausencia del XML de cobertura en CI. Se fijaron las acciones por SHA y se corrigieron cuatro interpolaciones directas de metadatos en shell. Actionlint pasó en los tres flujos. Semgrep de repositorio completo pasó de 69 hallazgos a uno, correspondiente a `MainActivity` exportada para launcher y App Links. T27.6 continúa abierta por ese hallazgo y la ejecución remota pendiente.
+- La primera suite por Gradle ejecutó 60 pruebas con dos fallos de jerarquía Compose. El reintento detectó una caída de Hilt al iniciar Firebase. Se corrigió la inicialización del servicio y la suite completa pasó por ADB. La APK Debug pasó `zipalign -c -P 16 4`. El vivo usa páginas de 4 KB, por lo que esa ejecución no acredita una prueba de arranque en 16 KB.
+- `connectedDebugAndroidTest` retiró la instalación Debug al terminar. La APK nueva se instaló otra vez y abrió correctamente con una base nueva. La base anterior dejó de estar disponible para esta prueba, así que la reapertura de una base existente sigue pendiente en un entorno de prueba preparado para actualización.
+
+## Separación del endurecimiento de escáneres — 2026-11-23
+
+- Decisión de la responsable de la rama: el endurecimiento de `security-scanners.yml` (escáneres bloqueantes, acciones fijadas por SHA, Semgrep CLI y umbrales) sale del PR de FT-11..FT-16 y se tramita en un PR propio, para que cada PR sea una slice.
+- En `movil_Rocio`, `security-scanners.yml` vuelve a la versión vigente en `develop`. `ci.yml` y `release-playstore.yml` conservan sus correcciones (SHA y sin interpolaciones directas), que pasan en CI.
+- [ ] T27.9 Corregir en el PR de escáneres cada herramienta antes de volverla bloqueante: SonarCloud (desactivar Automatic Analysis, requiere admin), Snyk (`JAVA_HOME` del contenedor), ktlint de la acción (alinear con ktlint 1.0.1 y estilo Android del proyecto), Semgrep (`setuptools` y hallazgo de `MainActivity` exportada), OSV (fuentes de dependencias), Dependency-Check (falso positivo de `gradle-wrapper.jar`) y MobSFscan (avisos restantes).
+
+## Escáneres bloqueantes dentro del PR #36 — 2026-11-23
+
+- Cambio de decisión de la responsable de la rama: el endurecimiento se corrige en este mismo PR. `security-scanners.yml` vuelve a la versión bloqueante (revierte la separación de `fd85e09`).
+- Correcciones sin suprimir hallazgos: Semgrep instala `setuptools<81` (`pkg_resources`); la acción de ktlint usa ktlint 1.0.1 con estilo Android, igual que el plugin Gradle; OSV analiza `app/gradle.lockfile`, que el CI genera para `releaseRuntimeClasspath` (bloqueo de dependencias en modo LENIENT); Snyk corre con la CLI en el runner (el contenedor heredaba un `JAVA_HOME` inexistente); `gradlew` con permiso de ejecución; manifiesto debug con `allowBackup=false`; `build.gradle.kts` raíz con sangría de 4 espacios.
+- [ ] T27.9a Pendiente de decisión del equipo (requiere suprimir con justificación): falso positivo de Dependency-Check en `gradle-wrapper.jar` (Gradle 8.7 validado en `ci.yml`, identificado como 4.6), `MainActivity` exportada en Semgrep (`exported_activity`, necesaria para launcher y App Links) y StrandHogg en MobSFscan (`targetSdk = 36` vive en Gradle; el escáner asume 26).
+- [ ] T27.9b Fuera del repositorio: un admin desactiva Automatic Analysis en SonarCloud; la landing publica `https://rodnix.com.mx/.well-known/assetlinks.json` con la huella SHA-256 del certificado de firma de Play (hoy no existe y MobSFscan lo reporta como error).
