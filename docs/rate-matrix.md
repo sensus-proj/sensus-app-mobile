@@ -28,7 +28,7 @@
 | Carga multimedia multipart | `POST /api/v1/media/upload` | 45 s | 1 | — | Alineado cliente (FT-15, 2026-11-14; reintento solo ante `IOException`/timeout, nunca ante respuesta HTTP; medición backend pendiente) |
 | Creación de oferta | `POST /api/v1/offers` | 20 s | 0 | — | Alineado cliente (FT-15, 2026-11-14; medición backend pendiente) |
 | Gestión inventario comercio | `GET /api/v1/merchants/my-offers`, `PUT /api/v1/offers/{id}` | 20 s | 1 / 0 | 20 | Propuesto (FT-16) |
-| Favoritos | `POST /api/v1/users/favorites/{id}` | 15 s | 0 | 20 | Propuesto (FT-17) |
+| Favoritos | `POST /api/v1/users/favorites/{offerId}` | 15 s | 0 | — | Propuesto (FT-17; 120/hora por usuario, conciliar con Spec 038) |
 | Feed social, comentarios y reportes | `GET /api/v1/feed/nearby`, `POST /feed/posts`, `DELETE /feed/posts/{id}`, `POST /feed/posts/{id}/like`, `GET`/`POST /feed/posts/{id}/comments`, `POST /api/v1/reports` | 15 s | 0 | 20 | Alineado cliente (`FT-18`/`FT-19`, cliente sin logs de cuerpo HTTP; medición backend desplegado pendiente) |
 | Búsqueda y sustitutos | `GET /api/v1/offers/search`, `GET /api/v1/offers/{id}/alternatives` | 15 s | 0 (OkHttp) | 20 | Alineado cliente (`FT-20`, `DiscoveryApiService` usa timeout central de `NetworkClient`; pruebas HTTP con `MockWebServer`; medición en producción pendiente) |
 | Feed de promociones e intereses | `GET /api/v1/feed/offers`, `GET`/`PUT /api/v1/users/me/interests` | 15 s | 0 (OkHttp) | 20 | Alineado cliente (`FT-30`, `OfferFeedApiService`/`InterestsApiService` usan timeout central de `NetworkClient`; caché página 1 en SQLCipher; medición en producción pendiente) |
