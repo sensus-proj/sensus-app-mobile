@@ -248,6 +248,8 @@ jobs:
     timeout-minutes: 25
     env:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      # A nivel de job: el `if` de un paso no ve el `env` declarado en ese mismo paso.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -260,16 +262,27 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # SonarCloud analiza por CI (Automatic Analysis desactivado en el proyecto): necesita las clases
+      # compiladas (hay .java de Room en app/src/main/java) y el XML de Kover para la cobertura.
+      - name: Compilar y generar cobertura Kover para SonarCloud
+        if: env.SONAR_TOKEN != ''
+        run: |
+          chmod +x ./gradlew
+          ./gradlew testDebugUnitTest koverXmlReportDebug --no-daemon
+          test -s app/build/reports/kover/reportDebug.xml
+          test -d app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes
+          test -d app/build/tmp/kotlin-classes/debug
+
       # Herramienta 12: SonarCloud (SAST & Quality Gate)
       # Se ejecuta si se configura SONAR_TOKEN en GitHub Secrets
       - name: "12. SonarCloud SAST (Ejecución condicionada por SONAR_TOKEN)"
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # master
+        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5.1
         with:
-          args: -Dsonar.qualitygate.wait=true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.java.binaries=app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes,app/build/tmp/kotlin-classes/debug
+            -Dsonar.coverage.jacoco.xmlReportPaths=app/build/reports/kover/reportDebug.xml
 
       # Herramienta 13: Snyk Security (SCA & SAST)
       # Se ejecuta si se configura SNYK_TOKEN en GitHub Secrets
