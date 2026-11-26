@@ -1,5 +1,6 @@
 package com.example.sensus.data.remote.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -26,6 +27,7 @@ data class CreateFeedPostRequest(
     val text: String,
     val latitude: Double,
     val longitude: Double,
+    @SerialName("mediaAssetId")
     val mediaId: String? = null,
     val merchantId: String? = null
 )

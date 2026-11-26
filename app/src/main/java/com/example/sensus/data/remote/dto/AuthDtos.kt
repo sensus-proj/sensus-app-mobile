@@ -21,7 +21,14 @@ data class AuthResponse(
     val token: String,
     val tokenType: String = "Bearer",
     val expiresAtUtc: String? = null,
-    val user: UserDto
+    val user: UserDto,
+    val refreshToken: String? = null,
+    val refreshExpiresAtUtc: String? = null
+)
+
+@Serializable
+data class RefreshTokenRequest(
+    val refreshToken: String
 )
 
 @Serializable

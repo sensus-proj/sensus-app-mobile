@@ -10,6 +10,7 @@ import com.example.sensus.data.mapper.MerchantMapper.toDto
 import com.example.sensus.data.mapper.UserMapper.toDomain
 import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.api.AuthApiService
+import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.dto.ActivateMerchantRequest
@@ -125,6 +126,7 @@ class RetrofitAuthRepository(
 
     private fun handleAuthSuccess(body: AuthResponse): Result<UserProfile> {
         securePreferences.saveAuthToken(body.token)
+        securePreferences.saveRefreshToken(body.refreshToken)
         securePreferences.saveSessionType(SessionType.REGISTERED)
         val domainUser = body.user.toDomain()
         securePreferences.saveUserSession(
@@ -223,9 +225,10 @@ class RetrofitAuthRepository(
 
 class RetrofitProfileRepository(
     private val profileApi: ProfileApiService,
-    private val moderationService: ImageModerationService = ImageModerationService(),
+    @Suppress("UNUSED_PARAMETER") moderationService: ImageModerationService = ImageModerationService(),
     private val securePreferences: SecurePreferences? = null,
-    private val onSessionUpdated: (() -> Unit)? = null
+    private val onSessionUpdated: (() -> Unit)? = null,
+    private val mediaUploadApi: MediaApiService? = null
 ) : ProfileRepository {
 
     private val cloudinaryUploader = CloudinarySignedUploader()
@@ -267,20 +270,12 @@ class RetrofitProfileRepository(
     }
 
     override suspend fun uploadProfilePhoto(imageBytes: ByteArray): Result<String> = withContext(Dispatchers.IO) {
-        val moderationResult = moderationService.moderateImage(imageBytes, "Foto de perfil de usuario")
-        if (moderationResult is ModerationResult.Rejected) {
-            return@withContext Result.Failure(AppError.Validation(moderationResult.reason))
-        }
-        if (moderationResult is ModerationResult.Quarantine) {
-            return@withContext Result.Failure(AppError.Validation("La imagen está en revisión preventiva: ${moderationResult.reason}"))
-        }
-        safeNetworkCall("Error al procesar la subida de foto.") {
-            val sigResponse = profileApi.generatePhotoSignature()
-            val sig = sigResponse.body()
-            if (!sigResponse.isSuccessful || sig == null) {
-                mapHttpError(sigResponse)
-            } else {
-                uploadBytesToCloudinary(imageBytes, sig)
+        val uploadApi = mediaUploadApi
+            ?: return@withContext Result.Failure(AppError.Validation("El servicio de carga moderada no está disponible."))
+        MediaRepositoryImpl(uploadApi).uploadAndModerate(imageBytes, "image/jpeg").let { uploaded ->
+            when (uploaded) {
+                is Result.Success -> Result.Success(uploaded.data.url)
+                is Result.Failure -> uploaded
             }
         }
     }
