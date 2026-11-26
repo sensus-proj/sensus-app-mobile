@@ -10,13 +10,13 @@ import com.example.sensus.data.mapper.MerchantMapper.toDto
 import com.example.sensus.data.mapper.UserMapper.toDomain
 import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.api.AuthApiService
+import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.MerchantApiService
 import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.dto.ActivateMerchantRequest
 import com.example.sensus.data.remote.dto.AuthResponse
 import com.example.sensus.data.remote.dto.DeleteAccountRequest
 import com.example.sensus.data.remote.dto.LoginRequest
-import com.example.sensus.data.remote.dto.PhotoSignatureResponse
 import com.example.sensus.data.remote.dto.RegisterRequest
 import com.example.sensus.data.remote.dto.RequestPasswordResetRequest
 import com.example.sensus.data.remote.dto.ResetPasswordRequest
@@ -27,7 +27,6 @@ import com.example.sensus.domain.model.MerchantActivationInput
 import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.MerchantProfileUpdateInput
-import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.MerchantRepository
@@ -125,6 +124,7 @@ class RetrofitAuthRepository(
 
     private fun handleAuthSuccess(body: AuthResponse): Result<UserProfile> {
         securePreferences.saveAuthToken(body.token)
+        securePreferences.refreshToken = body.refreshToken
         securePreferences.saveSessionType(SessionType.REGISTERED)
         val domainUser = body.user.toDomain()
         securePreferences.saveUserSession(
@@ -223,12 +223,11 @@ class RetrofitAuthRepository(
 
 class RetrofitProfileRepository(
     private val profileApi: ProfileApiService,
-    private val moderationService: ImageModerationService = ImageModerationService(),
+    @Suppress("UNUSED_PARAMETER") moderationService: ImageModerationService = ImageModerationService(),
     private val securePreferences: SecurePreferences? = null,
-    private val onSessionUpdated: (() -> Unit)? = null
+    private val onSessionUpdated: (() -> Unit)? = null,
+    private val mediaUploadApi: MediaApiService? = null
 ) : ProfileRepository {
-
-    private val cloudinaryUploader = CloudinarySignedUploader()
 
     override suspend fun getProfile(): Result<UserProfile> = safeNetworkCall("Error al obtener perfil.") {
         val response = profileApi.getProfile()
@@ -267,29 +266,15 @@ class RetrofitProfileRepository(
     }
 
     override suspend fun uploadProfilePhoto(imageBytes: ByteArray): Result<String> = withContext(Dispatchers.IO) {
-        val moderationResult = moderationService.moderateImage(imageBytes, "Foto de perfil de usuario")
-        if (moderationResult is ModerationResult.Rejected) {
-            return@withContext Result.Failure(AppError.Validation(moderationResult.reason))
-        }
-        if (moderationResult is ModerationResult.Quarantine) {
-            return@withContext Result.Failure(AppError.Validation("La imagen está en revisión preventiva: ${moderationResult.reason}"))
-        }
-        safeNetworkCall("Error al procesar la subida de foto.") {
-            val sigResponse = profileApi.generatePhotoSignature()
-            val sig = sigResponse.body()
-            if (!sigResponse.isSuccessful || sig == null) {
-                mapHttpError(sigResponse)
-            } else {
-                uploadBytesToCloudinary(imageBytes, sig)
+        val uploadApi = mediaUploadApi
+            ?: return@withContext Result.Failure(AppError.Validation("El servicio de carga moderada no está disponible."))
+        MediaRepositoryImpl(uploadApi).uploadAndModerate(imageBytes, "image/jpeg").let { uploaded ->
+            when (uploaded) {
+                is Result.Success -> Result.Success(uploaded.data.url)
+                is Result.Failure -> uploaded
             }
         }
     }
-
-    private fun uploadBytesToCloudinary(imageBytes: ByteArray, sig: PhotoSignatureResponse): Result<String> =
-        when (val upload = cloudinaryUploader.upload(imageBytes, "image/jpeg", "profile_avatar.jpg", sig)) {
-            is Result.Success -> Result.Success(upload.data.url)
-            is Result.Failure -> upload
-        }
 
     private fun persistSessionProfile(profile: UserProfile) {
         securePreferences?.saveUserSession(

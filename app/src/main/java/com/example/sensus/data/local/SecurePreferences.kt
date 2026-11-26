@@ -33,6 +33,19 @@ class SecurePreferences private constructor(preferencesFactory: () -> SharedPref
         prefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
     }
 
+    /** Refresh token rotatorio (G-06); asignar `null` o vacío lo elimina. */
+    var refreshToken: String?
+        get() = prefs.getString(KEY_REFRESH_TOKEN, null)
+        set(value) {
+            val editor = prefs.edit()
+            if (value.isNullOrBlank()) {
+                editor.remove(KEY_REFRESH_TOKEN)
+            } else {
+                editor.putString(KEY_REFRESH_TOKEN, value)
+            }
+            editor.apply()
+        }
+
     fun saveUserSession(name: String, email: String, photoUrl: String? = null) {
         prefs.edit()
             .putString(KEY_USER_NAME, name)
@@ -149,6 +162,7 @@ class SecurePreferences private constructor(preferencesFactory: () -> SharedPref
         private const val DEFAULT_GUEST_RADIUS_METERS = 2000
         private const val PREFS_FILENAME = "sensus_secure_prefs"
         private const val KEY_AUTH_TOKEN = "key_auth_token"
+        private const val KEY_REFRESH_TOKEN = "key_refresh"
         private const val KEY_SESSION_TYPE = "key_session_type"
         private const val KEY_GUEST_RADIUS = "key_guest_radius"
         private const val KEY_USER_NAME = "key_user_name"

@@ -1,0 +1,4 @@
+# Falsos positivos verificados: JWT ficticio de prueba ("fresh-jwt-15m") en TokenRefreshAuthenticatorTest.
+# El valor se reemplazo en el commit siguiente; solo se ignoran estas huellas exactas del historial.
+12a0462232351209fec7de0fa355bcaaa3612e28:app/src/test/java/com/example/sensus/data/TokenRefreshAuthenticatorTest.kt:generic-api-key:62
+da5bf122584d4dd7cf5a939b4910fa531aca41d4:app/src/test/java/com/example/sensus/data/TokenRefreshAuthenticatorTest.kt:generic-api-key:22

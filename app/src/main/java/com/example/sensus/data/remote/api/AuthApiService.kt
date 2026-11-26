@@ -4,6 +4,7 @@ import com.example.sensus.data.remote.dto.AuthResponse
 import com.example.sensus.data.remote.dto.DeleteAccountRequest
 import com.example.sensus.data.remote.dto.GuestSessionResponse
 import com.example.sensus.data.remote.dto.LoginRequest
+import com.example.sensus.data.remote.dto.RefreshTokenRequest
 import com.example.sensus.data.remote.dto.RegisterRequest
 import com.example.sensus.data.remote.dto.RequestPasswordResetRequest
 import com.example.sensus.data.remote.dto.ResetPasswordRequest
@@ -17,6 +18,9 @@ interface AuthApiService {
 
     @POST("api/v1/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
+
+    @POST("api/v1/auth/refresh")
+    suspend fun refresh(@Body request: RefreshTokenRequest): Response<AuthResponse>
 
     @POST("api/v1/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>

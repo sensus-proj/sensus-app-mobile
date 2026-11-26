@@ -388,32 +388,16 @@ class PublishingApiTest {
     }
 
     @Test
-    fun mediaUpload_fallsBackToSignedCloudinaryWhenBackendReturns500_afterModerationApproved() = runTest {
-        val moderator = mockk<ImageModerationRepository>()
-        coEvery { moderator.moderateImage(any(), any()) } returns ModerationResult.Approved
+    fun mediaUpload_doesNotBypassModerationViaSignedCloudinaryWhenBackendReturns500() = runTest {
         val uploader = CloudinarySignedUploader(baseUrl = server.url("/").toString())
-        val repository = MediaRepositoryImpl(client.mediaUploadApi, moderator, client.profileApi, uploader)
+        val repository = MediaRepositoryImpl(client.mediaUploadApi, null, client.profileApi, uploader)
 
         server.enqueue(MockResponse().setResponseCode(500).setBody("""{"detail":"Error interno"}"""))
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                """{"cloudName":"demo-cloud","apiKey":"k1","timestamp":1700000000,"folder":"sensus/media","signature":"sig1"}"""
-            )
-        )
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                """{"public_id":"pub_fb","secure_url":"https://res.cloudinary.com/demo-cloud/image/upload/fb.jpg"}"""
-            )
-        )
 
         val result = repository.uploadAndModerate(byteArrayOf(1, 2, 3), "image/jpeg")
-        assertTrue(result is Result.Success)
-        val media = (result as Result.Success).data
-        assertEquals("pub_fb", media.mediaId)
-        assertEquals("https://res.cloudinary.com/demo-cloud/image/upload/fb.jpg", media.url)
+        assertTrue(result is Result.Failure)
+        assertEquals(1, server.requestCount)
         assertEquals("/api/v1/media/upload", server.takeRequest().path)
-        assertEquals("/api/v1/users/photo-signature", server.takeRequest().path)
-        assertEquals("/v1_1/demo-cloud/image/upload", server.takeRequest().path)
     }
 
     @Test
