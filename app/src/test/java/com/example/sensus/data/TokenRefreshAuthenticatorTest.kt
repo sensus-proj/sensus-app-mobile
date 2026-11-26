@@ -17,6 +17,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+private val REFRESH_RESPONSE_BODY = """
+    {
+      "token": "fresh-jwt-15m",
+      "tokenType": "Bearer",
+      "expiresAtUtc": "2026-11-26T12:15:00Z",
+      "refreshToken": "refresh-v2",
+      "refreshExpiresAtUtc": "2026-12-26T12:00:00Z",
+      "user": {
+        "id": "u1",
+        "nombreCompleto": "Ana",
+        "correo": "ana@sensus.app",
+        "roles": ["Consumidor"],
+        "estatus": true,
+        "fechaRegistro": "2026-11-26T12:00:00Z"
+      }
+    }
+""".trimIndent()
+
 class TokenRefreshAuthenticatorTest {
 
     private lateinit var server: MockWebServer
@@ -39,11 +57,11 @@ class TokenRefreshAuthenticatorTest {
         var currentJwt = "expired-jwt"
         var currentRefresh = "refresh-v1"
         every { securePreferences.getAuthToken() } answers { currentJwt }
-        every { securePreferences.getRefreshToken() } answers { currentRefresh }
+        every { securePreferences.refreshToken } answers { currentRefresh }
         every { securePreferences.saveAuthToken(any()) } answers {
             currentJwt = firstArg()
         }
-        every { securePreferences.saveRefreshToken(any()) } answers {
+        every { securePreferences.refreshToken = any() } answers {
             currentRefresh = firstArg() ?: ""
         }
 
@@ -55,27 +73,7 @@ class TokenRefreshAuthenticatorTest {
         )
 
         server.enqueue(MockResponse().setResponseCode(401))
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                """
-                {
-                  "token": "fresh-jwt-15m",
-                  "tokenType": "Bearer",
-                  "expiresAtUtc": "2026-11-26T12:15:00Z",
-                  "refreshToken": "refresh-v2",
-                  "refreshExpiresAtUtc": "2026-12-26T12:00:00Z",
-                  "user": {
-                    "id": "u1",
-                    "nombreCompleto": "Ana",
-                    "correo": "ana@sensus.app",
-                    "roles": ["Consumidor"],
-                    "estatus": true,
-                    "fechaRegistro": "2026-11-26T12:00:00Z"
-                  }
-                }
-                """.trimIndent()
-            )
-        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody(REFRESH_RESPONSE_BODY))
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 """{"id":"u1","nombreCompleto":"Ana","correo":"ana@sensus.app","roles":["Consumidor"],"estatus":true,"fechaRegistro":"2026-11-26T12:00:00Z"}"""
@@ -104,7 +102,7 @@ class TokenRefreshAuthenticatorTest {
     @Test
     fun authenticator_clearsSessionAndInvokesCallback_whenRefreshRejectedWith401() = runTest {
         every { securePreferences.getAuthToken() } returns "expired-jwt"
-        every { securePreferences.getRefreshToken() } returns "revoked-refresh"
+        every { securePreferences.refreshToken } returns "revoked-refresh"
         every { securePreferences.clearAll() } just runs
 
         var unauthorizedTriggered = false

@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
+import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,10 +16,17 @@ import okhttp3.Response
 import okhttp3.Route
 
 private const val REFRESH_TIMEOUT_SECONDS = 15L
+private const val MAX_AUTH_ATTEMPTS = 2
+private const val REFRESH_PATH = "/api/v1/auth/refresh"
+private val SKIP_REFRESH_SUFFIXES = listOf("/auth/login", "/auth/register", "/auth/refresh", "/auth/guest")
 
 /**
  * Authenticator sincronizado de OkHttp (G-06) para rotar automáticamente un JWT de corta vigencia
  * usando el `refreshToken` guardado en [SecurePreferences] ante un HTTP 401.
+ *
+ * - Si otro hilo ya rotó el JWT, reintenta con el vigente sin volver a llamar a `/auth/refresh`.
+ * - Si el servidor rechaza el refresh token, limpia la sesión y notifica `onUnauthorizedCallback`.
+ * - Un fallo de red no cierra la sesión: devuelve `null` y el 401 llega al llamador.
  */
 class TokenRefreshAuthenticator(
     private val securePreferences: SecurePreferences,
@@ -39,76 +47,62 @@ class TokenRefreshAuthenticator(
 
     override fun authenticate(route: Route?, response: Response): Request? {
         val path = response.request.url.encodedPath
-        if (shouldSkipRefresh(path) || responseCount(response) >= 2) {
+        if (shouldSkipRefresh(path) || responseCount(response) >= MAX_AUTH_ATTEMPTS) {
             return null
         }
+        return synchronized(lock) { resolveRetry(response.request) }
+    }
 
-        val failedAuthHeader = response.request.header("Authorization")
+    private fun resolveRetry(failedRequest: Request): Request? {
+        val latestToken = securePreferences.getAuthToken()
+        val alreadyRotated = !latestToken.isNullOrBlank() &&
+            "Bearer $latestToken" != failedRequest.header("Authorization")
+        val token = if (alreadyRotated) latestToken else refreshAccessToken(failedRequest.url)
+        return token?.let { withBearer(failedRequest, it) }
+    }
 
-        synchronized(lock) {
-            val latestToken = securePreferences.getAuthToken()
-            if (!latestToken.isNullOrBlank() && "Bearer $latestToken" != failedAuthHeader) {
-                return response.request.newBuilder()
-                    .header("Authorization", "Bearer $latestToken")
-                    .build()
-            }
+    private fun refreshAccessToken(baseUrl: HttpUrl): String? {
+        val refreshToken = securePreferences.refreshToken?.takeIf { it.isNotBlank() } ?: return null
+        val result = runCatching { executeRefresh(baseUrl, refreshToken) }
+        val parsed = result.getOrNull()
+        if (result.isSuccess && parsed == null) {
+            clearSessionOnFailure()
+        }
+        parsed?.let {
+            securePreferences.saveAuthToken(it.token)
+            securePreferences.refreshToken = it.refreshToken
+        }
+        return parsed?.token
+    }
 
-            val refreshToken = securePreferences.getRefreshToken()?.takeIf { it.isNotBlank() }
-                ?: return null
-
-            val refreshUrl = response.request.url.newBuilder()
-                .encodedPath("/api/v1/auth/refresh")
-                .query(null)
-                .build()
-
-            val payload = json.encodeToString(RefreshTokenRequest(refreshToken))
-            val refreshRequest = Request.Builder()
-                .url(refreshUrl)
-                .header("Accept", "application/json")
-                .post(payload.toRequestBody("application/json".toMediaType()))
-                .build()
-
-            return try {
-                refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
-                    if (!refreshResponse.isSuccessful) {
-                        clearSessionOnFailure()
-                        return null
-                    }
-
-                    val body = refreshResponse.body?.string()?.takeIf { it.isNotBlank() } ?: run {
-                        clearSessionOnFailure()
-                        return null
-                    }
-
-                    val parsed = json.decodeFromString<AuthResponse>(body)
-                    if (parsed.token.isBlank()) {
-                        clearSessionOnFailure()
-                        return null
-                    }
-
-                    securePreferences.saveAuthToken(parsed.token)
-                    securePreferences.saveRefreshToken(parsed.refreshToken)
-
-                    response.request.newBuilder()
-                        .header("Authorization", "Bearer ${parsed.token}")
-                        .build()
-                }
-            } catch (_: Exception) {
-                null
-            }
+    /** Devuelve la sesión renovada, o `null` si el servidor rechazó el refresh token. Lanza ante fallo de red. */
+    private fun executeRefresh(baseUrl: HttpUrl, refreshToken: String): AuthResponse? {
+        val refreshUrl = baseUrl.newBuilder().encodedPath(REFRESH_PATH).query(null).build()
+        val payload = json.encodeToString(RefreshTokenRequest(refreshToken))
+        val refreshRequest = Request.Builder()
+            .url(refreshUrl)
+            .header("Accept", "application/json")
+            .post(payload.toRequestBody("application/json".toMediaType()))
+            .build()
+        return refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
+            if (refreshResponse.isSuccessful) parseAuthResponse(refreshResponse.body?.string()) else null
         }
     }
+
+    private fun parseAuthResponse(body: String?): AuthResponse? = body?.takeIf { it.isNotBlank() }
+        ?.let { json.decodeFromString<AuthResponse>(it) }
+        ?.takeIf { it.token.isNotBlank() }
+
+    private fun withBearer(request: Request, token: String): Request = request.newBuilder()
+        .header("Authorization", "Bearer $token")
+        .build()
 
     private fun clearSessionOnFailure() {
         securePreferences.clearAll()
         onUnauthorizedCallback?.invoke()
     }
 
-    private fun shouldSkipRefresh(path: String): Boolean =
-        path.endsWith("/auth/login") ||
-            path.endsWith("/auth/register") ||
-            path.endsWith("/auth/refresh") ||
-            path.endsWith("/auth/guest")
+    private fun shouldSkipRefresh(path: String): Boolean = SKIP_REFRESH_SUFFIXES.any { path.endsWith(it) }
 
     private fun responseCount(response: Response): Int {
         var count = 1

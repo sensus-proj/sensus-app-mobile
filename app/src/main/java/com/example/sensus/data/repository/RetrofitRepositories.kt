@@ -17,7 +17,6 @@ import com.example.sensus.data.remote.dto.ActivateMerchantRequest
 import com.example.sensus.data.remote.dto.AuthResponse
 import com.example.sensus.data.remote.dto.DeleteAccountRequest
 import com.example.sensus.data.remote.dto.LoginRequest
-import com.example.sensus.data.remote.dto.PhotoSignatureResponse
 import com.example.sensus.data.remote.dto.RegisterRequest
 import com.example.sensus.data.remote.dto.RequestPasswordResetRequest
 import com.example.sensus.data.remote.dto.ResetPasswordRequest
@@ -28,7 +27,6 @@ import com.example.sensus.domain.model.MerchantActivationInput
 import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.MerchantProfileUpdateInput
-import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.AuthRepository
 import com.example.sensus.domain.repository.MerchantRepository
@@ -126,7 +124,7 @@ class RetrofitAuthRepository(
 
     private fun handleAuthSuccess(body: AuthResponse): Result<UserProfile> {
         securePreferences.saveAuthToken(body.token)
-        securePreferences.saveRefreshToken(body.refreshToken)
+        securePreferences.refreshToken = body.refreshToken
         securePreferences.saveSessionType(SessionType.REGISTERED)
         val domainUser = body.user.toDomain()
         securePreferences.saveUserSession(
@@ -231,8 +229,6 @@ class RetrofitProfileRepository(
     private val mediaUploadApi: MediaApiService? = null
 ) : ProfileRepository {
 
-    private val cloudinaryUploader = CloudinarySignedUploader()
-
     override suspend fun getProfile(): Result<UserProfile> = safeNetworkCall("Error al obtener perfil.") {
         val response = profileApi.getProfile()
         val body = response.body()
@@ -279,12 +275,6 @@ class RetrofitProfileRepository(
             }
         }
     }
-
-    private fun uploadBytesToCloudinary(imageBytes: ByteArray, sig: PhotoSignatureResponse): Result<String> =
-        when (val upload = cloudinaryUploader.upload(imageBytes, "image/jpeg", "profile_avatar.jpg", sig)) {
-            is Result.Success -> Result.Success(upload.data.url)
-            is Result.Failure -> upload
-        }
 
     private fun persistSessionProfile(profile: UserProfile) {
         securePreferences?.saveUserSession(

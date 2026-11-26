@@ -17,10 +17,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 
 private const val HTTP_BAD_REQUEST = 400
-private const val HTTP_NOT_FOUND = 404
 private const val HTTP_PAYLOAD_TOO_LARGE = 413
 private const val HTTP_UNPROCESSABLE = 422
-private const val HTTP_SERVER_ERROR = 500
 private const val MEDIA_UPLOAD_MAX_RETRIES = 1
 private const val UPLOAD_FILE_NAME = "sensus_upload.jpg"
 private const val OFFER_MODERATION_CONTEXT = "Fotografía de producto de oferta comercial"
