@@ -28,8 +28,11 @@ import androidx.compose.ui.unit.dp
 import com.example.sensus.R
 import com.example.sensus.common.AppError
 import com.example.sensus.domain.model.FeedPolicy
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusTextButtonColors
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,7 +57,7 @@ internal fun CreateFeedPostSheet(state: CommunityViewState, onIntent: (Community
     }
     ModalBottomSheet(onDismissRequest = { onIntent(CommunityViewIntent.CloseComposer) }) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.community_create_post), color = SensusPurple)
+            Text(stringResource(R.string.community_create_post), color = SensusVioletInk)
             OutlinedTextField(
                 value = state.draftText,
                 onValueChange = { onIntent(CommunityViewIntent.TextChanged(it)) },
@@ -71,6 +74,7 @@ internal fun CreateFeedPostSheet(state: CommunityViewState, onIntent: (Community
                 Text(message, color = SensusRed)
             }
             Button(
+                shape = SensusButtonShape,
                 onClick = { onIntent(CommunityViewIntent.Submit) },
                 enabled = !state.isPublishing && !isReadingImage && state.draftText.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple)
@@ -83,21 +87,26 @@ internal fun CreateFeedPostSheet(state: CommunityViewState, onIntent: (Community
 
 @Composable
 private fun FeedAttachmentControls(state: CommunityViewState, onIntent: (CommunityViewIntent) -> Unit, onPickImage: () -> Unit) {
-    TextButton(onClick = { onPickImage() }, enabled = !state.isPublishing) {
+    TextButton(colors = sensusTextButtonColors(), onClick = { onPickImage() }, enabled = !state.isPublishing) {
         Text(if (state.hasImage) stringResource(R.string.community_change_photo) else stringResource(R.string.community_add_photo))
     }
     if (state.hasImage) {
         TextButton(
+            colors = sensusTextButtonColors(),
             onClick = { onIntent(CommunityViewIntent.ImageSelected(null)) },
             enabled = !state.isPublishing
         ) { Text(stringResource(R.string.community_remove_photo)) }
     }
     Text(stringResource(R.string.community_tag_merchant))
-    TextButton(onClick = {
+    TextButton(colors = sensusTextButtonColors(), onClick = {
         onIntent(CommunityViewIntent.MerchantSelected(null))
     }, enabled = !state.isPublishing) { Text(stringResource(R.string.community_no_merchant)) }
     state.nearbyMerchants.forEach { offer ->
-        TextButton(onClick = { onIntent(CommunityViewIntent.MerchantSelected(offer.merchantId)) }, enabled = !state.isPublishing) {
+        TextButton(
+            colors = sensusTextButtonColors(),
+            onClick = { onIntent(CommunityViewIntent.MerchantSelected(offer.merchantId)) },
+            enabled = !state.isPublishing
+        ) {
             Text(if (state.merchantId == offer.merchantId) "${offer.storeName} (seleccionado)" else offer.storeName)
         }
     }

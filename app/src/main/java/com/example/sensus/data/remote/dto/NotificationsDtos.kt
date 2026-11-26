@@ -26,6 +26,12 @@ data class NotificationsUpdateRequest(
 class NotificationsDeviceRequest(val deviceId: String, val platform: String, val token: String)
 
 @Serializable
+data class NotificationsLocationRequest(
+    @SerialName("latitude") val latitude: Double,
+    @SerialName("longitude") val longitude: Double
+)
+
+@Serializable
 class NotificationsDeviceResponse(
     val deviceId: String,
     val platform: String,

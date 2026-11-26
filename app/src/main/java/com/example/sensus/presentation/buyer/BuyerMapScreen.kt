@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -34,16 +33,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.sensus.domain.model.GuestRadiusPolicy
 import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.MapStoreClusterBuilder
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.StoreClusterQuery
 import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.domain.usecase.nearbyRadiusKm
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.OsmMapUtils
 import com.example.sensus.presentation.common.RadiusSelectorBottomSheet
+import com.example.sensus.theme.SensusBackground
 import kotlin.math.abs
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
@@ -51,7 +51,6 @@ import org.osmdroid.events.ZoomEvent
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
-private const val MAP_BG_HEX = 0xFFE5E7EB
 private const val FOCUS_ZOOM = 16.5
 private const val SHORT_RADIUS_ZOOM = 17.6
 private const val SHORT_RADIUS_THRESHOLD_KM = 0.25f
@@ -80,6 +79,7 @@ private class BuyerMapUiStateHolder {
     var selectedCategory by mutableStateOf(StoreCategory.ALL)
     var selectedStore by mutableStateOf<MapStoreCluster?>(null)
     var showRadiusSheet by mutableStateOf(false)
+    var manualLocation by mutableStateOf<UserLocation?>(null)
     var showLayersMenu by mutableStateOf(false)
     var locationNotice by mutableStateOf<Pair<String, Boolean>?>(null)
     var mapViewRef by mutableStateOf<MapView?>(null)
@@ -113,7 +113,7 @@ fun BuyerMapScreen(
     val uiHolder = remember { BuyerMapUiStateHolder() }
 
     val effectiveIsGuest = callbacks.isGuest || mapState.isGuest
-    val effectiveRadiusKm = GuestRadiusPolicy.clampRadius(mapState.selectedRadiusKm, effectiveIsGuest)
+    val effectiveRadiusKm = nearbyRadiusKm(mapState.selectedRadiusKm, effectiveIsGuest)
     val hasRuntimePermission = remember(mapState.isLocationPermissionGranted) { hasMapLocationPermission(context) }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
@@ -193,7 +193,7 @@ private fun BuyerMapScreenScaffold(hostInput: BuyerMapHostInput, deps: BuyerMapS
         label = "MapControlsBottomPadding"
     )
 
-    Box(modifier = modifier.fillMaxSize().background(Color(MAP_BG_HEX))) {
+    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         BuyerOsmMapView(
             userLocation = mapState.userLocation,
             renderConfig = MapRenderConfig(
@@ -225,6 +225,7 @@ private fun BuyerMapScreenScaffold(hostInput: BuyerMapHostInput, deps: BuyerMapS
             actions = MapBottomOverlayActions(
                 onRequestPermission = deps.onRequestPermission,
                 onRefreshLocation = { deps.mapViewModel.dispatchIntent(BuyerMapViewIntent.RefreshLocation(forceFresh = true)) },
+                onManualLocation = { location -> deps.mapViewModel.dispatchIntent(BuyerMapViewIntent.ManualLocationSelected(location)) },
                 onRadiusSelected = { km ->
                     deps.mapViewModel.dispatchIntent(BuyerMapViewIntent.RadiusSelected(km))
                     applyShortRadiusFocusZoom(km, mapState.userLocation, uiHolder)
@@ -278,6 +279,7 @@ private fun BuyerMapTopOverlaySection(
 private data class MapBottomOverlayActions(
     val onRequestPermission: () -> Unit,
     val onRefreshLocation: () -> Unit,
+    val onManualLocation: (UserLocation) -> Unit,
     val onRadiusSelected: (Float) -> Unit,
     val onToggleSaveOffer: (ProductOffer) -> Unit = {}
 )
@@ -302,18 +304,18 @@ private fun BuyerMapBottomOverlaySection(
             ),
             onZoomIn = { uiHolder.mapViewRef?.let { uiHolder.currentZoom = stepMapZoom(it, +ZOOM_STEP) } },
             onZoomOut = { uiHolder.mapViewRef?.let { uiHolder.currentZoom = stepMapZoom(it, -ZOOM_STEP) } },
-            onCenterLocation = {
-                if (!hostInput.hasRuntimePermission) {
-                    actions.onRequestPermission()
-                } else {
-                    uiHolder.locationNotice = null
-                    actions.onRefreshLocation()
-                }
-            },
+            onCenterLocation = { centerBuyerMap(hostInput.hasRuntimePermission, uiHolder, actions) },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
                 .padding(end = 16.dp, bottom = controlsBottomPadding)
+        )
+
+        ManualLocationOverlay(
+            showPicker = !mapState.isLocationEnabled || !hostInput.hasRuntimePermission,
+            uiHolder = uiHolder,
+            controlsBottomPadding = controlsBottomPadding,
+            onManualLocation = actions.onManualLocation
         )
 
         if (hostInput.cartItemCount > 0) {
@@ -344,6 +346,43 @@ private fun BuyerMapBottomOverlaySection(
                 onDismiss = { uiHolder.showRadiusSheet = false }
             )
         }
+    }
+}
+
+private fun centerBuyerMap(hasPermission: Boolean, uiHolder: BuyerMapUiStateHolder, actions: MapBottomOverlayActions) {
+    if (hasPermission) {
+        uiHolder.locationNotice = null
+        actions.onRefreshLocation()
+    } else {
+        actions.onRequestPermission()
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ManualLocationOverlay(
+    showPicker: Boolean,
+    uiHolder: BuyerMapUiStateHolder,
+    controlsBottomPadding: androidx.compose.ui.unit.Dp,
+    onManualLocation: (UserLocation) -> Unit
+) {
+    if (showPicker) {
+        ManualLocationButton(
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = controlsBottomPadding),
+            onClick = {
+                uiHolder.mapViewRef?.mapCenter?.let { center ->
+                    uiHolder.manualLocation = UserLocation(center.latitude, center.longitude)
+                }
+            }
+        )
+    }
+    uiHolder.manualLocation?.let { location ->
+        LocationPickerBottomSheet(
+            onApply = {
+                uiHolder.manualLocation = null
+                onManualLocation(location)
+            },
+            onDismiss = { uiHolder.manualLocation = null }
+        )
     }
 }
 

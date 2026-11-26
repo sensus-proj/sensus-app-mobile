@@ -3,16 +3,9 @@ package com.example.sensus.presentation.main
 import android.app.Activity
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,13 +51,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -79,19 +76,17 @@ import com.example.sensus.presentation.modals.ConfirmDeleteAccountDialog
 import com.example.sensus.presentation.modals.ConfirmLogoutDialog
 import com.example.sensus.presentation.modals.GuestPromptDialog
 import com.example.sensus.presentation.modals.OfflineDialog
+import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusTextPrimary
+import com.example.sensus.theme.SensusSurface
+import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
 import kotlin.math.roundToInt
 
 private const val EXIT_DOUBLE_TAP_MS = 2000L
 private const val SCRIM_VISIBILITY_THRESHOLD = 0.05f
 private const val SUBMENU_VISIBILITY_THRESHOLD = 0.01f
 private const val SCRIM_ALPHA = 0.45f
-private const val WOBBLE_DEGREES = 7f
-private const val WOBBLE_DURATION_MS = 140
-private const val CAT_MAX_SCALE = 1.07f
-private const val CAT_PULSE_MS = 700
-private const val CLOSE_ROTATION_DEG = 45f
 
 private const val SLOT_FAR_LEFT = -2
 private const val SLOT_MID_LEFT = -1
@@ -115,14 +110,12 @@ private const val MERCHANT_OUTER_Y = -34
 private const val MERCHANT_INNER_X = 42
 private const val MERCHANT_INNER_Y = -90
 
-private const val SELECTED_ITEM_SCALE = 1.22f
-private const val UNSELECTED_ITEM_SCALE = 0.95f
+private const val SELECTED_ITEM_SCALE = 1.04f
+private const val UNSELECTED_ITEM_SCALE = 1f
 private const val SELECTED_BORDER_DP = 2.5f
 private const val UNSELECTED_LABEL_BORDER_DP = 0.5f
-private const val UNSELECTED_FONT_SP = 9.5f
-private const val SELECTED_ICON_BORDER_HEX = 0xFFF3E8FF
-private const val BORDER_NEUTRAL_HEX = 0xFFE2E8F0
-private const val SELECTED_LABEL_BORDER_HEX = 0xFFC084FC
+private const val UNSELECTED_FONT_SP = 11f
+private const val ARC_REFERENCE_WIDTH_DP = 360f
 
 enum class BuyerNavTab(val title: String, val icon: ImageVector) {
     MAP("Mapa", Icons.Default.Map),
@@ -161,14 +154,15 @@ internal class MainAppState {
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
     var showSavedInterests by mutableStateOf(false)
+    var showMyClaims by mutableStateOf(false)
     var showInterestsPicker by mutableStateOf(false)
     var showSearchOffers by mutableStateOf(false)
-    var showHelpCenter by mutableStateOf(false)
     var showMerchantRegister by mutableStateOf(false)
     var isMerchantRegistered by mutableStateOf(false)
     var showConfirmLogout by mutableStateOf(false)
     var showConfirmDeleteAccount by mutableStateOf(false)
     var showOfflineDialog by mutableStateOf(false)
+    var showHelpCenter by mutableStateOf(false)
     var showGuestPrompt by mutableStateOf(false)
     var lastBackPressTime by mutableLongStateOf(0L)
 }
@@ -231,6 +225,10 @@ private fun dismissActiveDialog(state: MainAppState): Boolean = when {
         state.showOfflineDialog = false
         true
     }
+    state.showHelpCenter -> {
+        state.showHelpCenter = false
+        true
+    }
     state.showGuestPrompt -> {
         state.showGuestPrompt = false
         true
@@ -291,16 +289,16 @@ private fun dismissUtilityOverlay(state: MainAppState): Boolean = when {
         state.showSavedInterests = false
         true
     }
+    state.showMyClaims -> {
+        state.showMyClaims = false
+        true
+    }
     state.showInterestsPicker -> {
         state.showInterestsPicker = false
         true
     }
     state.showSearchOffers -> {
         state.showSearchOffers = false
-        true
-    }
-    state.showHelpCenter -> {
-        state.showHelpCenter = false
         true
     }
     state.showMerchantRegister -> {
@@ -339,19 +337,6 @@ internal fun FamBackdropScrim(isFamOpen: Boolean, animProgress: Float, onDismiss
 
 @Composable
 internal fun RainbowFloatingMenuBar(state: MainAppState, animProgress: Float) {
-    val infiniteTransition = rememberInfiniteTransition(label = "CatMenuAnimation")
-    val wobbleAngle by infiniteTransition.animateFloat(
-        initialValue = -WOBBLE_DEGREES,
-        targetValue = WOBBLE_DEGREES,
-        animationSpec = infiniteRepeatable(tween(WOBBLE_DURATION_MS, easing = LinearEasing), RepeatMode.Reverse),
-        label = "wobbleAngle"
-    )
-    val catScale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = CAT_MAX_SCALE,
-        animationSpec = infiniteRepeatable(tween(CAT_PULSE_MS, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "catScale"
-    )
     val density = LocalDensity.current
 
     if (animProgress > SUBMENU_VISIBILITY_THRESHOLD) {
@@ -367,11 +352,8 @@ internal fun RainbowFloatingMenuBar(state: MainAppState, animProgress: Float) {
         shape = CircleShape,
         containerColor = SensusPurple,
         contentColor = Color.White,
-        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
-        modifier = Modifier
-            .size(64.dp)
-            .rotate(if (state.isFamOpen) CLOSE_ROTATION_DEG else wobbleAngle)
-            .scale(if (state.isFamOpen) 1.0f else catScale)
+        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp, pressedElevation = 1.dp),
+        modifier = Modifier.size(60.dp)
     ) {
         if (state.isFamOpen) {
             Icon(imageVector = Icons.Default.Close, contentDescription = "Cerrar menú", tint = Color.White, modifier = Modifier.size(28.dp))
@@ -456,7 +438,8 @@ private fun MerchantRainbowMenuItems(state: MainAppState, animProgress: Float, d
 
 @Composable
 private fun RainbowArcSubMenuItem(config: RainbowArcItemConfig, onClick: () -> Unit) {
-    val pxX = with(config.density) { config.targetX.toPx() } * config.animProgress
+    val widthScale = (LocalConfiguration.current.screenWidthDp / ARC_REFERENCE_WIDTH_DP).coerceAtMost(1f)
+    val pxX = with(config.density) { config.targetX.toPx() } * config.animProgress * widthScale
     val pxY = with(config.density) { config.targetY.toPx() } * config.animProgress
     val style = resolveRainbowItemStyle(config.isSelected)
     val itemScale by animateFloatAsState(
@@ -471,7 +454,7 @@ private fun RainbowArcSubMenuItem(config: RainbowArcItemConfig, onClick: () -> U
             .offset { IntOffset(pxX.roundToInt(), pxY.roundToInt()) }
             .scale(config.animProgress * itemScale)
             .alpha(config.animProgress.coerceIn(0f, 1f))
-            .clickable(onClick = onClick)
+            .selectable(selected = config.isSelected, role = Role.Tab, onClick = onClick)
     ) {
         Surface(
             shape = CircleShape,
@@ -481,12 +464,12 @@ private fun RainbowArcSubMenuItem(config: RainbowArcItemConfig, onClick: () -> U
             modifier = Modifier.size(style.iconContainerSize)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = config.icon, contentDescription = config.title, tint = style.contentTint, modifier = Modifier.size(style.iconSize))
+                Icon(imageVector = config.icon, contentDescription = null, tint = style.contentTint, modifier = Modifier.size(style.iconSize))
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Surface(
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(12.dp),
             color = style.containerColor,
             shadowElevation = style.labelElevation,
             border = BorderStroke(width = style.labelBorderWidth, color = style.labelBorderColor)
@@ -496,27 +479,29 @@ private fun RainbowArcSubMenuItem(config: RainbowArcItemConfig, onClick: () -> U
                 fontSize = style.labelFontSize.sp,
                 fontWeight = style.labelFontWeight,
                 color = style.labelTextColor,
-                modifier = Modifier.padding(horizontal = style.labelPadH, vertical = style.labelPadV)
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = 88.dp).padding(horizontal = style.labelPadH, vertical = style.labelPadV)
             )
         }
     }
 }
 
+@Composable
 private fun resolveRainbowItemStyle(isSelected: Boolean): RainbowItemStyle = if (isSelected) {
     RainbowItemStyle(
         targetScale = SELECTED_ITEM_SCALE,
         containerColor = SensusPurple,
         contentTint = Color.White,
-        iconBorderColor = Color(SELECTED_ICON_BORDER_HEX),
+        iconBorderColor = SensusVioletBg,
         iconBorderWidth = SELECTED_BORDER_DP.dp,
         iconContainerSize = 52.dp,
         iconSize = 26.dp,
-        circleElevation = 12.dp,
-        labelElevation = 6.dp,
+        circleElevation = 2.dp,
+        labelElevation = 1.dp,
         labelBorderWidth = 1.dp,
-        labelBorderColor = Color(SELECTED_LABEL_BORDER_HEX),
+        labelBorderColor = SensusPurple,
         labelFontSize = 11f,
-        labelFontWeight = FontWeight.ExtraBold,
+        labelFontWeight = FontWeight.SemiBold,
         labelTextColor = Color.White,
         labelPadH = 9.dp,
         labelPadV = 3.dp
@@ -524,19 +509,19 @@ private fun resolveRainbowItemStyle(isSelected: Boolean): RainbowItemStyle = if 
 } else {
     RainbowItemStyle(
         targetScale = UNSELECTED_ITEM_SCALE,
-        containerColor = Color.White,
-        contentTint = SensusPurple,
-        iconBorderColor = Color(BORDER_NEUTRAL_HEX),
+        containerColor = SensusSurface,
+        contentTint = SensusTextSecondary,
+        iconBorderColor = SensusCardBorder,
         iconBorderWidth = 1.dp,
-        iconContainerSize = 44.dp,
+        iconContainerSize = 48.dp,
         iconSize = 20.dp,
-        circleElevation = 4.dp,
-        labelElevation = 2.dp,
+        circleElevation = 1.dp,
+        labelElevation = 0.dp,
         labelBorderWidth = UNSELECTED_LABEL_BORDER_DP.dp,
-        labelBorderColor = Color(BORDER_NEUTRAL_HEX),
+        labelBorderColor = SensusCardBorder,
         labelFontSize = UNSELECTED_FONT_SP,
         labelFontWeight = FontWeight.SemiBold,
-        labelTextColor = SensusTextPrimary,
+        labelTextColor = SensusTextSecondary,
         labelPadH = 6.dp,
         labelPadV = 2.dp
     )

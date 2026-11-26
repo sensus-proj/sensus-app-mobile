@@ -30,6 +30,7 @@ sealed interface BuyerMapViewIntent : ViewIntent {
     data class MerchantSelected(val merchant: MerchantProfile?) : BuyerMapViewIntent
     data class LocationPermissionGranted(val granted: Boolean) : BuyerMapViewIntent
     data class RefreshLocation(val forceFresh: Boolean = true) : BuyerMapViewIntent
+    data class ManualLocationSelected(val location: UserLocation) : BuyerMapViewIntent
     data class RadiusSelected(val radiusKm: Float) : BuyerMapViewIntent
     data class LayerSelected(val layer: MapLayerStyle) : BuyerMapViewIntent
     data object RefreshNearby : BuyerMapViewIntent

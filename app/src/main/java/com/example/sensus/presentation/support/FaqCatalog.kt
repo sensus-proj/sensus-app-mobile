@@ -13,8 +13,8 @@ object FaqCatalog {
             id = "radius",
             category = "Búsqueda y radio",
             question = "¿Qué alcance geográfico tengo para descubrir ofertas?",
-            answer = "Como usuario registrado puedes explorar entre 1 km y 5 km en la lista/mapa y hasta 50 km en el feed de promociones. " +
-                "En sesión de invitado el radio máximo se limita a 2 km en el servidor."
+            answer = "Como usuario registrado puedes elegir radios de 100 a 500 metros o de 1 a 5 km en la lista y el mapa, " +
+                "y hasta 50 km en el feed de promociones. En modo invitado el radio es fijo de 2 km."
         ),
         FaqItem(
             id = "merchant_no_ine",
@@ -36,8 +36,7 @@ object FaqCatalog {
             question = "¿Cómo usa Sensus mis intereses e interacciones en el feed?",
             answer = "Tus categorías de interés elegidas y tus interacciones con ofertas (impresiones en el feed, aperturas y apartados, " +
                 "seudonimizadas y conservadas por 180 días) se utilizan para ordenar el feed de promociones y medir su calidad. " +
-                "No existe un ajuste para desactivar la personalización; puedes ejercer tu derecho de cancelación eliminando tu cuenta " +
-                "en Perfil, lo que purga de inmediato tus intereses e interacciones seudonimizadas."
+                "Puedes consultar el Aviso de Privacidad o solicitar la eliminación de tu cuenta desde Perfil."
         ),
         FaqItem(
             id = "offline_terms",

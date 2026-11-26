@@ -2,26 +2,18 @@ package com.example.sensus.presentation.auth
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
@@ -32,12 +24,11 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,23 +43,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sensus.R
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 
-private const val SUBTITLE_ALPHA = 0.85f
 private const val MIN_NAME_LENGTH = 3
 private const val MAX_NAME_LENGTH = 50
 private const val MAX_EMAIL_LENGTH = 60
@@ -106,14 +97,16 @@ private data class RegisterValidationErrors(
 private data class RegisterFormProps(
     val form: RegisterFormState,
     val errors: RegisterValidationErrors,
-    val remoteError: String?
+    val remoteError: String?,
+    val isRegistering: Boolean,
+    val isGuestLoading: Boolean
 )
 
 @ComposeUiModel
 private data class RegisterFormCallbacks(
     val onFormChange: (RegisterFormState, RegisterValidationErrors) -> Unit,
     val onNavigateToTerms: () -> Unit,
-    val onNavigateToLogin: () -> Unit,
+    val onContinueAsGuest: () -> Unit,
     val onSubmit: () -> Unit
 )
 
@@ -143,9 +136,12 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
     onNavigateToTerms: () -> Unit,
-    viewModel: RegisterViewModel = hiltViewModel()
+    onContinueAsGuest: () -> Unit = {}
 ) {
+    val viewModel: RegisterViewModel = hiltViewModel()
+    val guestViewModel: LoginViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsState()
+    val guestState by guestViewModel.viewState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var form by remember { mutableStateOf(RegisterFormState()) }
     var errors by remember { mutableStateOf(RegisterValidationErrors()) }
@@ -158,21 +154,27 @@ fun RegisterScreen(
             }
         }
     }
+    LaunchedEffect(guestViewModel) {
+        guestViewModel.viewEffect.collect { effect ->
+            if (effect == LoginViewEffect.NavigateToHomeAsGuest) onContinueAsGuest()
+        }
+    }
     BackHandler { onNavigateToLogin() }
 
-    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().imePadding()) {
-            RegisterHeader(onNavigateToLogin = onNavigateToLogin)
-            RegisterFormContainer(
-                uiState = RegisterFormProps(form, errors, state.errorMessage),
+    AuthAccessScreenLayout(modifier, header = { RegisterHeader(onNavigateToLogin) }) {
+        AuthAccessSelector(isRegister = true, onSwitch = onNavigateToLogin)
+        AuthDataFrame {
+            RegisterFormFields(
+                uiState = RegisterFormProps(form, errors, guestState.errorMessage ?: state.errorMessage, state.isLoading, guestState.isGuestLoading),
                 callbacks = RegisterFormCallbacks(
                     onFormChange = { updated, cleared ->
                         form = updated
                         errors = cleared
                     },
                     onNavigateToTerms = onNavigateToTerms,
-                    onNavigateToLogin = onNavigateToLogin,
+                    onContinueAsGuest = { guestViewModel.dispatchIntent(LoginViewIntent.StartGuestSession) },
                     onSubmit = {
+                        guestViewModel.dispatchIntent(LoginViewIntent.DismissError)
                         val result = validateRegistrationForm(form)
                         errors = result
                         if (!result.hasErrors) submitRegistration(viewModel, form)
@@ -185,41 +187,15 @@ fun RegisterScreen(
 
 @Composable
 private fun RegisterHeader(onNavigateToLogin: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(color = SensusPurple, shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 20.dp)
-    ) {
-        Column {
-            IconButton(onClick = onNavigateToLogin, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "Crea tu Cuenta", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            Text(
-                text = "Únete para descubrir ofertas exclusivas en tu zona",
-                fontSize = 13.sp,
-                color = Color.White.copy(alpha = SUBTITLE_ALPHA)
+    Box(Modifier.fillMaxWidth()) {
+        AuthAccessBrand(showBackSpace = true)
+        IconButton(onClick = onNavigateToLogin, modifier = Modifier.align(Alignment.TopStart)) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.auth_back),
+                tint = SensusVioletInk
             )
         }
-    }
-}
-
-@Composable
-private fun RegisterFormContainer(uiState: RegisterFormProps, callbacks: RegisterFormCallbacks) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp)) {
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            RegisterFormFields(uiState = uiState, callbacks = callbacks)
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-        RegisterLoginFooter(onNavigateToLogin = callbacks.onNavigateToLogin)
     }
 }
 
@@ -227,10 +203,16 @@ private fun RegisterFormContainer(uiState: RegisterFormProps, callbacks: Registe
 private fun RegisterFormFields(uiState: RegisterFormProps, callbacks: RegisterFormCallbacks) {
     val form = uiState.form
     val errors = uiState.errors
-    Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        AuthFormTitle(stringResource(R.string.auth_register_title))
+        Text(
+            stringResource(R.string.auth_register_description),
+            color = SensusTextSecondary,
+            style = MaterialTheme.typography.bodyMedium
+        )
         val visibleGeneralError = uiState.remoteError ?: errors.generalError
         if (!visibleGeneralError.isNullOrBlank()) {
-            Text(text = visibleGeneralError, color = SensusRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = visibleGeneralError, color = SensusRed, style = MaterialTheme.typography.labelMedium)
         }
         RegisterIdentityFields(form = form, errors = errors, onFormChange = callbacks.onFormChange)
         RegisterSecurityFields(form = form, errors = errors, onFormChange = callbacks.onFormChange)
@@ -239,7 +221,9 @@ private fun RegisterFormFields(uiState: RegisterFormProps, callbacks: RegisterFo
             onCheckedChange = { checked -> callbacks.onFormChange(form.copy(acceptTerms = checked), errors.copy(generalError = null)) },
             onNavigateToTerms = callbacks.onNavigateToTerms
         )
-        RegisterSubmitButton(onSubmit = callbacks.onSubmit)
+        val busy = uiState.isRegistering || uiState.isGuestLoading
+        RegisterSubmitButton(enabled = !busy, onSubmit = callbacks.onSubmit)
+        AuthGuestButton(uiState.isGuestLoading, !busy, callbacks.onContinueAsGuest)
     }
 }
 
@@ -358,7 +342,7 @@ private fun RegisterValidatedField(spec: RegisterFieldSpec, onValueChange: (Stri
             onValueChange = onValueChange,
             label = { Text(spec.label) },
             isError = spec.error != null,
-            leadingIcon = { Icon(spec.icon, contentDescription = null, tint = SensusPurple) },
+            leadingIcon = { Icon(spec.icon, contentDescription = null, tint = SensusVioletInk) },
             trailingIcon = spec.trailingIcon,
             visualTransformation = spec.visualTransformation,
             singleLine = true,
@@ -368,7 +352,7 @@ private fun RegisterValidatedField(spec: RegisterFieldSpec, onValueChange: (Stri
             modifier = Modifier.fillMaxWidth()
         )
         spec.error?.let { err ->
-            Text(text = err, color = SensusRed, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+            Text(text = err, color = SensusRed, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
         }
     }
 }
@@ -376,44 +360,29 @@ private fun RegisterValidatedField(spec: RegisterFieldSpec, onValueChange: (Stri
 @Composable
 private fun TermsCheckboxRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit, onNavigateToTerms: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange, colors = CheckboxDefaults.colors(checkedColor = SensusPurple))
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange, colors = CheckboxDefaults.colors(checkedColor = SensusVioletInk))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(text = "Acepto los ", fontSize = 12.sp, color = SensusTextSecondary)
+        Text(text = "Acepto los ", style = MaterialTheme.typography.labelMedium, color = SensusTextSecondary)
         Text(
             text = "Términos y Privacidad",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = SensusPurple,
+            style = MaterialTheme.typography.labelMedium,
+            color = SensusVioletInk,
             modifier = Modifier.clickable(onClick = onNavigateToTerms)
         )
     }
 }
 
 @Composable
-private fun RegisterSubmitButton(onSubmit: () -> Unit) {
+private fun RegisterSubmitButton(enabled: Boolean, onSubmit: () -> Unit) {
     Button(
         onClick = onSubmit,
-        shape = RoundedCornerShape(14.dp),
+        enabled = enabled,
+        shape = CircleShape,
+        contentPadding = AuthActionPadding,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = "Crear Cuenta", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    }
-}
-
-@Composable
-private fun RegisterLoginFooter(onNavigateToLogin: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "¿Ya tienes una cuenta? ", fontSize = 14.sp, color = SensusTextSecondary)
-        Text(
-            text = "Inicia sesión",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = SensusPurple,
-            modifier = Modifier.clickable(onClick = onNavigateToLogin)
-        )
+        Text(text = "Crear Cuenta", style = MaterialTheme.typography.labelLarge, color = Color.White)
     }
 }
 

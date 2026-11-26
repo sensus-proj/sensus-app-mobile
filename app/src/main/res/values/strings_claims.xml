@@ -18,5 +18,23 @@
     <string name="claims_network_uncertain">Se perdió la conexión. La operación podría haberse aplicado; verifica antes de volver a enviar.</string>
     <string name="claims_expired">Apartado vencido. Este código ya no está disponible para canje.</string>
     <string name="claims_qr_unavailable">No se pudo mostrar el QR. Usa el código confirmado para la captura manual.</string>
-    <string name="claims_existing_code_unavailable">Ya tienes un apartado activo, pero su código no está disponible en esta sesión. No es posible recuperarlo tras reiniciar la app porque el servidor aún no publica esa consulta.</string>
+    <string name="claims_existing_code_unavailable">Ya tienes un apartado activo. El código QR de ese apartado no está disponible en esta sesión.</string>
+    <string name="claims_scan_qr">Escanear QR del cliente</string>
+    <string name="claims_scan_instructions">Apunta la cámara al QR del apartado o selecciona una imagen de la galería.</string>
+    <string name="community_scan_instructions">Apunta la cámara al código QR de tu amigo o elige una captura de galería.</string>
+    <string name="claims_scan_ready">QR leído. Revisa el folio y confirma el canje.</string>
+    <string name="my_claims_title">Mis reservas</string>
+    <string name="my_claims_empty">Aún no tienes reservas.</string>
+    <string name="my_claims_retry">Reintentar</string>
+    <string name="my_claims_untitled">Oferta reservada</string>
+    <string name="my_claims_status_active">Activa</string>
+    <string name="my_claims_status_redeemed">Canjeada</string>
+    <string name="my_claims_status_expired">Vencida</string>
+    <string name="my_claims_status_cancelled">Cancelada</string>
+    <string name="my_claims_status_unknown">Estado no disponible</string>
+    <string name="my_claims_cancel_action">Cancelar reserva</string>
+    <string name="my_claims_cancel_title">¿Cancelar esta reserva?</string>
+    <string name="my_claims_cancel_message">La unidad vuelve a quedar disponible para otras personas y el código QR deja de ser válido.</string>
+    <string name="my_claims_cancel_confirm">Sí, cancelar</string>
+    <string name="my_claims_cancel_keep">Conservar</string>
 </resources>

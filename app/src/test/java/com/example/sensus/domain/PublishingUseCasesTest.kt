@@ -106,10 +106,29 @@ class PublishingUseCasesTest {
     }
 
     @Test
-    fun offerWithoutPhoto_createsWithoutUpload() = runTest {
-        coEvery { offers.createOffer(input, null) } returns Result.Success(offer)
-        assertEquals(Result.Success(offer), CreateOfferUseCase(offers, media, compressor) { 1000L }(input))
+    fun offerWithoutPhotoOrSpecificCategory_neverUploadsOrCreates() = runTest {
+        val useCase = CreateOfferUseCase(offers, media, compressor) { 1000L }
+
+        assertTrue((useCase(input) as Result.Failure).error is AppError.Validation)
+        assertTrue((useCase(input.copy(category = StoreCategory.ALL), byteArrayOf(1)) as Result.Failure).error is AppError.Validation)
         coVerify(exactly = 0) { compressor.compressForUpload(any()) }
+        coVerify(exactly = 0) { media.uploadAndModerate(any(), any()) }
+        coVerify(exactly = 0) { offers.createOffer(any(), any()) }
+    }
+
+    @Test
+    fun offerThatExpiresDuringImageUpload_neverCreates() = runTest {
+        var now = 1000L
+        coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
+        coEvery { media.uploadAndModerate(any(), any()) } coAnswers {
+            now = input.expiresAtMillis
+            Result.Success(uploaded)
+        }
+
+        val result = CreateOfferUseCase(offers, media, compressor) { now }(input, byteArrayOf(1))
+
+        assertTrue((result as Result.Failure).error is AppError.Validation)
+        coVerify(exactly = 0) { offers.createOffer(any(), any()) }
     }
 
     @Test

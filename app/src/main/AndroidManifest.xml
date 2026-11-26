@@ -23,7 +23,8 @@
         android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Sensus">
-        <activity
+        <!-- Launcher y destino de deep links: debe estar exportada. Los extras se validan en MainActivity. -->
+        <!-- nosemgrep: java.android.security.exported_activity.exported_activity --><activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
@@ -53,16 +54,11 @@
                 <data
                     android:scheme="https"
                     android:host="rodnix.com.mx"
-                    android:pathPrefix="/sensus/reset" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                    android:path="/sensus/reset" />
                 <data
-                    android:scheme="http"
+                    android:scheme="https"
                     android:host="rodnix.com.mx"
-                    android:pathPrefix="/sensus/reset" />
+                    android:path="/sensus/reset/" />
             </intent-filter>
 
             <!-- FT-25 Deep Link: sensus://invitacion?code=... -->
@@ -89,20 +85,23 @@
                     android:host="rodnix.com.mx"
                     android:path="/sensus/" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="http"
-                    android:host="rodnix.com.mx"
-                    android:path="/sensus" />
-                <data
-                    android:scheme="http"
-                    android:host="rodnix.com.mx"
-                    android:path="/sensus/" />
-            </intent-filter>
         </activity>
+
+        <!-- FT-39: notificaciones push por FCM HTTP v1 -->
+        <service
+            android:name=".presentation.push.SensusMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/push_channel_id" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_sensus" />
     </application>
 
 </manifest>

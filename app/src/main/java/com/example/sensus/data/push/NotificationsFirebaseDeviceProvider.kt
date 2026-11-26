@@ -4,11 +4,11 @@ import android.content.Context
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.NotificationsDevice
+import com.example.sensus.domain.repository.NotificationsLocalStore
 import com.example.sensus.domain.repository.NotificationsPushDeviceProvider
 import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseException
-import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -18,17 +18,22 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
+/**
+ * Entrega el par (deviceId, token FCM) para `PUT /api/v1/users/device-token`.
+ *
+ * `deviceId` es el UUID estable de la instalacion ([NotificationsLocalStore.installationId]), nunca el token.
+ * El token es una credencial: no se guarda ni se escribe en logs.
+ */
 class NotificationsFirebaseDeviceProvider @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val store: NotificationsLocalStore
 ) : NotificationsPushDeviceProvider {
-    override suspend fun getDevice(): Result<NotificationsDevice> {
+    override suspend fun getDevice(token: String?): Result<NotificationsDevice> {
         return try {
-            val app = FirebaseApp.initializeApp(context) ?: return Result.Failure(
+            FirebaseApp.initializeApp(context) ?: return Result.Failure(
                 AppError.NotFound(NotificationsPushDeviceProvider.CONFIGURATION_UNAVAILABLE)
             )
-            val id = FirebaseInstallations.getInstance(app).id.awaitDeviceTask()
-            val token = FirebaseMessaging.getInstance().token.awaitDeviceTask()
-            if (id.isBlank() || token.isBlank()) Result.Failure(AppError.Generic()) else Result.Success(NotificationsDevice(id, token))
+            buildDevice(store.installationId(), resolveToken(token))
         } catch (exception: CancellationException) {
             throw exception
         } catch (_: FirebaseException) {
@@ -40,6 +45,14 @@ class NotificationsFirebaseDeviceProvider @Inject constructor(
         } catch (_: IllegalArgumentException) {
             Result.Failure(AppError.Generic())
         }
+    }
+
+    private suspend fun resolveToken(token: String?): String? = token?.takeIf { it.isNotBlank() } ?: FirebaseMessaging.getInstance().token.awaitDeviceTask()
+
+    private fun buildDevice(id: String, token: String?): Result<NotificationsDevice> = if (id.isBlank() || token.isNullOrBlank()) {
+        Result.Failure(AppError.Generic())
+    } else {
+        Result.Success(NotificationsDevice(id, token))
     }
 }
 

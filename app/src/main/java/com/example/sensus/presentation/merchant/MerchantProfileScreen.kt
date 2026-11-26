@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -75,21 +76,26 @@ import com.example.sensus.domain.model.HorarioDia
 import com.example.sensus.domain.model.MerchantCoordinates
 import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.presentation.common.AppearanceSettings
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSuccessBg
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.StatusGreen
 import java.util.Locale
 import kotlinx.coroutines.launch
 
 private const val STORE_AVATAR_ALPHA = 0.12f
 private const val EDIT_BTN_ALPHA = 0.1f
 private const val ERROR_BG_ALPHA = 0.1f
-private const val DIVIDER_COLOR_HEX = 0xFFF1F5F9
 private const val MIN_ADDR_LEN = 5
 private const val MAX_ADDR_LEN = 250
 private const val POSTAL_LEN = 5
@@ -272,7 +278,7 @@ private fun MerchantProfileListContent(
         display.photoErrorMessage?.let { err ->
             item {
                 Surface(shape = RoundedCornerShape(12.dp), color = SensusRed.copy(alpha = ERROR_BG_ALPHA), modifier = Modifier.fillMaxWidth()) {
-                    Text(text = err, fontSize = 12.sp, color = SensusRed, fontWeight = FontWeight.Medium, modifier = Modifier.padding(12.dp))
+                    Text(text = err, fontSize = 13.sp, color = SensusRed, fontWeight = FontWeight.Medium, modifier = Modifier.padding(12.dp))
                 }
             }
         }
@@ -294,6 +300,7 @@ private fun MerchantProfileListContent(
                 onEditClick = actions.onEditClick
             )
         }
+        item { AppearanceSettings() }
         item { SwitchToBuyerModeButton(onClick = actions.onSwitchToBuyer) }
     }
 }
@@ -340,7 +347,7 @@ private fun ProfileSuccessBanner(message: String) {
         Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(10.dp))
-            Text(text = message, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusSuccess)
+            Text(text = message, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         }
     }
 }
@@ -349,7 +356,7 @@ private fun ProfileSuccessBanner(message: String) {
 private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, isUpdatingPhoto: Boolean, onPhotoClick: () -> Unit, onEditClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onEditClick)
@@ -386,7 +393,7 @@ private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, i
                 Text(
                     text = ratingSummaryText,
                     fontSize = 11.sp,
-                    color = SensusPurple,
+                    color = SensusVioletInk,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -397,7 +404,7 @@ private fun MerchantProfileHeaderCard(storeName: String, store: MerchantStore, i
                 onClick = onEditClick,
                 modifier = Modifier.size(36.dp).clip(CircleShape).background(SensusPurple.copy(alpha = EDIT_BTN_ALPHA))
             ) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar datos del local", tint = SensusPurple, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar datos del local", tint = SensusVioletInk, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -424,7 +431,7 @@ private fun StoreProfileFacadeAvatar(photoUrl: String?, isUpdating: Boolean, onC
                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
             )
         } else {
-            Icon(imageVector = Icons.Default.Storefront, contentDescription = "Cambiar foto de tienda", tint = SensusPurple, modifier = Modifier.size(32.dp))
+            Icon(imageVector = Icons.Default.Storefront, contentDescription = "Cambiar foto de tienda", tint = SensusVioletInk, modifier = Modifier.size(32.dp))
         }
         if (isUpdating) {
             CircularProgressIndicator(color = SensusPurple, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
@@ -435,7 +442,7 @@ private fun StoreProfileFacadeAvatar(photoUrl: String?, isUpdating: Boolean, onC
                 modifier = Modifier.align(Alignment.BottomEnd).padding(3.dp).size(18.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(11.dp))
+                    Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(11.dp))
                 }
             }
         }
@@ -444,7 +451,7 @@ private fun StoreProfileFacadeAvatar(photoUrl: String?, isUpdating: Boolean, onC
 
 @Composable
 private fun MerchantOpenToggleCard(isOpen: Boolean, isUpdating: Boolean, onToggle: (Boolean) -> Unit) {
-    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -467,7 +474,7 @@ private fun MerchantOpenToggleCard(isOpen: Boolean, isUpdating: Boolean, onToggl
                 checked = isOpen,
                 enabled = !isUpdating,
                 onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = SensusSuccess)
+                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = StatusGreen)
             )
         }
     }
@@ -475,23 +482,23 @@ private fun MerchantOpenToggleCard(isOpen: Boolean, isUpdating: Boolean, onToggl
 
 @Composable
 private fun MerchantDetailsCard(storeAddress: String, storePostalCode: String, storeScheduleText: String, onEditClick: () -> Unit) {
-    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = SensusSurface), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "Información del establecimiento", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = "Información del establecimiento", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Text(
                     text = "Modificar",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = SensusPurple,
+                    color = SensusVioletInk,
                     modifier = Modifier.clickable(onClick = onEditClick)
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text(text = storeAddress, fontSize = 12.sp, color = SensusTextPrimary)
+                    Text(text = storeAddress, fontSize = 13.sp, color = SensusTextPrimary)
                     Text(text = "C.P. $storePostalCode (Coordenadas sincronizadas)", fontSize = 11.sp, color = SensusTextSecondary)
                 }
             }
@@ -503,9 +510,9 @@ private fun MerchantDetailsCard(storeAddress: String, storePostalCode: String, s
 @Composable
 private fun ProfileSimpleInfoRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(imageVector = icon, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(18.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(10.dp))
-        Text(text = text, fontSize = 12.sp, color = SensusTextSecondary)
+        Text(text = text, fontSize = 13.sp, color = SensusTextSecondary)
     }
 }
 
@@ -513,14 +520,14 @@ private fun ProfileSimpleInfoRow(icon: ImageVector, text: String) {
 private fun SwitchToBuyerModeButton(onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = SensusButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 14.dp)
     ) {
         Icon(imageVector = Icons.Default.SwapHoriz, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "Regresar al modo comprador", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(text = "Regresar al modo comprador", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
 }
 
@@ -540,7 +547,7 @@ private fun MerchantEditBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color.White,
+        containerColor = SensusSurface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         MerchantEditSheetLazyBody(
@@ -597,10 +604,10 @@ private fun MerchantEditSheetLazyBody(draft: MerchantEditDraft, editError: Strin
     ) {
         item {
             Column {
-                Text(text = "Editar datos del local comercial", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = "Editar datos del local comercial", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Text(
                     text = "Al modificar la dirección física se recalcularán automáticamente las coordenadas espaciales.",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
             }
@@ -620,25 +627,25 @@ private fun MerchantEditSheetLazyBody(draft: MerchantEditDraft, editError: Strin
             }
         }
         item {
-            HorizontalDivider(color = Color(DIVIDER_COLOR_HEX))
+            HorizontalDivider(color = SensusVioletBg)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "Horarios de atención por día", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+            Text(text = "Horarios de atención por día", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
         }
         items(draft.schedules) { schedule ->
             MerchantScheduleDayCard(schedule) { updated ->
                 actions.onDraftChange(draft.copy(schedules = draft.schedules.map { if (it.dia == updated.dia) updated else it }))
             }
         }
-        editError?.let { err -> item { Text(text = err, fontSize = 12.sp, color = SensusRed) } }
+        editError?.let { err -> item { Text(text = err, fontSize = 13.sp, color = SensusRed) } }
         item {
             Button(
                 onClick = actions.onSaveClick,
                 enabled = !isSaving,
-                shape = RoundedCornerShape(14.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
             ) {
                 Text(text = if (isSaving) "Guardando..." else "Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
@@ -669,14 +676,14 @@ private fun MerchantScheduleDayCard(schedule: HorarioDia, onUpdate: (HorarioDia)
     Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = SensusBackground), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = schedule.dia, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                Text(text = schedule.dia, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = schedule.estaCerrado,
                         onCheckedChange = { onUpdate(schedule.copy(estaCerrado = it)) },
-                        colors = CheckboxDefaults.colors(checkedColor = SensusPurple)
+                        colors = CheckboxDefaults.colors(checkedColor = SensusVioletInk)
                     )
-                    Text(text = "Cerrado", fontSize = 12.sp, color = SensusTextSecondary)
+                    Text(text = "Cerrado", fontSize = 13.sp, color = SensusTextSecondary)
                 }
             }
             if (!schedule.estaCerrado) {
@@ -686,7 +693,7 @@ private fun MerchantScheduleDayCard(schedule: HorarioDia, onUpdate: (HorarioDia)
                         onValueChange = { onUpdate(schedule.copy(horaApertura = it)) },
                         label = { Text("Abre", fontSize = 11.sp) },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
                     OutlinedTextField(
@@ -694,7 +701,7 @@ private fun MerchantScheduleDayCard(schedule: HorarioDia, onUpdate: (HorarioDia)
                         onValueChange = { onUpdate(schedule.copy(horaCierre = it)) },
                         label = { Text("Cierra", fontSize = 11.sp) },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
                 }

@@ -6,4 +6,6 @@ interface MapPreferencesRepository {
     fun peekCachedLayer(): MapLayer?
     suspend fun getPreferredLayer(): MapLayer
     suspend fun savePreferredLayer(layer: MapLayer)
+    suspend fun getPreferredRadiusMeters(): Int? = null
+    suspend fun savePreferredRadiusMeters(radiusMeters: Int) = Unit
 }

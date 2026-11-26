@@ -13,6 +13,7 @@ import android.location.Location
 import android.text.TextPaint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -21,6 +22,10 @@ import com.example.sensus.R
 import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.UserLocation
+import com.example.sensus.theme.BrandViolet
+import com.example.sensus.theme.BrandVioletDark
+import com.example.sensus.theme.Ink
+import com.example.sensus.theme.LightBorder
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -249,7 +254,7 @@ object OsmMapUtils {
         val center = sizePx / 2f
 
         val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.parseColor("#6E4DDB")
+            color = BrandViolet.toArgb()
             alpha = CAT_HALO_ALPHA
         }
         canvas.drawCircle(center, center, center * CAT_HALO_RATIO, haloPaint)
@@ -261,7 +266,7 @@ object OsmMapUtils {
         canvas.drawCircle(center, center, center * CAT_CIRCLE_RATIO, bgPaint)
 
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.parseColor("#6E4DDB")
+            color = BrandViolet.toArgb()
             style = Paint.Style.STROKE
             strokeWidth = CAT_BORDER_WIDTH_DP * density
         }
@@ -313,20 +318,20 @@ private fun formatAddressLabel(area: String?, city: String?, admin: String?): St
 }
 
 private fun createPinTextPaint(density: Float, isSelected: Boolean): TextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = if (isSelected) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#1E293B")
+    color = if (isSelected) android.graphics.Color.WHITE else Ink.toArgb()
     textSize = PIN_TEXT_SIZE_SP * density
     typeface = Typeface.DEFAULT_BOLD
 }
 
 private fun createPinPricePaint(density: Float, isSelected: Boolean): TextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = if (isSelected) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#6E4DDB")
+    color = if (isSelected) android.graphics.Color.WHITE else BrandViolet.toArgb()
     textSize = PIN_PRICE_SIZE_SP * density
     typeface = Typeface.DEFAULT_BOLD
 }
 
 private fun drawPinBackgroundAndBorder(canvas: Canvas, density: Float, widthPx: Int, heightPx: Int, isSelected: Boolean) {
     val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (isSelected) android.graphics.Color.parseColor("#6E4DDB") else android.graphics.Color.WHITE
+        color = if (isSelected) BrandViolet.toArgb() else android.graphics.Color.WHITE
         style = Paint.Style.FILL
     }
     val rect = RectF(PIN_RECT_INSET, PIN_RECT_INSET, widthPx - PIN_RECT_INSET, heightPx - PIN_RECT_INSET)
@@ -334,7 +339,7 @@ private fun drawPinBackgroundAndBorder(canvas: Canvas, density: Float, widthPx: 
     canvas.drawRoundRect(rect, corner, corner, bgPaint)
 
     val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (isSelected) android.graphics.Color.parseColor("#5A3CB8") else android.graphics.Color.parseColor("#E2E8F0")
+        color = if (isSelected) BrandVioletDark.toArgb() else LightBorder.toArgb()
         style = Paint.Style.STROKE
         strokeWidth = PIN_BORDER_WIDTH_DP * density
     }
@@ -359,11 +364,11 @@ private fun drawPinPointerTail(canvas: Canvas, density: Float, bounds: PinTailBo
         close()
     }
     val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (isSelected) android.graphics.Color.parseColor("#6E4DDB") else android.graphics.Color.WHITE
+        color = if (isSelected) BrandViolet.toArgb() else android.graphics.Color.WHITE
         style = Paint.Style.FILL
     }
     val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (isSelected) android.graphics.Color.parseColor("#5A3CB8") else android.graphics.Color.parseColor("#E2E8F0")
+        color = if (isSelected) BrandVioletDark.toArgb() else LightBorder.toArgb()
         style = Paint.Style.STROKE
         strokeWidth = PIN_BORDER_WIDTH_DP * density
     }

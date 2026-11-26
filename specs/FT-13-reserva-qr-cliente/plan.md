@@ -4,10 +4,12 @@
 2. Materializar contratos publicados con serialización explícita; fechas UTC a epoch-ms.
 3. Implementar repositorio fail closed y casos de uso puros; Hilt ClaimsModule.
 4. MVI y UI manual/confirmación explícita, recursos strings_claims.xml.
-5. Pruebas nuevas JUnit4 y Compose sin modificar suites compartidas.
+5. Cubrir el contrato en JUnit4 y Compose, y la retirada de una unidad en las pruebas de CartRepository y ClaimOfferViewModel.
 6. Integración principal añade claimsApi sin logs, ZXing core y navegación; ejecuta gates secuenciales.
 
-No GET, cancelación, cantidades múltiples, idempotency header inventado ni persistencia plaintext.
+7. Al confirmar la creación, ClaimOfferViewModel solicita a CartRepository retirar una unidad de la oferta confirmada antes de emitir el efecto de UI. La operación comparte el bloqueo de las demás escrituras de bolsa.
+
+El cliente no usa la consulta individual GET por claimId ni implementa cancelación. El POST continúa apartando una unidad por confirmación y los códigos siguen en memoria.
 Verificación pendiente: compileDebugKotlin, testDebugUnitTest, compileDebugAndroidTestSources, lint,
 detekt, ktlintCheck, koverVerify y scripts check_sdd/check_layers/check_endpoints/check_secrets/check_coverage --min 80.
 

@@ -43,6 +43,7 @@ specs/README.md, Memoria.md, CHECKLIST_PR.md
 - **Given** búsqueda de mocks en `app/src/main` **When** se inspecciona el código fuente **Then** existen 0 referencias a `MockDataProvider`.
 - **Given** una compilación Release (`isMinifyEnabled = true`) **When** se validan llamadas HTTP **Then** `HttpLoggingInterceptor` no registra tokens JWT ni cuerpos PII.
 - **Given** la suite completa local y en GitHub Actions **When** se ejecuta CI **Then** los 5 gates Python, `detekt`, `ktlintCheck`, `lint`, CodeQL, Semgrep, pruebas unitarias (`>= 80%` Kover) y `compileDebugAndroidTestSources` terminan en verde.
+- La candidata de distribución debe ser compatible con dispositivos de páginas de 16 KB y abrir la base cifrada al actualizar desde la versión anterior.
 
 ## 6. Plan de pruebas
 

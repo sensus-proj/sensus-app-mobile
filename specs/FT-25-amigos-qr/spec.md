@@ -76,3 +76,7 @@ presentation/
 | Estado | Revisor | Fecha | Evidencia |
 |---|---|---|---|
 | En revision | Pendiente revisión de PR | 2026-11-16 | Implementación alineada con `sensus-back` Spec `050` y `sensus-landing`; pruebas locales en verde |
+
+### Validación de enlaces
+
+El lector admite códigos manuales y enlaces con rutas de invitación exactas. Rechaza enlaces con parámetros de invitación repetidos, información de usuario en la autoridad o puertos explícitos.

@@ -9,16 +9,19 @@ import com.example.sensus.data.local.db.dao.UserSessionDao
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 
 class SessionRepositoryImpl(
     private val securePreferences: SecurePreferences,
-    private val userSessionDao: UserSessionDao? = null,
-    private val pendingSyncDao: PendingSyncDao? = null,
-    private val offerDao: OfferDao? = null,
+    private val userSessionDao: () -> UserSessionDao? = { null },
+    private val pendingSyncDao: () -> PendingSyncDao? = { null },
+    private val offerDao: () -> OfferDao? = { null },
     private val authApiService: AuthApiService? = null
 ) : SessionRepository {
 
@@ -93,21 +96,23 @@ class SessionRepositoryImpl(
      */
     override suspend fun clearSession() {
         try {
-            authApiService?.logout()
+            authApiService?.logout(null)
         } catch (_: Exception) {
             // Ignorar errores de red para asegurar fail-safe en cliente
         }
         clearLocalSession()
     }
 
-    override suspend fun clearLocalSession() {
+    override suspend fun clearLocalSession() = withContext(NonCancellable) {
         securePreferences.clearAll()
         try {
-            userSessionDao?.clearSession()
-            pendingSyncDao?.clearAll()
-            offerDao?.clearOffers()
+            withContext(Dispatchers.IO) {
+                userSessionDao()?.clearSession()
+                pendingSyncDao()?.clearAll()
+                offerDao()?.clearOffers()
+            }
         } catch (_: Exception) {
-            // Degradación segura si los DAOs no están disponibles en el hilo actual
+            // Degradación segura si la base local no se puede abrir.
         }
         SensusAuthManager.logout()
         syncState()

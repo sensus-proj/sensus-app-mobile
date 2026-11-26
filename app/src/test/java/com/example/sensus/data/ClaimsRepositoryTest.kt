@@ -2,12 +2,15 @@ package com.example.sensus.data
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.data.local.EncryptedClaimIndex
 import com.example.sensus.data.remote.api.ClaimsApiService
+import com.example.sensus.data.remote.dto.ClaimDetailDto
 import com.example.sensus.data.remote.dto.ClaimOfferResultDto
 import com.example.sensus.data.repository.ClaimsRepositoryImpl
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.io.IOException
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.HttpException
@@ -40,6 +44,33 @@ class ClaimsRepositoryTest {
         }
         val result = repository().createClaim("offer") as Result.Failure
         assertTrue(result.error is AppError.Unauthorized)
+    }
+
+    @Test
+    fun confirmedReservationRestoresFromAccountIndexThroughReadOnlyDetail() = runTest {
+        val index = mockk<EncryptedClaimIndex>()
+        state.value = state.value.copy(activeEmail = "owner@example.invalid")
+        every { sessions.sessionState } returns state
+        val storedIds = mutableMapOf<Pair<String, String>, String>()
+        every { index.rememberClaimId(any(), any(), any()) } answers {
+            storedIds[firstArg<String>() to secondArg<String>()] = thirdArg()
+        }
+        every { index.findClaimId(any(), any()) } answers { storedIds[firstArg<String>() to secondArg<String>()] }
+        val details = ClaimDetailDto("claim", "offer", "Active", "2099-01-01T00:00:00Z", "signed")
+        coEvery { api.getClaim("claim") } returns Response.success(details)
+        coEvery { api.createClaim("offer") } returns Response.success(dto)
+        val repo = ClaimsRepositoryImpl(api, sessions, index)
+        assertTrue(repo.createClaim("offer") is Result.Success)
+        assertEquals("signed", repo.restoreClaim("offer").getOrNull()?.qrPayload)
+        coEvery { api.getClaim("claim") } returns Response.success(details.copy(status = "Redeemed"))
+        assertTrue(repo.restoreClaim("offer") is Result.Failure)
+        coEvery { api.getClaim("claim") } returns Response.success(details.copy(offerId = "other"))
+        assertTrue(repo.restoreClaim("offer") is Result.Failure)
+        state.value = state.value.copy(activeEmail = "other@example.invalid")
+        coEvery { api.getMyClaims() } returns Response.error(404, "".toResponseBody())
+        assertTrue(repo.restoreClaim("offer") is Result.Failure)
+        coVerify(exactly = 1) { api.createClaim(any()) }
+        coVerify(exactly = 3) { api.getClaim("claim") }
     }
 
     @Test

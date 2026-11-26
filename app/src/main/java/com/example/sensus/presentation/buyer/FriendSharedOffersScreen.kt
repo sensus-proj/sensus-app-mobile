@@ -55,14 +55,18 @@ import com.example.sensus.domain.model.ConnectedFriend
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.SharedOfferMessage
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -146,7 +150,7 @@ private fun FriendSharedOffersThreadBody(
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(threadOffers, key = { it.id }) { item ->
@@ -164,7 +168,7 @@ private fun FriendSharedOffersThreadBody(
 
 @Composable
 private fun FriendThreadTopBar(friend: ConnectedFriend, onNavigateBack: () -> Unit, onRefresh: () -> Unit) {
-    Surface(color = Color.White, shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = SensusSurface, shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -188,12 +192,12 @@ private fun FriendThreadTopBar(friend: ConnectedFriend, onNavigateBack: () -> Un
                 )
                 Text(
                     text = "Ofertas compartidas entre ustedes",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
             }
             IconButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = "Actualizar ofertas", tint = SensusPurple)
+                Icon(Icons.Default.Refresh, contentDescription = "Actualizar ofertas", tint = SensusVioletInk)
             }
         }
     }
@@ -214,7 +218,7 @@ private fun SharedOfferBubble(item: SharedOfferMessage, friend: ConnectedFriend,
         )
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = if (isSentByMe) SensusVioletBg else Color.White),
+            colors = CardDefaults.cardColors(containerColor = if (isSentByMe) SensusVioletBg else SensusSurface),
             border = BorderStroke(1.dp, if (isSentByMe) SensusPurple.copy(alpha = 0.25f) else SensusCardBorder),
             modifier = Modifier
                 .widthIn(max = BUBBLE_MAX_WIDTH_DP.dp)
@@ -243,13 +247,13 @@ private fun SharedOfferBubbleDetails(item: SharedOfferMessage) {
             text = item.storeName,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color = SensusPurple,
+            color = SensusVioletInk,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
             text = item.offerTitle,
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = SensusTextPrimary,
             maxLines = 2,
@@ -262,24 +266,24 @@ private fun SharedOfferBubbleDetails(item: SharedOfferMessage) {
             Text(
                 text = formatPrice(item.discountedPrice),
                 fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary
             )
             if (item.originalPrice > item.discountedPrice) {
                 Text(
                     text = formatPrice(item.originalPrice),
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextMuted,
                     textDecoration = TextDecoration.LineThrough
                 )
             }
             if (item.discountPercentage > 0) {
-                Surface(shape = RoundedCornerShape(6.dp), color = SensusDiscountTag.copy(alpha = 0.14f)) {
+                Surface(shape = RoundedCornerShape(6.dp), color = SensusDiscountTag) {
                     Text(
                         text = "-${item.discountPercentage}%",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = SensusDiscountTag,
+                        color = Ink,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
@@ -293,7 +297,7 @@ private fun SharedOfferBubbleDetails(item: SharedOfferMessage) {
 private fun EmptySharedOffersNotice(friendName: String, onExploreOffers: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -302,7 +306,7 @@ private fun EmptySharedOffersNotice(friendName: String, onExploreOffers: () -> U
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(Icons.Default.LocalOffer, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(34.dp))
+            Icon(Icons.Default.LocalOffer, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(34.dp))
             Text(text = "Sin ofertas compartidas aún", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
             Text(
                 text = "Abre cualquier oferta y pulsa Compartir para enviársela directo a $friendName aquí.",
@@ -312,7 +316,7 @@ private fun EmptySharedOffersNotice(friendName: String, onExploreOffers: () -> U
             Button(
                 onClick = onExploreOffers,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-                shape = RoundedCornerShape(12.dp)
+                shape = SensusButtonShape
             ) {
                 Text(text = "Explorar ofertas", color = Color.White, fontWeight = FontWeight.Bold)
             }
@@ -322,7 +326,7 @@ private fun EmptySharedOffersNotice(friendName: String, onExploreOffers: () -> U
 
 @Composable
 private fun FriendThreadBottomHint() {
-    Surface(color = Color.White, shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = SensusSurface, shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -332,7 +336,7 @@ private fun FriendThreadBottomHint() {
         ) {
             Text(
                 text = "Solo ofertas: comparte productos desde el detalle de cada oferta.",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary
             )
         }

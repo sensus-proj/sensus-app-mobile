@@ -11,4 +11,20 @@
     <string name="cart_one_unit_contract">El apartado disponible reserva una unidad de una oferta. Selecciona una oferta y una unidad para continuar.</string>
     <string name="cart_start_claim">Continuar al apartado</string>
     <string name="detail_view_active_claim">Ver apartado activo</string>
+    <string name="detail_sold_out">Oferta agotada</string>
+    <string name="detail_expired">Oferta vencida</string>
+    <plurals name="detail_low_stock">
+        <item quantity="one">Solo queda %1$d unidad</item>
+        <item quantity="other">Solo quedan %1$d unidades</item>
+    </plurals>
+    <string name="offer_filters_title">Filtros</string>
+    <string name="offer_filters_max_price">Precio máximo (MXN)</string>
+    <string name="offer_filters_min_discount">Descuento mínimo (%)</string>
+    <string name="offer_filters_sort">Ordenar por</string>
+    <string name="offer_filters_distance">Distancia</string>
+    <string name="offer_filters_discount">Descuento</string>
+    <string name="offer_filters_price">Precio</string>
+    <string name="offer_filters_apply">Aplicar filtros</string>
+    <string name="offer_filters_clear">Limpiar filtros</string>
+    <string name="offer_filters_invalid">Introduce un valor válido</string>
 </resources>

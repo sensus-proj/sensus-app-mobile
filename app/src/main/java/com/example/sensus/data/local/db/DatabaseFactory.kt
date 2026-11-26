@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.room.Room
 import androidx.room.migration.Migration
 import com.example.sensus.data.local.security.DatabaseKeyManager
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 object DatabaseFactory {
     private const val DATABASE_NAME = "sensus_encrypted.db"
@@ -54,8 +54,9 @@ object DatabaseFactory {
     }
 
     private fun createRoomDatabase(context: Context, keyManager: DatabaseKeyManager): SensusDatabase {
+        System.loadLibrary("sqlcipher")
         val passphrase = keyManager.getOrCreatePassphrase()
-        val factory = SupportFactory(passphrase)
+        val factory = SupportOpenHelperFactory(passphrase)
 
         return Room.databaseBuilder(
             context,

@@ -17,6 +17,13 @@ class SecurePreferencesClearAllTest {
     private val prefs = SecurePreferences(store)
 
     @Test
+    fun claimIndexRemainsEmptyWhenEncryptionIsUnavailable() {
+        prefs.claimIndex.rememberClaimId("test@example.invalid", "offer", "claim")
+        assertNull(prefs.claimIndex.findClaimId("test@example.invalid", "offer"))
+        assertEquals(emptyMap<String, Any?>(), store.data)
+    }
+
+    @Test
     fun clearAll_preservesDatabasePassphrase() {
         prefs.saveString(SecurePreferences.KEY_DB_PASSPHRASE, "clave-sqlcipher-base64")
         prefs.saveAuthToken("jwt")

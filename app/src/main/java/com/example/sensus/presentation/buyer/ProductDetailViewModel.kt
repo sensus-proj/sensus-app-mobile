@@ -4,8 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.ContentReportInput
+import com.example.sensus.domain.model.OfferDetails
 import com.example.sensus.domain.model.ReportReason
 import com.example.sensus.domain.model.ReportTargetType
+import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
 import com.example.sensus.domain.usecase.GetOfferAlternativesUseCase
 import com.example.sensus.domain.usecase.GetOfferDetailUseCase
 import com.example.sensus.domain.usecase.RegisterOfferViewUseCase
@@ -15,7 +17,10 @@ import com.example.sensus.presentation.base.MviViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+
+private const val DETAIL_LOOKUP_RADIUS_METERS = 1000
 
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(
@@ -23,7 +28,8 @@ class ProductDetailViewModel @Inject constructor(
     private val registerView: RegisterOfferViewUseCase,
     private val getAlternatives: GetOfferAlternativesUseCase? = null,
     private val toggleLikeUseCase: ToggleOfferLikeUseCase? = null,
-    private val submitReportUseCase: SubmitContentReportUseCase? = null
+    private val submitReportUseCase: SubmitContentReportUseCase? = null,
+    private val nearbyMerchants: GetNearbyMerchantsUseCase? = null
 ) : MviViewModel<ProductDetailViewState, ProductDetailViewIntent, ProductDetailViewEffect>(ProductDetailViewState()) {
     private var loadJob: Job? = null
     private val viewedOffers = mutableSetOf<String>()
@@ -39,6 +45,15 @@ class ProductDetailViewModel @Inject constructor(
             ProductDetailViewIntent.CloseReport -> updateState { copy(showReportDialog = false, reportError = null) }
             is ProductDetailViewIntent.SubmitReport -> submitReport(intent.offerId, intent.reason, intent.details)
         }
+    }
+
+    private suspend fun loadMerchantProfile(loaded: OfferDetails) {
+        val offer = loaded.offer
+        if (offer.merchantId.isNullOrBlank() || !offer.latitude.isFinite() || !offer.longitude.isFinite()) return
+        val profiles = nearbyMerchants?.invoke(offer.latitude, offer.longitude, DETAIL_LOOKUP_RADIUS_METERS, isGuest = true)?.getOrNull()
+        val profile = profiles?.firstOrNull { it.id == offer.merchantId } ?: return
+        kotlin.coroutines.coroutineContext.ensureActive()
+        updateState { copy(details = loaded.copy(offer = offer.copy(merchantProfile = profile))) }
     }
 
     private fun load(offerId: String, initialLikesCount: Int, initialLiked: Boolean) {
@@ -68,6 +83,7 @@ class ProductDetailViewModel @Inject constructor(
                     if (viewedOffers.add(offerId)) {
                         viewModelScope.launch { registerView(offerId) }
                     }
+                    loadMerchantProfile(result.data)
                     if (result.data.offer.unitsLeft <= 0 && getAlternatives != null) {
                         val altRes = getAlternatives(offerId)
                         if (altRes is Result.Success) {

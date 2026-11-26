@@ -50,8 +50,11 @@ class MapPreferencesRepositoryTest {
         every { dao.getByKey(MapPreferencesRepositoryImpl.KEY_MAP_LAYER) } returns
             UserPreferenceEntity("map_layer", "SATELLITE", 10L)
 
-        val repo = MapPreferencesRepositoryImpl(dao, Dispatchers.Unconfined)
+        val resolveDao = mockk<() -> UserPreferenceDao>()
+        every { resolveDao() } returns dao
+        val repo = MapPreferencesRepositoryImpl(resolveDao, Dispatchers.Unconfined)
         assertNull(repo.peekCachedLayer())
+        verify(exactly = 0) { resolveDao() }
 
         val first = repo.getPreferredLayer()
         val second = repo.getPreferredLayer()
@@ -59,6 +62,7 @@ class MapPreferencesRepositoryTest {
         assertEquals(MapLayer.SATELLITE, first)
         assertEquals(MapLayer.SATELLITE, second)
         assertEquals(MapLayer.SATELLITE, repo.peekCachedLayer())
+        verify(exactly = 1) { resolveDao() }
         verify(exactly = 1) { dao.getByKey(MapPreferencesRepositoryImpl.KEY_MAP_LAYER) }
     }
 
@@ -69,7 +73,7 @@ class MapPreferencesRepositoryTest {
         every { dao.upsert(capture(savedSlot)) } returns Unit
         every { dao.getByKey(MapPreferencesRepositoryImpl.KEY_MAP_LAYER) } throws IllegalStateException("locked")
 
-        val failingRepo = MapPreferencesRepositoryImpl(dao, Dispatchers.Unconfined)
+        val failingRepo = MapPreferencesRepositoryImpl({ dao }, Dispatchers.Unconfined)
         assertEquals(MapLayer.STANDARD, failingRepo.getPreferredLayer())
 
         val saveUseCase = SavePreferredMapLayerUseCase(failingRepo)

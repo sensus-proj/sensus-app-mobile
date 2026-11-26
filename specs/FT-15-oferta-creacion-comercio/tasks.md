@@ -38,3 +38,11 @@
 - La integración con los contratos desplegados del backend y la revisión formal de la slice siguen pendientes.
 - Cambios únicamente locales, sin commit, push, tag ni modificación de configuración de escáneres.
 - [x] T15.15 Añadir `apiCode` a `StoreCategory` y enviarlo en `CreateOfferRequest.category` (RF-15-07, spec backend 034 FR-034-08); mapear de vuelta código → texto visible al leer ofertas — verif: `./gradlew.bat testDebugUnitTest` (364/364 PASS, Kover 80.90%, `detekt`/`ktlintCheck`/`lint` PASS)
+
+## Avance en movil_Rocio — 2026-11-21
+
+- Se recuperó el mapeo T15.15 de 0643cca. La petición de publicación usa los códigos del catálogo y la lectura de ofertas admite tanto códigos como nombres históricos.
+- El caso de uso rechaza foto ausente o vacía y categoría genérica antes de comprimir, subir o crear. Se vuelve a comprobar la vigencia al finalizar la carga moderada.
+- Se movió la escritura de la oferta confirmada a Dispatchers.IO para que Room la admita al publicar desde la pantalla. Se agregaron regresiones de la petición HTTP, la conservación de stock y el hilo de escritura.
+- Sigue pendiente ejecutar pruebas instrumentadas en dispositivo y publicar una oferta de prueba contra el backend desplegado en un entorno autorizado.
+- Validación local: 449 pruebas unitarias sin fallos, Kover Debug 80.72 %, compilación de app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.

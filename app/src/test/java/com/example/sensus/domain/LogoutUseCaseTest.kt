@@ -53,6 +53,17 @@ class LogoutUseCaseTest {
     }
 
     @Test
+    fun invoke_clearsSessionThroughDefaultRepositoryImplementation() = runTest {
+        val repository = object : SessionRepository by sessionRepository {
+            override suspend fun clearLocalSession() = super<SessionRepository>.clearLocalSession()
+        }
+        coEvery { authRepository.logout() } returns Result.Success(Unit)
+
+        assertTrue(LogoutUseCase(authRepository, repository)() is Result.Success)
+        coVerify(exactly = 1) { sessionRepository.clearSession() }
+    }
+
+    @Test
     fun invoke_clearsLocalSessionEvenWhenRemoteLogoutThrows() = runTest {
         coEvery { authRepository.logout() } throws IOException("Timeout")
 
@@ -60,6 +71,30 @@ class LogoutUseCaseTest {
 
         assertTrue(result is Result.Success)
         coVerify(exactly = 1) { authRepository.logout() }
+        coVerify(exactly = 1) { sessionRepository.clearLocalSession() }
+    }
+
+    @Test
+    fun invoke_sendsInstallationDeviceIdAndForgetsUserScopedPushData() = runTest {
+        var cleared = false
+        val withDevice = LogoutUseCase(authRepository, sessionRepository, { "install-uuid-fixture" }, { cleared = true })
+        coEvery { authRepository.logout("install-uuid-fixture") } returns Result.Success(Unit)
+
+        withDevice()
+
+        coVerifyOrder {
+            authRepository.logout("install-uuid-fixture")
+            sessionRepository.clearLocalSession()
+        }
+        assertTrue(cleared)
+    }
+
+    @Test
+    fun invoke_stillLogsOutWhenDeviceIdIsUnavailable() = runTest {
+        val failingDevice = LogoutUseCase(authRepository, sessionRepository, { error("store unavailable") })
+
+        assertTrue(failingDevice() is Result.Success)
+        coVerify(exactly = 1) { authRepository.logout(null) }
         coVerify(exactly = 1) { sessionRepository.clearLocalSession() }
     }
 }

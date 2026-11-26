@@ -26,9 +26,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.sensus.R
-import com.example.sensus.theme.SensusSplashYellow
 import java.io.IOException
 import kotlinx.coroutines.delay
 
@@ -95,7 +95,7 @@ fun SplashScreen(modifier: Modifier = Modifier, onSplashFinished: () -> Unit) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SensusSplashYellow)
+            .background(colorResource(R.color.sensus_video_matte))
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
@@ -116,7 +116,7 @@ fun SplashScreen(modifier: Modifier = Modifier, onSplashFinished: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(SensusSplashYellow)
+                    .background(colorResource(R.color.sensus_video_matte))
             )
         }
     }

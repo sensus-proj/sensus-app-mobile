@@ -14,6 +14,7 @@ import com.example.sensus.data.location.AndroidReverseGeocodingRepository
 import com.example.sensus.data.location.FusedLocationRepository
 import com.example.sensus.data.media.AndroidImageCompressor
 import com.example.sensus.data.moderation.ImageModerationService
+import com.example.sensus.data.push.NotificationsInstallationStore
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.repository.AiChatRepositoryImpl
@@ -33,6 +34,7 @@ import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.MerchantRepository
+import com.example.sensus.domain.repository.NotificationsLocalStore
 import com.example.sensus.domain.repository.ProfileRepository
 import com.example.sensus.domain.repository.ReverseGeocodingRepository
 import com.example.sensus.domain.repository.SavedOffersRepository
@@ -103,9 +105,9 @@ class SensusContainer(
     val sessionRepository: SessionRepository by lazy {
         SessionRepositoryImpl(
             securePreferences = securePreferences,
-            userSessionDao = userSessionDao,
-            pendingSyncDao = pendingSyncDao,
-            offerDao = offerDao,
+            userSessionDao = { userSessionDao },
+            pendingSyncDao = { pendingSyncDao },
+            offerDao = { offerDao },
             authApiService = networkClient.authApi
         )
     }
@@ -162,7 +164,7 @@ class SensusContainer(
     }
 
     val mapPreferencesRepository: MapPreferencesRepository by lazy {
-        MapPreferencesRepositoryImpl(userPreferenceDao)
+        MapPreferencesRepositoryImpl({ userPreferenceDao })
     }
 
     val savedOffersRepository: SavedOffersRepository by lazy {
@@ -182,7 +184,18 @@ class SensusContainer(
 
     // Sprint 1 Use Cases
     val loginUseCase by lazy { LoginUseCase(authRepository) }
-    val logoutUseCase by lazy { LogoutUseCase(authRepository, sessionRepository) }
+
+    // FT-39: datos de push por instalación (UUID estable); sobreviven al cierre de sesión.
+    val notificationsLocalStore: NotificationsLocalStore by lazy { NotificationsInstallationStore(context.applicationContext) }
+
+    val logoutUseCase by lazy {
+        LogoutUseCase(
+            authRepository = authRepository,
+            sessionRepository = sessionRepository,
+            pushDeviceId = { notificationsLocalStore.installationId() },
+            onLoggedOut = { notificationsLocalStore.clearUserScoped() }
+        )
+    }
     val registerUseCase by lazy { RegisterUseCase(authRepository) }
     val requestPasswordResetUseCase by lazy { RequestPasswordResetUseCase(authRepository) }
     val resetPasswordUseCase by lazy { ResetPasswordUseCase(authRepository) }

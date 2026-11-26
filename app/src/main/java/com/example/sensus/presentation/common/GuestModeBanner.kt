@@ -23,10 +23,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensus.R
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
@@ -55,20 +57,20 @@ fun GuestModeBanner(onRegisterClick: () -> Unit, modifier: Modifier = Modifier) 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 Icon(
                     imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "Modo invitado",
+                    contentDescription = null,
                     tint = SensusPurple,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Modo invitado (radio 2 km)",
+                        text = stringResource(R.string.ft23_guest_title),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = SensusTextPrimary
                     )
                     Text(
-                        text = "Regístrate en 30 s: radio 5 km, promociones y comunidad",
+                        text = stringResource(R.string.ft23_guest_description),
                         fontSize = 11.sp,
                         color = SensusTextSecondary
                     )
@@ -82,7 +84,7 @@ fun GuestModeBanner(onRegisterClick: () -> Unit, modifier: Modifier = Modifier) 
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 modifier = Modifier.heightIn(min = 48.dp)
             ) {
-                Text(text = "Registrarme", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = stringResource(R.string.ft23_guest_action), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
@@ -94,4 +96,9 @@ internal fun GuestModeBannerPreview() {
     SensusTheme {
         GuestModeBanner(onRegisterClick = {})
     }
+}
+
+@Composable
+internal fun GuestModeBannerIfVisible(visible: Boolean, onRegisterClick: () -> Unit, modifier: Modifier = Modifier) {
+    if (visible) GuestModeBanner(onRegisterClick, modifier)
 }

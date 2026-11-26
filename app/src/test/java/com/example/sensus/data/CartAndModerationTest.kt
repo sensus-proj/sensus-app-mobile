@@ -2,6 +2,7 @@ package com.example.sensus.data
 
 import com.example.sensus.data.cart.CartManager
 import com.example.sensus.data.moderation.ImageModerationService
+import com.example.sensus.data.repository.CartRepositoryImpl
 import com.example.sensus.domain.model.AddToCartResult
 import com.example.sensus.domain.model.ModerationResult
 import kotlinx.coroutines.test.runTest
@@ -60,6 +61,35 @@ class CartAndModerationTest {
     // ==========================================
     // CartManager Tests (Mismo comercio y límites)
     // ==========================================
+
+    @Test
+    fun removesExactlyOneReservedUnitAndPreservesOtherOffers() {
+        val repository = CartRepositoryImpl()
+        repository.addToCart(offerStoreA1, 2)
+        repository.addToCart(offerStoreA2, 3)
+        val before = repository.cart.value
+
+        repository.removeReservedUnit(offerStoreB.id)
+        assertEquals(before, repository.cart.value)
+
+        repository.removeReservedUnit(offerStoreA1.id)
+        assertEquals(before.storeName, repository.cart.value.storeName)
+        assertEquals(listOf(1, 3), repository.cart.value.items.map { it.quantity })
+
+        repository.removeReservedUnit(offerStoreA1.id)
+        assertEquals(before.items.last(), repository.cart.value.items.single())
+    }
+
+    @Test
+    fun removingTheLastReservedUnitResetsTheEmptyCart() {
+        val repository = CartRepositoryImpl()
+        repository.addToCart(offerStoreA1)
+
+        repository.removeReservedUnit(offerStoreA1.id)
+
+        assertTrue(repository.cart.value.isEmpty)
+        assertEquals(null, repository.cart.value.storeName)
+    }
 
     @Test
     fun addToCart_shouldAddItems_fromSameStore() {

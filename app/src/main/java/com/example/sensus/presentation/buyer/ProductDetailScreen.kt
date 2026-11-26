@@ -2,7 +2,6 @@ package com.example.sensus.presentation.buyer
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,9 +25,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,7 +35,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
+import com.example.sensus.domain.model.OfferDetails
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.domain.model.publishedHours
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.presentation.common.NavigationIntentUtils
 import com.example.sensus.theme.SensusBackground
@@ -44,6 +45,7 @@ import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.sensusTextButtonColors
 
 @Composable
 fun ProductDetailScreen(
@@ -139,16 +141,21 @@ private fun ShareOfferEffectsHandler(friendsViewModel: FriendsViewModel, onShare
 
 @Composable
 internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewState, actions: ProductDetailActions, modifier: Modifier = Modifier) {
-    val current = state.details?.offer?.copy(distanceMeters = offer.distanceMeters) ?: offer.copy(isVerified = false, rating = 0.0, reviewCount = 0)
+    val detailOffer = state.details?.offer
+    val current = detailOffer?.copy(
+        distanceMeters = offer.distanceMeters,
+        merchantProfile = detailOffer.merchantProfile ?: offer.merchantProfile?.takeIf { it.id == detailOffer.merchantId }
+    ) ?: offer.copy(isVerified = false, rating = 0.0, reviewCount = 0)
     val canClaim = state.details?.canClaim(System.currentTimeMillis()) == true
     val context = LocalContext.current
     var showAddedNotice by remember(offer.id) { mutableStateOf(false) }
-    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Column(modifier = modifier.fillMaxSize().background(SensusBackground)) {
         ProductDetailScrollSection(
             offer = current,
             showAddedNotice = showAddedNotice,
             state = state,
-            actions = actions
+            actions = actions,
+            modifier = Modifier.weight(1f)
         )
         ProductDetailBottomBar(
             offer = current,
@@ -156,20 +163,21 @@ internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewS
             actions = ProductBottomBarActions(
                 enabled = canClaim,
                 onAddToCart = {
-                    actions.onAddToCart(current, state.quantity)
-                    showAddedNotice = true
-                    Toast.makeText(context, context.getString(R.string.detail_added_to_cart), Toast.LENGTH_SHORT).show()
+                    if (state.details?.canClaim(System.currentTimeMillis()) == true) {
+                        actions.onAddToCart(current, state.quantity)
+                        showAddedNotice = true
+                        Toast.makeText(context, context.getString(R.string.detail_added_to_cart), Toast.LENGTH_SHORT).show()
+                    }
                 },
                 onApartarDirect = {
                     if (state.details?.hasActiveClaim == true) {
                         actions.navigation.onViewActiveClaim(current)
-                    } else {
+                    } else if (state.details?.canClaim(System.currentTimeMillis()) == true) {
                         actions.navigation.onApartarDirect(current, 1)
                     }
                 },
                 hasActiveClaim = state.details?.hasActiveClaim == true
-            ),
-            modifier = Modifier.align(Alignment.BottomCenter)
+            )
         )
         if (state.showReportDialog) {
             ReportContentDialog(
@@ -188,17 +196,22 @@ internal fun ProductDetailContent(offer: ProductOffer, state: ProductDetailViewS
 }
 
 @Composable
-private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boolean, state: ProductDetailViewState, actions: ProductDetailActions) {
+private fun ProductDetailScrollSection(
+    offer: ProductOffer,
+    showAddedNotice: Boolean,
+    state: ProductDetailViewState,
+    actions: ProductDetailActions,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val quantity = state.quantity
     val callbacks = actions.navigation
     val hasCoordinates = offer.latitude.isFinite() && offer.longitude.isFinite()
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(bottom = 120.dp)
     ) {
         ProductDetailTopBar(
             onNavigateBack = callbacks.onNavigateBack,
@@ -231,6 +244,7 @@ private fun ProductDetailScrollSection(offer: ProductOffer, showAddedNotice: Boo
             onRouteClick = { callbacks.onNavigateToRoute?.invoke(offer) }
         )
         Spacer(modifier = Modifier.height(16.dp))
+        MerchantScheduleAndPayments(offer)
         ProductDescriptionCard(description = offer.description, quantity = quantity)
         if (state.alternatives.isNotEmpty()) {
             ProductDetailAlternativesSection(
@@ -299,16 +313,39 @@ private fun ProductDetailAlternativesSection(
 }
 
 @Composable
+private fun MerchantScheduleAndPayments(offer: ProductOffer) {
+    MerchantOpenStatusText(offer.merchantProfile)
+    offer.merchantProfile?.horarios.orEmpty().forEach { day ->
+        val hours = if (day.estaCerrado) stringResource(R.string.discovery_day_closed) else day.publishedHours()
+        if (hours != null) Text(stringResource(R.string.discovery_day_schedule, day.dia, hours))
+    }
+    val methods = offer.merchantProfile?.paymentMethods.orEmpty()
+    if (methods.isNotEmpty()) Text(stringResource(R.string.discovery_payment_methods, methods.joinToString(", ")))
+}
+
+@Composable
 internal fun ProductDetailStatus(state: ProductDetailViewState, onRetry: () -> Unit) {
     when {
         state.isLoading -> Text(stringResource(R.string.detail_refreshing), modifier = Modifier.padding(16.dp))
         state.error != null -> Column(modifier = Modifier.padding(16.dp)) {
             Text(state.error.message, color = SensusRed)
-            TextButton(onClick = onRetry) { Text(stringResource(R.string.detail_retry)) }
+            TextButton(colors = sensusTextButtonColors(), onClick = onRetry) { Text(stringResource(R.string.detail_retry)) }
         }
-        state.details?.hasActiveClaim == true -> Text(stringResource(R.string.detail_active_claim), modifier = Modifier.padding(16.dp))
-        state.details?.canClaim(System.currentTimeMillis()) == false -> Text(stringResource(R.string.detail_unavailable), modifier = Modifier.padding(16.dp))
+        else -> state.details?.let { ProductAvailabilityNotice(it, System.currentTimeMillis()) }
     }
+}
+
+@Composable
+private fun ProductAvailabilityNotice(details: OfferDetails, nowMillis: Long) {
+    val message = when {
+        details.hasActiveClaim -> stringResource(R.string.detail_active_claim)
+        details.isSoldOut -> stringResource(R.string.detail_sold_out)
+        details.isExpired(nowMillis) -> stringResource(R.string.detail_expired)
+        !details.canClaim(nowMillis) -> stringResource(R.string.detail_unavailable)
+        details.hasLowStock -> pluralStringResource(R.plurals.detail_low_stock, details.offer.unitsLeft, details.offer.unitsLeft)
+        else -> return
+    }
+    Text(message, modifier = Modifier.padding(16.dp))
 }
 
 @ComposeUiModel

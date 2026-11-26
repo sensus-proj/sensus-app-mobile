@@ -3,6 +3,7 @@ package com.example.sensus.presentation
 import app.cash.turbine.test
 import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.network.NetworkMonitor
+import com.example.sensus.domain.repository.FriendsRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.sync.SyncManager
@@ -12,10 +13,12 @@ import com.example.sensus.presentation.root.AppScreen
 import com.example.sensus.presentation.root.AppViewEffect
 import com.example.sensus.presentation.root.AppViewIntent
 import com.example.sensus.presentation.root.AppViewModel
+import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,6 +65,26 @@ class AppViewModelTest {
     }
 
     @Test
+    fun invite_resolvesFriendsRepositoryOnlyWhenNeeded() = runTest {
+        val friends = mockk<FriendsRepository>(relaxed = true)
+        val provider = mockk<Lazy<FriendsRepository>>()
+        every { provider.get() } returns friends
+        sessionFlow.value = SessionState(isSessionActive = true, hasAcceptedTerms = true)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase, provider)
+        viewModel.ioDispatcher = testDispatcher
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 0) { provider.get() }
+
+        val invite = "sensus://amigos"
+        viewModel.dispatchIntent(AppViewIntent.FriendInviteDeepLinkReceived(invite))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(exactly = 1) { provider.get() }
+        coVerify(exactly = 1) { friends.queuePendingInvite(invite) }
+        assertEquals(AppScreen.MAIN, viewModel.viewState.value.currentScreen)
+    }
+
+    @Test
     fun splashFinished_navigatesToOnboarding_whenNoLocationPermission() = runTest {
         val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -71,6 +94,49 @@ class AppViewModelTest {
 
         coVerify(exactly = 1) { sessionRepository.setSplashCompleted(true) }
         assertEquals(AppScreen.ONBOARDING, viewModel.viewState.value.currentScreen)
+    }
+
+    @Test
+    fun splashFinished_navigatesToLogin_whenLocationIsAlreadyReady() = runTest(testDispatcher) {
+        sessionFlow.value = SessionState(hasLocationPermission = true)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
+        viewModel.dispatchIntent(AppViewIntent.SplashFinished)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(AppScreen.LOGIN, viewModel.viewState.value.currentScreen)
+    }
+
+    @Test
+    fun pendingInviteKeepsAnUnauthenticatedUserOnLoginAfterSplash() = runTest(testDispatcher) {
+        val friends = mockk<FriendsRepository>(relaxed = true)
+        val provider = mockk<Lazy<FriendsRepository>>()
+        every { provider.get() } returns friends
+        sessionFlow.value = SessionState(hasLocationPermission = true)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase, provider)
+        viewModel.ioDispatcher = testDispatcher
+
+        viewModel.dispatchIntent(AppViewIntent.SplashFinished)
+        testDispatcher.scheduler.advanceUntilIdle()
+        val invite = "sensus://amigos"
+        viewModel.dispatchIntent(AppViewIntent.FriendInviteDeepLinkReceived(invite))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { friends.queuePendingInvite(invite) }
+        assertEquals(AppScreen.LOGIN, viewModel.viewState.value.currentScreen)
+    }
+
+    @Test
+    fun splashFinished_resumesTermsForAuthenticatedAccount() = runTest(testDispatcher) {
+        sessionFlow.value = SessionState(isSessionActive = true)
+        val viewModel = AppViewModel(sessionRepository, logoutUseCase, getPreferredMapLayerUseCase)
+        viewModel.dispatchIntent(AppViewIntent.SplashFinished)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(AppScreen.TERMS, viewModel.viewState.value.currentScreen)
+
+        viewModel.dispatchIntent(AppViewIntent.TermsAccepted(true))
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { sessionRepository.setTermsAccepted(true) }
+        assertEquals(AppScreen.MAIN, viewModel.viewState.value.currentScreen)
     }
 
     @Test

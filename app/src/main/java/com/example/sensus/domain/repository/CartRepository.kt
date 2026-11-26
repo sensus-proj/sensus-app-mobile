@@ -12,6 +12,7 @@ interface CartRepository {
     fun replaceCart(offer: ProductOffer, quantity: Int = 1)
     fun updateQuantity(offerId: String, newQuantity: Int)
     fun removeItem(offerId: String)
+    fun removeReservedUnit(offerId: String)
     fun clearCart()
     fun createApartadoOrder(): ApartadoOrder?
 }

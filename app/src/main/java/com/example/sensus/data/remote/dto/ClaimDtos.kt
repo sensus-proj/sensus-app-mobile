@@ -13,6 +13,16 @@ data class ClaimOfferResultDto(
 )
 
 @Serializable
+data class ClaimDetailDto(
+    val claimId: String,
+    val offerId: String,
+    val status: String,
+    val expiresAtUtc: String,
+    val qrPayload: String? = null,
+    val offerTitle: String? = null
+)
+
+@Serializable
 data class RedeemClaimResultDto(
     @SerialName("claimId") val claimId: String,
     @SerialName("offerId") val offerId: String,

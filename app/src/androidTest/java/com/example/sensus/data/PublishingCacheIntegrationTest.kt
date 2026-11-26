@@ -11,8 +11,7 @@ import com.example.sensus.domain.model.ProductOffer
 import java.security.SecureRandom
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,10 +20,10 @@ class PublishingCacheIntegrationTest {
     @Test
     fun encryptedCache_preservesOfferStockAndReplacesFeedPages() = runBlocking(Dispatchers.IO) {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        SQLiteDatabase.loadLibs(context)
+        System.loadLibrary("sqlcipher")
         val passphrase = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val database = Room.inMemoryDatabaseBuilder(context, SensusDatabase::class.java)
-            .openHelperFactory(SupportFactory(passphrase)).build()
+            .openHelperFactory(SupportOpenHelperFactory(passphrase)).build()
         try {
             val offer = ProductOffer(
                 "offer-1", "Pan", "Local", "Panadería", 100.0, 60.0, 40, 17, 0,

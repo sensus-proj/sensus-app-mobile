@@ -44,20 +44,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
-import com.example.sensus.theme.SensusPurpleDark
 import com.example.sensus.theme.SensusPurpleLight
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusRedBg
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
-
-private const val HEX_PURPLE_TINT = 0xFFEDE9FE
-private const val HEX_DISABLED_GRAY = 0xFFD1D5DB
 
 @Composable
 internal fun SensiHeaderBar(isDegraded: Boolean, onClear: () -> Unit) {
@@ -77,7 +76,7 @@ internal fun SensiHeaderBar(isDegraded: Boolean, onClear: () -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "Sensi IA", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
+                    Text(text = "Sensi IA", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
@@ -88,7 +87,7 @@ internal fun SensiHeaderBar(isDegraded: Boolean, onClear: () -> Unit) {
                 }
                 Text(
                     text = if (isDegraded) "Modo básico activo" else "Asistente de Ahorro y Combos Inteligentes",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
             }
@@ -136,14 +135,14 @@ internal fun DegradedModeBanner() {
             Icon(
                 imageVector = Icons.Default.Info,
                 contentDescription = null,
-                tint = SensusPurple,
+                tint = SensusVioletInk,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Modo básico activo: respuestas rápidas sin razonamiento extendido.",
-                fontSize = 12.sp,
-                color = SensusPurpleDark
+                fontSize = 13.sp,
+                color = SensusVioletInk
             )
         }
     }
@@ -170,7 +169,7 @@ internal fun ErrorMessageBanner(error: String, onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = error,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusRed,
                 modifier = Modifier.weight(1f)
             )
@@ -190,7 +189,7 @@ internal fun ErrorMessageBanner(error: String, onDismiss: () -> Unit) {
 internal fun EmptyChatWelcomeCard() {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp)
@@ -203,20 +202,20 @@ internal fun EmptyChatWelcomeCard() {
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(Color(HEX_PURPLE_TINT)),
+                    .background(SensusVioletBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = null,
-                    tint = SensusPurple,
+                    tint = SensusVioletInk,
                     modifier = Modifier.size(32.dp)
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "¡Hola! Soy Sensi",
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary
             )
@@ -259,15 +258,15 @@ internal fun QuickSuggestionsBar(onSuggestionClick: (String) -> Unit) {
 private fun QuickSuggestionChip(text: String, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = SensusSurface,
         shadowElevation = 1.dp,
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = text,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = SensusPurple,
+            color = SensusVioletInk,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
@@ -334,14 +333,14 @@ private fun SendButton(input: ChatInputUi, onSend: () -> Unit) {
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(if (input.canSend) SensusPurple else Color(HEX_DISABLED_GRAY))
+            .background(if (input.canSend) SensusPurple else SensusCardBorder)
     ) {
         when {
             input.isBlocked -> Text(
                 text = "${input.retryAfterSeconds}s",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = SensusTextPrimary
             )
             input.isSending -> CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
@@ -362,7 +361,7 @@ private fun SendButton(input: ChatInputUi, onSend: () -> Unit) {
 internal fun TypingIndicatorBubble() {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = SensusSurface,
         shadowElevation = 1.dp,
         modifier = Modifier.padding(vertical = 4.dp)
     ) {
@@ -378,7 +377,7 @@ internal fun TypingIndicatorBubble() {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Sensi está pensando...",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = SensusTextSecondary
             )
         }

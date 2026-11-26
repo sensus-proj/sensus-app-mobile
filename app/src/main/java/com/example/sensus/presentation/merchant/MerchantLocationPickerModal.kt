@@ -66,15 +66,18 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.OsmMapUtils
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusPurpleDark
 import com.example.sensus.theme.SensusPurpleLight
 import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSuccessBg
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.SensusVioletLight
 import com.example.sensus.theme.SensusWhite
 import java.util.Locale
@@ -136,7 +139,7 @@ internal fun PeekingCatLocationButton(isResolving: Boolean, hasCoordinates: Bool
                     text = if (hasCoordinates) "Ubicación en mapa lista" else "Usar mi ubicación actual",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = SensusPurpleDark
+                    color = SensusVioletInk
                 )
                 Text(
                     text = if (hasCoordinates) {
@@ -180,7 +183,7 @@ internal fun PeekingCatPinBadge(badgeSize: Dp, modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Default.LocationOn,
             contentDescription = null,
-            tint = SensusPurple,
+            tint = SensusVioletInk,
             modifier = Modifier.size(PIN_ICON_SIZE_DP.dp)
         )
         PeekingSensusCatHead(modifier = Modifier.fillMaxSize())
@@ -330,7 +333,7 @@ internal fun MerchantLocationPickerModal(
 private fun PickerGpsRecenterButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         shape = CircleShape,
-        color = SensusWhite,
+        color = SensusSurface,
         shadowElevation = 6.dp,
         modifier = modifier
             .padding(16.dp)
@@ -342,7 +345,7 @@ private fun PickerGpsRecenterButton(onClick: () -> Unit, modifier: Modifier = Mo
             Icon(
                 imageVector = Icons.Default.MyLocation,
                 contentDescription = "Recentrar en mi ubicación actual",
-                tint = SensusPurple
+                tint = SensusVioletInk
             )
         }
     }
@@ -350,7 +353,7 @@ private fun PickerGpsRecenterButton(onClick: () -> Unit, modifier: Modifier = Mo
 
 @Composable
 private fun PickerHeaderBar(onDismiss: () -> Unit) {
-    Surface(color = SensusWhite, shadowElevation = 2.dp) {
+    Surface(color = SensusSurface, shadowElevation = 2.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -363,7 +366,7 @@ private fun PickerHeaderBar(onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.width(6.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = "Ubica tu comercio en el mapa", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-                Text(text = "Arrastra o toca el mapa si necesitas mayor precisión", fontSize = 12.sp, color = SensusTextSecondary)
+                Text(text = "Arrastra o toca el mapa si necesitas mayor precisión", fontSize = 13.sp, color = SensusTextSecondary)
             }
         }
     }
@@ -490,7 +493,7 @@ private fun CenterMapTargetPin(modifier: Modifier = Modifier) {
 
 @Composable
 private fun PickerConfirmationPanel(state: MerchantRegisterViewState, onConfirm: () -> Unit) {
-    Surface(color = SensusWhite, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), shadowElevation = 10.dp) {
+    Surface(color = SensusSurface, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), shadowElevation = 10.dp) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -504,7 +507,7 @@ private fun PickerConfirmationPanel(state: MerchantRegisterViewState, onConfirm:
             }
             Button(
                 onClick = onConfirm,
-                shape = RoundedCornerShape(14.dp),
+                shape = SensusButtonShape,
                 colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 14.dp)
@@ -528,7 +531,7 @@ private fun PickerCoordinatesHeader(latitude: Double, longitude: Double) {
                 text = String.format(Locale.US, "%.5f, %.5f", latitude, longitude),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = SensusPurpleDark,
+                color = SensusVioletInk,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
@@ -540,12 +543,12 @@ private fun PickerAddressPreviewBody(state: MerchantRegisterViewState) {
     if (state.isResolvingLocation) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = SensusPurple)
-            Text(text = "Consultando dirección exacta...", fontSize = 12.sp, color = SensusTextSecondary)
+            Text(text = "Consultando dirección exacta...", fontSize = 13.sp, color = SensusTextSecondary)
         }
     } else {
         Text(
             text = state.resolvedAddressPreview ?: "Punto listo; podrás editar tu dirección manualmente.",
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             color = SensusTextPrimary
         )
@@ -555,7 +558,7 @@ private fun PickerAddressPreviewBody(state: MerchantRegisterViewState) {
                     text = "Código postal: $cp",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = SensusSuccess,
+                    color = SensusTextPrimary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }

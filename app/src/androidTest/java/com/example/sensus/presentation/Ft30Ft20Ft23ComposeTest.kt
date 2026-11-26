@@ -119,12 +119,12 @@ class Ft30Ft20Ft23ComposeTest {
                 GuestModeBanner(onRegisterClick = { clicked = true })
             }
         }
-        composeTestRule.onNodeWithText("Registrarme").performClick()
+        composeTestRule.onNodeWithText("Crear cuenta").performClick()
         assertTrue(clicked)
 
         composeTestRule.setContent {
             SensusTheme { TermsScreen(onTermsAccepted = {}) }
         }
-        composeTestRule.onNodeWithText("Personalización e Interacciones del Feed (LFPDPPP)").assertExists()
+        composeTestRule.onNodeWithText("Intereses y personalización del feed").assertExists()
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,11 +56,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusPurpleLight
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
+import com.example.sensus.theme.SensusVioletInk
+import com.example.sensus.theme.sensusOutlinedButtonColors
 
 private const val RADAR_HALO_ALPHA = 0.12f
 private const val FEATURE_BG_ALPHA = 0.15f
@@ -176,15 +181,15 @@ private fun DeniedPermissionContent() {
     Text(
         text = "Para mostrarte promociones y excedentes de panaderías y restaurantes cerca de ti " +
             "(radio de hasta 2 km), Sensus necesita acceso a tu ubicación GPS.",
-        fontSize = 14.sp,
+        fontSize = 15.sp,
         color = SensusTextSecondary,
         textAlign = TextAlign.Center,
-        lineHeight = 20.sp
+        lineHeight = 22.sp
     )
     Spacer(modifier = Modifier.height(20.dp))
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -193,7 +198,7 @@ private fun DeniedPermissionContent() {
         ) {
             Text(
                 text = "Cómo activar el permiso:",
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary
             )
@@ -201,7 +206,7 @@ private fun DeniedPermissionContent() {
                 text = "1. Toca en 'Abrir ajustes'.\n2. Selecciona 'Permisos'.\n3. Activa 'Ubicación' con precisión exacta.",
                 fontSize = 13.sp,
                 color = SensusTextSecondary,
-                lineHeight = 19.sp
+                lineHeight = 22.sp
             )
         }
     }
@@ -220,15 +225,15 @@ private fun LocationBenefitsContent() {
     Text(
         text = "Descubre las ofertas y excedentes disponibles a menos de 2 km a tu alrededor " +
             "en tiempo real y ahorra hasta un 50%.",
-        fontSize = 14.sp,
+        fontSize = 15.sp,
         color = SensusTextSecondary,
         textAlign = TextAlign.Center,
-        lineHeight = 20.sp
+        lineHeight = 22.sp
     )
     Spacer(modifier = Modifier.height(24.dp))
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -274,24 +279,25 @@ private fun OnboardingLocationActions(
         }
         Button(
             onClick = if (permissionDeniedPermanently) onOpenSettings else onRequestLocation,
-            shape = RoundedCornerShape(14.dp),
+            shape = SensusButtonShape,
             colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp)
+                .heightIn(min = 54.dp)
         ) {
             Icon(imageVector = primaryIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = primaryLabel, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
         OutlinedButton(
+            colors = sensusOutlinedButtonColors(),
             onClick = onManualLocationSelected,
-            shape = RoundedCornerShape(14.dp),
+            shape = SensusButtonShape,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
         ) {
-            Text(text = secondaryLabel, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SensusPurple)
+            Text(text = secondaryLabel, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
         }
     }
 }
@@ -308,13 +314,13 @@ private fun FeatureRow(icon: ImageVector, title: String, subtitle: String) {
             modifier = Modifier.size(42.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = icon, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(22.dp))
+                Icon(imageVector = icon, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(22.dp))
             }
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column {
             Text(text = title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
-            Text(text = subtitle, fontSize = 12.sp, color = SensusTextSecondary)
+            Text(text = subtitle, fontSize = 13.sp, color = SensusTextSecondary)
         }
     }
 }

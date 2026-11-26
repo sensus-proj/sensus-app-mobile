@@ -49,6 +49,7 @@ import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
+import com.example.sensus.theme.SensusVioletInk
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -96,7 +97,7 @@ internal fun rememberSafeMerchantCameraLauncher(onBitmapCaptured: (Bitmap) -> Un
 @Composable
 internal fun StoreFacadePickerField(selection: StoreFacadePhotoSelection, error: String?, onClick: () -> Unit) {
     Column {
-        Text(text = "Foto de la fachada de tu comercio", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+        Text(text = "Foto de la fachada de tu comercio", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
         Spacer(modifier = Modifier.height(6.dp))
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -127,7 +128,7 @@ internal fun StoreFacadePickerField(selection: StoreFacadePhotoSelection, error:
                         modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp).size(32.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Edit, contentDescription = "Cambiar foto de fachada", tint = SensusPurple, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Edit, contentDescription = "Cambiar foto de fachada", tint = SensusVioletInk, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -140,7 +141,7 @@ internal fun StoreFacadePickerField(selection: StoreFacadePhotoSelection, error:
                         modifier = Modifier.size(44.dp).clip(CircleShape).background(SensusPurple.copy(alpha = FACADE_ICON_ALPHA)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.AddAPhoto, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(22.dp))
+                        Icon(imageVector = Icons.Default.AddAPhoto, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(22.dp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = "Tomar o elegir foto de fachada", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)

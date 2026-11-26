@@ -46,24 +46,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.sensus.domain.model.MapStoreCluster
 import com.example.sensus.domain.model.ProductOffer
+import com.example.sensus.presentation.common.OfferThumbnailSize
+import com.example.sensus.presentation.common.PublicOfferThumbnail
+import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusCardBorder
 import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusSuccess
+import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
+import com.example.sensus.theme.SensusVioletInk
 import java.util.Locale
 
 private const val IMAGE_BG_ALPHA = 0.08f
@@ -84,7 +87,7 @@ internal fun StoreCatalogTopBar(storeName: String, offersCount: Int, onNavigateB
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = storeName,
-                        fontSize = 17.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = SensusTextPrimary,
                         maxLines = 1,
@@ -94,18 +97,18 @@ internal fun StoreCatalogTopBar(storeName: String, offersCount: Int, onNavigateB
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Verificado",
-                        tint = SensusPurple,
+                        tint = SensusVioletInk,
                         modifier = Modifier.size(16.dp)
                     )
                 }
                 Text(
                     text = "$offersCount productos activos",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = SensusTextSecondary
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = SensusSurface)
     )
 }
 
@@ -126,7 +129,7 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
         modifier = modifier
             .fillMaxWidth()
@@ -137,11 +140,11 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusPurple, modifier = Modifier.size(16.dp))
+                    Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "${cluster.formattedDistance} • $addressText",
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = SensusTextSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -150,7 +153,7 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.AccessTime, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = scheduleText, fontSize = 12.sp, color = SensusTextMuted)
+                    Text(text = scheduleText, fontSize = 13.sp, color = SensusTextMuted)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Star, contentDescription = "Reseñas", tint = SensusPurple, modifier = Modifier.size(16.dp))
@@ -170,14 +173,14 @@ internal fun StoreCatalogHeaderCard(cluster: MapStoreCluster, modifier: Modifier
 @Composable
 internal fun StoreCatalogCategoryRow(categories: List<String>, selectedCategory: String?, onSelectCategory: (String?) -> Unit) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
             FilterChip(
                 selected = selectedCategory == null,
                 onClick = { onSelectCategory(null) },
-                label = { Text(text = "Todos", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                label = { Text(text = "Todos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = SensusPurple,
                     selectedLabelColor = Color.White
@@ -189,7 +192,7 @@ internal fun StoreCatalogCategoryRow(categories: List<String>, selectedCategory:
             FilterChip(
                 selected = selected,
                 onClick = { onSelectCategory(if (selected) null else category) },
-                label = { Text(text = category, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                label = { Text(text = category, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = SensusPurple,
                     selectedLabelColor = Color.White
@@ -209,7 +212,7 @@ internal fun StoreCatalogProductCard(
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = SensusSurface),
         border = BorderStroke(1.dp, SensusCardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = GRID_CARD_SHADOW_DP.dp),
         modifier = modifier
@@ -220,15 +223,15 @@ internal fun StoreCatalogProductCard(
             CatalogProductBoundedImage(offer = offer, isSaved = isSaved, onSaveClick = onSaveClick)
             Text(
                 text = offer.category,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = SensusPurple,
+                color = SensusVioletInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = offer.name,
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = SensusTextPrimary,
                 maxLines = 2,
@@ -238,8 +241,8 @@ internal fun StoreCatalogProductCard(
                 Text(
                     text = "$${String.format(Locale.US, "%.2f", offer.discountPrice)}",
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SensusPurple
+                    fontWeight = FontWeight.Bold,
+                    color = SensusVioletInk
                 )
                 Text(
                     text = "$${String.format(Locale.US, "%.0f", offer.originalPrice)}",
@@ -264,17 +267,17 @@ private fun CatalogProductBoundedImage(offer: ProductOffer, isSaved: Boolean = f
         contentAlignment = Alignment.Center
     ) {
         if (!offer.imageUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = offer.imageUrl,
-                contentDescription = offer.name,
-                contentScale = ContentScale.Crop,
+            PublicOfferThumbnail(
+                url = offer.imageUrl,
+                size = OfferThumbnailSize.CATALOG,
+                description = offer.name,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Storefront,
                 contentDescription = offer.name,
-                tint = SensusPurple,
+                tint = SensusVioletInk,
                 modifier = Modifier.size(36.dp)
             )
         }
@@ -287,8 +290,8 @@ private fun CatalogProductBoundedImage(offer: ProductOffer, isSaved: Boolean = f
         ) {
             Text(
                 text = "-${offer.discountPercent}%",
-                color = Color.White,
-                fontSize = 10.sp,
+                color = Ink,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
@@ -306,7 +309,7 @@ private fun CatalogProductBoundedImage(offer: ProductOffer, isSaved: Boolean = f
 @Composable
 private fun CatalogPinBadge(isSaved: Boolean, onSaveClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
-        color = if (isSaved) SensusPurple else Color.White,
+        color = if (isSaved) SensusPurple else SensusSurface,
         shape = CircleShape,
         modifier = modifier.size(28.dp).clip(CircleShape).clickable(onClick = onSaveClick)
     ) {
@@ -314,7 +317,7 @@ private fun CatalogPinBadge(isSaved: Boolean, onSaveClick: () -> Unit, modifier:
             Icon(
                 imageVector = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                 contentDescription = if (isSaved) "Guardada" else "Me interesa",
-                tint = if (isSaved) Color.White else SensusPurple,
+                tint = if (isSaved) Color.White else SensusVioletInk,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -362,9 +365,9 @@ private fun CatalogProductStockFooter(offer: ProductOffer) {
         Surface(color = SensusVioletBg, shape = RoundedCornerShape(6.dp), modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Ver información • ${offer.expirationDate}",
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = SensusPurple,
+                color = SensusVioletInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)

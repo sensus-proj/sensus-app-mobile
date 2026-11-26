@@ -1,12 +1,21 @@
 package com.example.sensus.presentation.auth
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.sensus.HiltTestActivity
 import com.example.sensus.theme.SensusTheme
@@ -51,7 +60,7 @@ class AuthFlowE2ETest {
 
         composeTestRule.onNodeWithText("Sensus").assertExists()
         composeTestRule.onNodeWithText("Iniciar Sesión").assertExists()
-        composeTestRule.onNodeWithText("Continuar como invitado").assertExists().performClick()
+        composeTestRule.onNodeWithText("Mirar como invitado").performScrollTo().performClick()
 
         // El ViewModel real abre la sesión de invitado contra el backend: se espera su respuesta (E2E, FT-27).
         composeTestRule.waitUntil(timeoutMillis = GUEST_SESSION_TIMEOUT_MS) { guestClicked }
@@ -59,19 +68,61 @@ class AuthFlowE2ETest {
     }
 
     @Test
-    fun registerScreen_rendersFormElements_properly() {
+    fun compactLoginWithLargeText_keepsValidationAndSecondaryActionsReachable() {
+        var smsOpened = false
+        var recoveryOpened = false
+        var registerOpened = false
         composeTestRule.setContent {
-            SensusTheme {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 1.5f)) {
+                SensusTheme {
+                    Box(Modifier.size(width = 320.dp, height = 480.dp)) {
+                        LoginScreen(
+                            callbacks = LoginCallbacks(
+                                onNavigateToOtp = { smsOpened = true },
+                                onForgotPassword = { recoveryOpened = true },
+                                onNavigateToRegister = { registerOpened = true }
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Mostrar contraseña").performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription("Ocultar contraseña").assertExists()
+        composeTestRule.onNodeWithText("Entrar").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Ingresa tu correo o teléfono.").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("¿Olvidaste tu contraseña?").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Entrar con código SMS").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Iniciar sesión").assertIsSelected()
+        composeTestRule.onNodeWithText("Crear cuenta").performScrollTo().performClick()
+        composeTestRule.runOnIdle {
+            assertTrue(recoveryOpened)
+            assertTrue(smsOpened)
+            assertTrue(registerOpened)
+        }
+    }
+
+    @Test
+    fun registerScreen_rendersFormElements_properly() {
+        var loginOpened = false
+        composeTestRule.setContent {
+            SensusTheme(darkTheme = true) {
                 RegisterScreen(
                     onRegisterSuccess = {},
-                    onNavigateToLogin = {},
+                    onNavigateToLogin = { loginOpened = true },
                     onNavigateToTerms = {}
                 )
             }
         }
 
+        composeTestRule.onNodeWithText("Lo bueno, por menos").assertExists()
+        composeTestRule.onNodeWithText("Crear cuenta").assertIsSelected()
         composeTestRule.onNodeWithText("Crea tu Cuenta").assertExists()
         composeTestRule.onNodeWithText("Únete para descubrir ofertas exclusivas en tu zona").assertExists()
+        composeTestRule.onNodeWithText("Mirar como invitado").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Iniciar sesión").performScrollTo().performClick()
+        composeTestRule.runOnIdle { assertTrue(loginOpened) }
     }
 
     @Test

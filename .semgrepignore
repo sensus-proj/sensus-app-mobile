@@ -1,0 +1,21 @@
+# Semgrep (FT-27). Un .semgrepignore reemplaza la lista por defecto, asi que se repite aqui.
+# Valores por defecto de Semgrep:
+node_modules/
+build/
+dist/
+vendor/
+.env/
+.venv/
+.tox/
+*.min.js
+.npm/
+.yarn/
+test/
+tests/
+*_test.go
+.semgrep
+.semgrep_logs/
+
+# Script POSIX generado por Gradle: el parser bash de Semgrep no soporta `case $# in (0) ...`
+# y --strict lo convierte en fallo. Su integridad la cubre validate-wrapper (checksum oficial).
+/gradlew

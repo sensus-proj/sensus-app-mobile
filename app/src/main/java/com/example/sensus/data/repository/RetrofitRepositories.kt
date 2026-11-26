@@ -182,9 +182,9 @@ class RetrofitAuthRepository(
         }
     }
 
-    override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun logout(deviceId: String?): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            authApi.logout()
+            authApi.logout(deviceId)
             Result.Success(Unit)
         } catch (_: IOException) {
             Result.Success(Unit)

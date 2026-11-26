@@ -2,9 +2,11 @@ package com.example.sensus.presentation
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.MerchantProfile
 import com.example.sensus.domain.model.OfferDetails
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.ToggleOfferLikeResult
+import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
 import com.example.sensus.domain.usecase.GetOfferDetailUseCase
 import com.example.sensus.domain.usecase.RegisterOfferViewUseCase
 import com.example.sensus.domain.usecase.ToggleOfferLikeUseCase
@@ -45,6 +47,19 @@ class ProductDetailViewModelTest {
     @After
     fun teardown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun detailUsesOnlyTheProfileMatchingTheMerchantId() = runTest(dispatcher) {
+        val nearby = mockk<GetNearbyMerchantsUseCase>()
+        val matching = MerchantProfile(id = "m1", nombreComercial = "Tienda", direccion = "Calle 1", codigoPostal = "42800")
+        val withMerchant = details.copy(offer = offer.copy(merchantId = "m1"))
+        coEvery { getDetail(any()) } returns Result.Success(withMerchant)
+        coEvery { nearby(any(), any(), any(), any()) } returns Result.Success(listOf(matching.copy(id = "other"), matching))
+        val vm = ProductDetailViewModel(getDetail, registerView, nearbyMerchants = nearby)
+        vm.dispatchIntent(ProductDetailViewIntent.Load(offer.id))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(matching, vm.viewState.value.details?.offer?.merchantProfile)
     }
 
     @Test

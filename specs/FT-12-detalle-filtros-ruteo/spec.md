@@ -74,3 +74,8 @@ presentation/buyer/
 ### Integración publicada — 2026-11-14
 
 Se mantiene la URL oficial establecida en commit 78556bb (2026-11-09), Retrofit e interceptor. Se usa OfferDetailDto real del backend main 01dad6e: merchantAddress, discountedPrice, stock, startsAt, endsAt, viewCount y hasActiveClaim. El contrato no trae horarios ni métodos de pago: no se inventan. Adaptador remoto dedicado de detalle para evitar ampliar el repositorio legacy de publicación; todos los accesos permanecen en data, orquestados por casos de uso y MVI/Hilt. Un resumen de oferta no acredita disponibilidad: apartado se habilita tras detalle remoto válido y vigente. El fallo de registro de vista es no bloqueante, sin retries automáticos. Favoritos y reseñas no se conectan al no estar publicados.
+
+
+### Integración Android de perfil público
+
+El filtro Abierto ahora usa las ofertas cargadas cuyo horario publicado incluye el minuto actual. El detalle consulta el perfil cercano al punto de la oferta y exige coincidencia de merchantId. Muestra el horario de hoy y los métodos de pago explícitos. El contrato actual no publica métodos de pago. El cliente admite paymentMethods como extensión opcional pendiente de ratificación y prueba con backend.
