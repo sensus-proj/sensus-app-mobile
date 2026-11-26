@@ -19,7 +19,7 @@ import org.junit.Test
 
 private val REFRESH_RESPONSE_BODY = """
     {
-      "token": "fresh-jwt-15m",
+      "token": "jwt-nuevo",
       "tokenType": "Bearer",
       "expiresAtUtc": "2026-11-26T12:15:00Z",
       "refreshToken": "refresh-v2",
@@ -84,7 +84,7 @@ class TokenRefreshAuthenticatorTest {
 
         assertTrue(response.isSuccessful)
         assertFalse(unauthorizedTriggered)
-        assertEquals("fresh-jwt-15m", currentJwt)
+        assertEquals("jwt-nuevo", currentJwt)
         assertEquals("refresh-v2", currentRefresh)
         verify(exactly = 0) { securePreferences.clearAll() }
 
@@ -96,7 +96,7 @@ class TokenRefreshAuthenticatorTest {
         assertEquals("/api/v1/auth/refresh", refreshReq.path)
         assertTrue(refreshReq.body.readUtf8().contains("refresh-v1"))
         assertEquals("/api/v1/users/profile", retried.path)
-        assertEquals("Bearer fresh-jwt-15m", retried.getHeader("Authorization"))
+        assertEquals("Bearer jwt-nuevo", retried.getHeader("Authorization"))
     }
 
     @Test
