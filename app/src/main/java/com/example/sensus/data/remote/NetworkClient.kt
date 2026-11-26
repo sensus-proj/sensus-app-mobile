@@ -19,6 +19,7 @@ import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.data.remote.api.ReportsApiService
 import com.example.sensus.data.remote.api.StoreReviewsApiService
 import com.example.sensus.data.remote.interceptor.AuthInterceptor
+import com.example.sensus.data.remote.interceptor.TokenRefreshAuthenticator
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -80,6 +81,7 @@ class NetworkClient(
         .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .addInterceptor(AuthInterceptor(securePreferences, onUnauthorized))
+        .authenticator(TokenRefreshAuthenticator(securePreferences, onUnauthorized))
         .addInterceptor(loggingInterceptor)
         .build()
 

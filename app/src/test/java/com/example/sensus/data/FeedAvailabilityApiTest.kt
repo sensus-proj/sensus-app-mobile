@@ -8,6 +8,7 @@ import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.repository.FeedRepositoryImpl
 import com.example.sensus.domain.model.CreatePostInput
 import com.example.sensus.domain.model.FeedQuery
+import com.example.sensus.domain.model.UploadedMedia
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -67,5 +68,22 @@ class FeedAvailabilityApiTest {
         assertTrue(request.body.readUtf8().contains("Hola comunidad"))
         assertEquals(1, server.requestCount)
         verify(exactly = 0) { dao.replacePage(any(), any(), any()) }
+    }
+
+    @Test
+    fun createPost_sendsMediaAssetIdAndNeverImageUrl() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(201).setBody(
+                """{"id":"p1","authorName":"Ana","text":"Post con foto","createdAt":"2026-11-26T00:00:00Z"}"""
+            )
+        )
+        val result = repository.createPost(
+            CreatePostInput("Post con foto", 20.0, -99.0),
+            UploadedMedia("asset-123", "https://res.cloudinary.com/sensus/image/upload/v1/x.jpg")
+        )
+        assertTrue(result is Result.Success)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"mediaAssetId\":\"asset-123\""))
+        assertTrue(!body.contains("imageUrl"))
     }
 }

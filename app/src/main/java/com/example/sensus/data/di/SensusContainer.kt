@@ -133,7 +133,8 @@ class SensusContainer(
             profileApi = networkClient.profileApi,
             moderationService = moderationService,
             securePreferences = securePreferences,
-            onSessionUpdated = { notifySessionUpdated() }
+            onSessionUpdated = { notifySessionUpdated() },
+            mediaUploadApi = networkClient.mediaUploadApi
         )
     }
 
@@ -147,9 +148,7 @@ class SensusContainer(
 
     val mediaRepository: MediaRepository by lazy {
         MediaRepositoryImpl(
-            mediaApi = networkClient.mediaUploadApi,
-            moderationService = moderationService,
-            profileApi = networkClient.profileApi
+            mediaApi = networkClient.mediaUploadApi
         )
     }
 
