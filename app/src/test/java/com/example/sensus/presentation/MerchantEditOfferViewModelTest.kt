@@ -9,6 +9,7 @@ import com.example.sensus.domain.model.OfferField
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.UpdateOfferInput
+import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.MerchantRepository
 import com.example.sensus.domain.repository.OffersRepository
@@ -134,13 +135,20 @@ class MerchantEditOfferViewModelTest {
         val merchantRepo = mockk<MerchantRepository>()
         val mediaRepo = mockk<MediaRepository>(relaxed = true)
         val compressor = mockk<ImageCompressor>(relaxed = true)
+        val uploaded = UploadedMedia("media-2", "https://example.com/updated.jpg")
+        coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(9)
+        coEvery { mediaRepo.uploadAndModerate(any(), "image/jpeg", "Pan artesanal\nHorneado hoy") } returns Result.Success(uploaded)
         coEvery { offersRepo.updateOffer(validInput) } returns Result.Success(baseOffer)
+        coEvery { offersRepo.updateOffer(validInput.copy(imageUrl = uploaded.url)) } returns Result.Success(baseOffer)
         coEvery { offersRepo.changeOfferStatus("o_10", OfferLifecycleStatus.ARCHIVED) } returns
             Result.Success(baseOffer.copy(status = OfferLifecycleStatus.ARCHIVED))
         val profile = MerchantProfile("m1", "u1", "Tienda", "Calle 1", "42800")
         coEvery { merchantRepo.getNearbyMerchants(20.0, -99.0, 2000) } returns Result.Success(listOf(profile))
 
-        assertTrue(UpdateOfferUseCase(offersRepo, mediaRepo, compressor) { 1000L }.invoke(validInput) is Result.Success)
+        val useCase = UpdateOfferUseCase(offersRepo, mediaRepo, compressor) { 1000L }
+        assertTrue(useCase.invoke(validInput) is Result.Success)
+        assertTrue(useCase.invoke(validInput, byteArrayOf(7)) is Result.Success)
+        coVerify { mediaRepo.uploadAndModerate(any(), "image/jpeg", "Pan artesanal\nHorneado hoy") }
         assertTrue(ChangeOfferStatusUseCase(offersRepo).invoke(baseOffer, OfferLifecycleStatus.ARCHIVED) is Result.Success)
         assertTrue(
             ChangeOfferStatusUseCase(offersRepo).invoke(

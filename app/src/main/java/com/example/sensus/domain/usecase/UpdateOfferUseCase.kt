@@ -24,7 +24,7 @@ class UpdateOfferUseCase(
             return Result.Failure(AppError.Validation(it.message))
         }
 
-        val textContext = listOf(normalized.title, normalized.description).filter { it.isNotBlank() }.joinToString(" - ")
+        val textContext = offerModerationContext(normalized.title, normalized.description)
         val resolvedImageUrl = when (val upload = uploadMediaIfPresent(mediaRepository, imageCompressor, newImageBytes, textContext)) {
             is Result.Failure -> return upload
             is Result.Success -> upload.data?.url ?: normalized.imageUrl

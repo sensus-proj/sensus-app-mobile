@@ -31,9 +31,7 @@ class CreateOfferUseCase(
             ?: "Selecciona una categoría para la oferta.".takeIf { normalized.category.apiCode == null }
         if (validationMessage != null) return Result.Failure(AppError.Validation(validationMessage))
 
-        val textContext = listOf(normalized.title, normalized.description)
-            .filter { it.isNotBlank() }
-            .joinToString(" - ")
+        val textContext = offerModerationContext(normalized.title, normalized.description)
         return when (val upload = compressAndUpload(mediaRepository, imageCompressor, imageBytes, textContext)) {
             is Result.Failure -> upload
             is Result.Success -> createAfterUpload(normalized, upload.data)
@@ -45,6 +43,10 @@ class CreateOfferUseCase(
         return if (error != null) Result.Failure(AppError.Validation(error.message)) else offersRepository.createOffer(input, media)
     }
 }
+
+/** Construye el contexto textual alineado con ModeratedTextFingerprint (`Titulo\nDescripcion`). */
+internal fun offerModerationContext(title: String, description: String): String =
+    listOf(title.trim(), description.trim()).filter { it.isNotBlank() }.joinToString("\n")
 
 /** Compresion + subida moderada compartida por ofertas (FT-15) y publicaciones del feed (FT-18). */
 internal suspend fun uploadMediaIfPresent(
