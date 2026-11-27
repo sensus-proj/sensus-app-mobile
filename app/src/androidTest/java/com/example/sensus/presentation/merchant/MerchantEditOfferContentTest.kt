@@ -64,7 +64,7 @@ class MerchantEditOfferContentTest {
     @Test
     fun pausingRequiresConfirmationAndCancelDoesNotSendStatusChange() {
         val intents = renderOffer()
-        val pauseButton = compose.onNodeWithText("Pausar promoción")
+        val pauseButton = compose.onNodeWithContentDescription("Pausar promoción")
         val confirmButton = compose.onNodeWithText("Sí, pausar")
 
         pauseButton.performScrollTo().performClick()

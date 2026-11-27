@@ -62,7 +62,7 @@ class ClaimsScreensTest {
         }
         compose.onNodeWithText("backend-code").assertExists()
         compose.onNodeWithText("Vence: 1970-01-01T00:00:01Z").assertExists()
-        compose.onNodeWithText("Cómo llegar").performClick()
+        compose.onNodeWithText("Abrir en GPS / Cómo llegar").performClick()
         compose.runOnIdle { assertEquals(1, routes) }
         compose.onNodeWithContentDescription("Código QR del apartado confirmado por el servidor").assertExists()
         compose.onNodeWithText("Confirmar apartado de una unidad").assertDoesNotExist()

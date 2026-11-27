@@ -8,7 +8,16 @@
     <string name="claims_confirm_multi">Confirmar apartado (%1$d unidades en 1 QR)</string>
     <string name="claims_reserved_units">Total apartado: %1$d unidades</string>
     <string name="claims_expiry">Vence: %1$s</string>
-    <string name="claims_route">Cómo llegar</string>
+    <string name="claims_route">Abrir en GPS / Cómo llegar</string>
+    <string name="claims_screen_title">Tu apartado</string>
+    <string name="claims_confirmed_title">¡Oferta apartada!</string>
+    <string name="claims_confirmed_subtitle">Tu ahorro te espera en %1$s.</string>
+    <string name="claims_product_store_unit">%1$s · 1 unidad</string>
+    <string name="claims_currency">MXN</string>
+    <string name="claims_qr_instructions">Muestra este código en el comercio</string>
+    <string name="claims_countdown">Tiempo restante para recoger en tienda: %1$s min</string>
+    <string name="claims_store_distance">%1$s · a %2$d m</string>
+    <string name="claims_payment_info">Pago en el comercio: efectivo o tarjeta</string>
     <string name="claims_qr_description">Código QR del apartado confirmado por el servidor</string>
     <string name="claims_failure">No se confirmó la operación. Revisa tu sesión, conexión y disponibilidad antes de intentarlo nuevamente.</string>
     <string name="claims_redeem_title">Canjear apartado</string>
