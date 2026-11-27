@@ -47,7 +47,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 private const val DATE_BOX_WEIGHT = 1.4f
 private val SPANISH_MX: Locale = Locale.forLanguageTag("es-MX")
@@ -97,21 +96,13 @@ internal fun OfferExpirationPicker(value: Long, error: String?, onChange: (Long)
             text = { TimePicker(state = timeState) },
             confirmButton = {
                 TextButton(colors = sensusTextButtonColors(), onClick = {
-                    onChange(combineExpiration(local, dateState.selectedDateMillis ?: value, timeState.hour, timeState.minute))
+                    onChange(combineExpiration(dateState.selectedDateMillis ?: value, timeState.hour, timeState.minute))
                     showTime = false
                 }) { Text(stringResource(R.string.publishing_confirm)) }
             },
             dismissButton = { ExpirationCancelButton { showTime = false } }
         )
     }
-}
-
-/** Une el día elegido (medianoche UTC del DatePicker) con la hora local seleccionada. */
-private fun combineExpiration(local: Calendar, selectedDayUtcMillis: Long, hour: Int, minute: Int): Long {
-    val selected = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = selectedDayUtcMillis }
-    local.set(selected.get(Calendar.YEAR), selected.get(Calendar.MONTH), selected.get(Calendar.DAY_OF_MONTH), hour, minute, 0)
-    local.set(Calendar.MILLISECOND, 0)
-    return local.timeInMillis
 }
 
 @Composable
@@ -134,13 +125,4 @@ private fun ExpirationBox(icon: ImageVector, text: String, modifier: Modifier, o
 @Composable
 private fun ExpirationCancelButton(onClick: () -> Unit) {
     TextButton(colors = sensusTextButtonColors(), onClick = onClick) { Text(stringResource(R.string.publishing_cancel)) }
-}
-
-/** DatePicker uses UTC midnight; preserve the local calendar day shown in the form. */
-internal fun expirationCalendarDayUtc(value: Long, zone: TimeZone = TimeZone.getDefault()): Long {
-    val local = Calendar.getInstance(zone).apply { timeInMillis = value }
-    return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-        clear()
-        set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
-    }.timeInMillis
 }

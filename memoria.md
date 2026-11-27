@@ -1343,3 +1343,8 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - En el push de `Fin_Rocio`, el paso 10 falló porque `trivy-action` v0.36.0 instala por defecto Trivy v0.70.0, que ya no existe en los releases de aquasecurity/trivy (`unable to find 'v0.70.0'`). Sin binario no hubo SARIF, falló la subida del reporte y con ella la consolidación de escáneres.
 - Se fijó `version: 'v0.76.2'` y la subida del SARIF solo corre si el archivo existe. Trivy sigue bloqueante con CRITICAL,HIGH y `exit-code: 1`; no se suprimió ningún hallazgo. `develop` tiene el mismo flujo y necesita esta corrección.
 - Segundo intento: con `version: 'v0.76.2'` el instalador de `setup-trivy` seguía fallando (`unable to find 'v0.76.2'`) aunque el release existe. Se instala Trivy en un paso propio (binario oficial verificado con el checksum publicado) y la acción corre con `skip-setup-trivy: true`.
+
+### FT-38 — Quality Gate de SonarCloud en el PR #47 (2026-11-27)
+
+- SonarCloud marcó 1.2 % de cobertura en código nuevo (62 líneas, 61 sin cubrir): todas en `OfferExpirationPicker.kt` y `MerchantPhotoHelper.kt`, que son UI de Compose pero no tenían un sufijo excluido en `sonar.coverage.exclusions` ni en Kover.
+- La lógica de fecha límite pasó a `OfferExpirationTime.kt` (`combineExpiration` ahora es pura) con `OfferExpirationTimeTest` (4 pruebas). La UI quedó en `OfferExpirationComponents.kt` y `MerchantPhotoComponents.kt`, como en el patrón `*Components.kt` ya usado en FT-18. No se cambiaron exclusiones ni umbrales.
