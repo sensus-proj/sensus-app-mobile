@@ -1,6 +1,7 @@
 package com.example.sensus.presentation.buyer
 
 import com.example.sensus.common.AppError
+import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCart
 import com.example.sensus.presentation.base.ViewEffect
@@ -21,5 +22,8 @@ sealed interface CartViewIntent : ViewIntent {
 }
 
 sealed interface CartViewEffect : ViewEffect {
-    data class OpenClaim(val offer: ProductOffer) : CartViewEffect
+    data class OpenClaim(
+        val offer: ProductOffer,
+        val items: List<CartItem> = listOf(CartItem(offer, 1))
+    ) : CartViewEffect
 }

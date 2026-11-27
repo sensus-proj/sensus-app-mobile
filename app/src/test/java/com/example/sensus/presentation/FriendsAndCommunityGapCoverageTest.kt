@@ -229,7 +229,7 @@ class FriendsAndCommunityGapCoverageTest {
         val deleteUc = mockk<DeleteFeedPostUseCase>()
         val reportUc = mockk<SubmitContentReportUseCase>()
         coEvery { commentsUc("p1") } returns Result.Failure(AppError.Network("Err comentarios"))
-        coEvery { toggleUc("p1") } returns Result.Failure(AppError.Unauthorized("Auth like"))
+        coEvery { toggleUc("p1", any()) } returns Result.Failure(AppError.Unauthorized("Auth like"))
         coEvery { addCommentUc("p1", any()) } returns Result.Failure(AppError.Unauthorized("Auth comment"))
         coEvery { deleteUc("p1") } returns Result.Failure(AppError.Network("Err delete")) andThen Result.Failure(AppError.Unauthorized("Auth delete"))
         coEvery { reportUc(any()) } returns

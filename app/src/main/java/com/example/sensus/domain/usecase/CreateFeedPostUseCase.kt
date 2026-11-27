@@ -19,7 +19,7 @@ class CreateFeedPostUseCase(
     suspend operator fun invoke(input: CreatePostInput, imageBytes: ByteArray? = null): Result<FeedPost> {
         validate(input)?.let { return Result.Failure(it) }
         val text = input.text.trim()
-        val uploaded = when (val result = uploadMediaIfPresent(media, compressor, imageBytes)) {
+        val uploaded = when (val result = uploadMediaIfPresent(media, compressor, imageBytes, text)) {
             is Result.Failure -> return result
             is Result.Success -> result.data
         }

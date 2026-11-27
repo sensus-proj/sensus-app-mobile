@@ -111,4 +111,41 @@ class ClaimsRepositoryTest {
         val http = repository().createClaim("offer") as Result.Failure
         assertTrue(http.error is AppError.Forbidden)
     }
+
+    @Test
+    fun createCartClaim_sendsAllItemsAndIndexesEveryOfferForOneQr() = runTest {
+        val index = mockk<EncryptedClaimIndex>(relaxed = true)
+        state.value = state.value.copy(activeEmail = "buyer@example.invalid")
+        every { sessions.sessionState } returns state
+        val offerA = com.example.sensus.domain.model.ProductOffer("o1", "Pan", "Tienda", "Panadería", 20.0, 10.0, 50, 10, 100, merchantId = "m1")
+        val offerB = offerA.copy(id = "o2", name = "Café")
+        val multiDto = ClaimOfferResultDto(
+            claimId = "claim-multi",
+            offerId = "o1",
+            code = "v1.multi",
+            qrPayload = "v1.multi",
+            expiresAtUtc = "2026-11-15T00:00:00Z",
+            totalUnits = 6,
+            items = listOf(
+                com.example.sensus.data.remote.dto.OfferClaimItemDto("o1", 4, "Pan"),
+                com.example.sensus.data.remote.dto.OfferClaimItemDto("o2", 2, "Café")
+            )
+        )
+        coEvery { api.createCartClaim(any()) } returns Response.success(multiDto)
+        val repo = ClaimsRepositoryImpl(api, sessions, index)
+
+        val result = repo.createCartClaim(
+            listOf(
+                com.example.sensus.domain.model.CartItem(offerA, 4),
+                com.example.sensus.domain.model.CartItem(offerB, 2)
+            )
+        )
+
+        assertTrue(result is Result.Success)
+        val claim = (result as Result.Success).data
+        assertEquals(6, claim.totalUnits)
+        assertEquals(2, claim.items.size)
+        io.mockk.verify(exactly = 1) { index.rememberClaimId("buyer@example.invalid", "o1", "claim-multi") }
+        io.mockk.verify(exactly = 1) { index.rememberClaimId("buyer@example.invalid", "o2", "claim-multi") }
+    }
 }

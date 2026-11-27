@@ -24,9 +24,13 @@ data class ClaimSummary(
     val offerTitle: String?,
     val status: ClaimStatus,
     val expiresAtEpochMs: Long,
-    val qrPayload: String?
+    val qrPayload: String?,
+    val totalUnits: Int = 1,
+    val items: List<ClaimItemSummary> = emptyList()
 ) {
     fun isActiveAt(nowEpochMs: Long): Boolean = status == ClaimStatus.ACTIVE && expiresAtEpochMs > nowEpochMs
 
-    fun toOfferClaim(): OfferClaim? = qrPayload?.takeIf { it.isNotBlank() }?.let { OfferClaim(claimId, offerId, it, it, expiresAtEpochMs) }
+    fun toOfferClaim(): OfferClaim? = qrPayload?.takeIf { it.isNotBlank() }?.let {
+        OfferClaim(claimId, offerId, it, it, expiresAtEpochMs, totalUnits, items)
+    }
 }

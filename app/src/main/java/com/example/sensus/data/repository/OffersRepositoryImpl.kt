@@ -28,6 +28,8 @@ private const val HTTP_OK = 200
 private const val HTTP_CREATED = 201
 private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_FORBIDDEN = 403
+private const val MERCHANT_INVENTORY_PAGE_SIZE = 100
+private const val MAX_MERCHANT_PAGES = 20
 private const val HTTP_UNPROCESSABLE = 422
 private const val DEFAULT_UPDATE_DURATION_MS = 86_400_000L
 private const val MIN_BACKEND_DESC_LEN = 5
@@ -102,7 +104,7 @@ class OffersRepositoryImpl(
                         runCatching { offerDao?.insertOffers(offers.map { it.toEntity() }) }
                     }
                 }
-                val hasMore = body.page == query.page && body.items.isNotEmpty() &&
+                val hasMore = body.resolvedPage() == query.page && body.items.isNotEmpty() &&
                     query.page.toLong() * query.pageSize < body.totalCount
                 Result.Success(PagedOffers(offers, (query.page + 1).takeIf { hasMore }))
             } else {
@@ -114,13 +116,19 @@ class OffersRepositoryImpl(
     override suspend fun fetchMerchantOffers(status: String?): Result<List<ProductOffer>> {
         val api = offersApi ?: return Result.Failure(AppError.Network("No se pudo consultar el inventario del comercio."))
         return safeNetworkCall("Error al cargar tus ofertas.") {
-            val response = api.getMyMerchantOffers(status = status)
-            val body = response.body()
-            if (response.isSuccessful && body != null) {
-                Result.Success(body.map { it.toDomain() })
-            } else {
-                mapCreateOfferError(response)
+            val collected = mutableListOf<ProductOffer>()
+            var page = 1
+            while (page <= MAX_MERCHANT_PAGES) {
+                val response = api.getMyMerchantOffers(status = status, page = page, pageSize = MERCHANT_INVENTORY_PAGE_SIZE)
+                val body = response.body()
+                if (!response.isSuccessful || body == null) {
+                    return@safeNetworkCall mapCreateOfferError(response)
+                }
+                collected.addAll(body.items.map { it.toDomain() })
+                if (body.items.isEmpty() || collected.size >= body.totalCount) break
+                page++
             }
+            Result.Success(collected)
         }
     }
 

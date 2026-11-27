@@ -31,7 +31,7 @@ class CartViewModel @Inject constructor(
             is CartViewIntent.ClearCart -> cartRepository.clearCart()
             is CartViewIntent.CheckoutApartado -> {
                 when (val result = prepareClaim(cartRepository.cart.value)) {
-                    is Result.Success -> emitEffect(CartViewEffect.OpenClaim(result.data))
+                    is Result.Success -> emitEffect(CartViewEffect.OpenClaim(result.data.first().offer, result.data))
                     is Result.Failure -> updateState { copy(checkoutError = result.error) }
                 }
             }

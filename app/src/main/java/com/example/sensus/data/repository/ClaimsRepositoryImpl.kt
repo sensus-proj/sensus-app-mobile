@@ -4,7 +4,13 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.EncryptedClaimIndex
 import com.example.sensus.data.remote.api.ClaimsApiService
+import com.example.sensus.data.remote.dto.CartClaimItemDto
 import com.example.sensus.data.remote.dto.ClaimDetailDto
+import com.example.sensus.data.remote.dto.ClaimOfferResultDto
+import com.example.sensus.data.remote.dto.CreateCartClaimRequestDto
+import com.example.sensus.data.remote.dto.OfferClaimItemDto
+import com.example.sensus.domain.model.CartItem
+import com.example.sensus.domain.model.ClaimItemSummary
 import com.example.sensus.domain.model.ClaimRedemption
 import com.example.sensus.domain.model.ClaimStatus
 import com.example.sensus.domain.model.ClaimSummary
@@ -54,13 +60,32 @@ class ClaimsRepositoryImpl(
         val session = sessions.sessionState.value
         val response = request(false, { api.createClaim(offerId) }, session) {
             require(it.claimId.isNotBlank() && it.offerId == offerId)
-            require(it.code.isNotBlank() && it.qrPayload.isNotBlank())
-            require(it.qrPayload.toByteArray(Charsets.UTF_8).size <= MAX_QR_PAYLOAD_BYTES)
-            OfferClaim(it.claimId, it.offerId, it.code, it.qrPayload, Instant.parse(it.expiresAtUtc).toEpochMilli())
+            it.toOfferClaim()
         }
         val claim = response.getOrNull()
         val account = session.activeEmail
         if (claim != null && !account.isNullOrBlank()) rememberClaim(account, offerId, claim.claimId, session)
+        return if (ClaimsSessionIdentity.from(sessions.sessionState.value) == ClaimsSessionIdentity.from(session)) response else failure(HTTP_UNAUTHORIZED)
+    }
+
+    override suspend fun createCartClaim(items: List<CartItem>): Result<OfferClaim> {
+        if (items.isEmpty()) return Result.Failure(AppError.Validation("Agrega al menos un producto para apartar."))
+        val single = items.singleOrNull()
+        if (single != null && single.quantity == 1) return createClaim(single.offer.id)
+
+        val session = sessions.sessionState.value
+        val body = CreateCartClaimRequestDto(items.map { CartClaimItemDto(it.offer.id, it.quantity) })
+        val response = request(false, { api.createCartClaim(body) }, session) {
+            require(it.claimId.isNotBlank() && it.offerId.isNotBlank())
+            it.toOfferClaim()
+        }
+        val claim = response.getOrNull()
+        val account = session.activeEmail
+        if (claim != null && !account.isNullOrBlank()) {
+            items.map { it.offer.id }.distinct().forEach { id ->
+                rememberClaim(account, id, claim.claimId, session)
+            }
+        }
         return if (ClaimsSessionIdentity.from(sessions.sessionState.value) == ClaimsSessionIdentity.from(session)) response else failure(HTTP_UNAUTHORIZED)
     }
 
@@ -204,25 +229,60 @@ class ClaimsRepositoryImpl(
     )
 }
 
+private fun ClaimOfferResultDto.toOfferClaim(): OfferClaim {
+    require(code.isNotBlank() && qrPayload.isNotBlank())
+    require(qrPayload.toByteArray(Charsets.UTF_8).size <= MAX_QR_PAYLOAD_BYTES)
+    val mappedItems = items.toDomainItems()
+    val resolvedTotal = totalUnits.coerceAtLeast(mappedItems.sumOf { it.quantity }.coerceAtLeast(1))
+    return OfferClaim(
+        claimId = claimId,
+        offerId = offerId,
+        code = code,
+        qrPayload = qrPayload,
+        expiresAtEpochMs = Instant.parse(expiresAtUtc).toEpochMilli(),
+        totalUnits = resolvedTotal,
+        items = mappedItems
+    )
+}
+
+private fun List<OfferClaimItemDto>.toDomainItems(): List<ClaimItemSummary> = map {
+    ClaimItemSummary(offerId = it.offerId, quantity = it.quantity.coerceAtLeast(1), offerTitle = it.offerTitle, unitPrice = it.unitPrice)
+}
+
 private fun ClaimDetailDto.toActiveOfferClaim(offerId: String, claimId: String): OfferClaim {
-    require(this.offerId == offerId && this.claimId == claimId && ClaimStatus.from(status) == ClaimStatus.ACTIVE)
+    val matchesOffer = this.offerId == offerId || items.any { it.offerId == offerId }
+    require(matchesOffer && this.claimId == claimId && ClaimStatus.from(status) == ClaimStatus.ACTIVE)
     val payload = requireNotNull(qrPayload)
     require(payload.isNotBlank() && payload.toByteArray(Charsets.UTF_8).size <= MAX_QR_PAYLOAD_BYTES)
     val expiresAt = Instant.parse(expiresAtUtc).toEpochMilli()
     require(expiresAt > System.currentTimeMillis())
-    return OfferClaim(claimId, offerId, payload, payload, expiresAt)
+    val mappedItems = items.toDomainItems()
+    return OfferClaim(
+        claimId = claimId,
+        offerId = offerId,
+        code = payload,
+        qrPayload = payload,
+        expiresAtEpochMs = expiresAt,
+        totalUnits = totalUnits.coerceAtLeast(mappedItems.sumOf { it.quantity }.coerceAtLeast(1)),
+        items = mappedItems
+    )
 }
 
 private fun ClaimDetailDto.toSummary(): ClaimSummary {
     require(claimId.isNotBlank() && offerId.isNotBlank())
     val payload = qrPayload?.takeIf { it.isNotBlank() && it.toByteArray(Charsets.UTF_8).size <= MAX_QR_PAYLOAD_BYTES }
+    val mappedItems = items.toDomainItems()
+    val resolvedTitle = offerTitle?.trim()?.takeIf { it.isNotEmpty() }
+        ?: mappedItems.firstOrNull()?.offerTitle?.trim()?.takeIf { it.isNotEmpty() }
     return ClaimSummary(
         claimId = claimId,
         offerId = offerId,
-        offerTitle = offerTitle?.trim()?.takeIf { it.isNotEmpty() },
+        offerTitle = resolvedTitle,
         status = ClaimStatus.from(status),
         expiresAtEpochMs = Instant.parse(expiresAtUtc).toEpochMilli(),
-        qrPayload = payload
+        qrPayload = payload,
+        totalUnits = totalUnits.coerceAtLeast(mappedItems.sumOf { it.quantity }.coerceAtLeast(1)),
+        items = mappedItems
     )
 }
 

@@ -50,12 +50,30 @@ class PublishedOfferUseCasesTest {
     }
 
     @Test
-    fun cartPreparesOneUnitOnlyWithoutGeneratingALocalClaimOrQr() {
+    fun cartPreparesSingleStoreMultiItemAndMultiQuantityWithoutGeneratingLocalQr() {
         val action = PrepareCartClaimUseCase()
         val single = StoreCart(items = listOf(CartItem(offer, 1)))
-        assertEquals(offer, (action(single) as Result.Success).data)
+        assertEquals(single.items, (action(single) as Result.Success).data)
+
+        val multiQty = StoreCart(items = listOf(CartItem(offer, 4)))
+        assertEquals(multiQty.items, (action(multiQty) as Result.Success).data)
+
+        val sameStoreMultiProduct = StoreCart(
+            items = listOf(CartItem(offer, 2), CartItem(offer.copy(id = "2"), 3))
+        )
+        assertEquals(sameStoreMultiProduct.items, (action(sameStoreMultiProduct) as Result.Success).data)
+
         assertTrue(action(StoreCart()) is Result.Failure)
-        assertTrue(action(StoreCart(items = listOf(CartItem(offer, 2)))) is Result.Failure)
-        assertTrue(action(StoreCart(items = listOf(CartItem(offer, 1), CartItem(offer.copy(id = "2"), 1)))) is Result.Failure)
+        assertTrue(action(StoreCart(items = listOf(CartItem(offer, 0)))) is Result.Failure)
+        assertTrue(
+            action(
+                StoreCart(
+                    items = listOf(
+                        CartItem(offer.copy(merchantId = "m-1"), 1),
+                        CartItem(offer.copy(id = "2", merchantId = "m-2"), 1)
+                    )
+                )
+            ) is Result.Failure
+        )
     }
 }
