@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.example.sensus.domain.security.DeviceAuthOutcome
 import com.example.sensus.domain.security.DeviceAuthPrompt
 import com.example.sensus.domain.security.DeviceAuthenticator
+import com.example.sensus.domain.security.runDeviceAuthentication
 import com.example.sensus.domain.security.userFacingErrorMessage
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusRed
@@ -73,9 +74,4 @@ fun SensitiveQrGate(unlockKey: String, deviceAuthenticator: DeviceAuthenticator?
             Text("Mostrar código QR")
         }
     }
-}
-
-suspend fun runDeviceAuthentication(authenticator: DeviceAuthenticator?, prompt: DeviceAuthPrompt): DeviceAuthOutcome {
-    if (authenticator == null) return DeviceAuthOutcome.Authenticated
-    return authenticator.authenticate(prompt)
 }

@@ -105,5 +105,23 @@ class FavoritesUseCasesTest {
 
         val availableOnly = useCase(FavoriteFilter.AVAILABLE_ONLY) { 1_000L }.first()
         assertEquals(listOf("offer-fav-1"), availableOnly.map { it.offer.id })
+
+        val noExpiration = FavoriteOffer(sampleOffer.copy(id = "no-exp", expiresAtMillis = null))
+        favoritesFlow.value = listOf(noExpiration, soldOut, expired)
+        assertEquals(listOf("no-exp"), useCase(FavoriteFilter.AVAILABLE_ONLY) { 1_000L }.first().map { it.offer.id })
+    }
+
+    @Test
+    fun toggleAndGetFavoritesRejectInactiveOrBlankTokenSessions() = runTest {
+        val toggle = ToggleFavoriteUseCase(repository, sessionRepository)
+        val get = GetFavoritesUseCase(repository, sessionRepository)
+
+        sessionFlow.value = SessionState(isSessionActive = false, isGuest = false, activeToken = "jwt-a")
+        assertTrue((toggle(sampleOffer) as Result.Failure).error is AppError.Unauthorized)
+        assertTrue((get() as Result.Failure).error is AppError.Unauthorized)
+
+        sessionFlow.value = SessionState(isSessionActive = true, isGuest = false, activeToken = " ")
+        assertTrue((toggle(sampleOffer) as Result.Failure).error is AppError.Unauthorized)
+        assertTrue((get() as Result.Failure).error is AppError.Unauthorized)
     }
 }

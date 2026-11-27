@@ -41,10 +41,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.example.sensus.domain.security.DeviceAuthOutcome
 import com.example.sensus.domain.security.DeviceAuthPrompt
+import com.example.sensus.domain.security.runDeviceAuthentication
 import com.example.sensus.domain.security.userFacingErrorMessage
 import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.presentation.common.currentDeviceAuthenticator
-import com.example.sensus.presentation.common.runDeviceAuthentication
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed

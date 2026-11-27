@@ -118,4 +118,72 @@ class FavoritesViewModelTest {
             assertFalse(vm.viewState.value.pendingOfferIds.contains("fav-1"))
         }
     }
+
+    @Test
+    fun syncHandlesUnauthenticatedSuccessEmptyErrorAndRefreshBranches() = runTest(dispatcher) {
+        sessionFlow.value = SessionState(isSessionActive = false, isGuest = false, activeToken = null)
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.dispatchIntent(FavoritesViewIntent.Load)
+        assertFalse(vm.viewState.value.isLoading)
+        assertTrue(vm.viewState.value.isEmpty)
+
+        sessionFlow.value = SessionState(isSessionActive = true, isGuest = false, activeToken = "jwt-a")
+        coEvery { repository.syncFavorites(1, 20) } returns Result.Failure(AppError.Network("Sin red")) andThen Result.Success(emptyList())
+        vm.dispatchIntent(FavoritesViewIntent.Load)
+        advanceUntilIdle()
+        assertEquals("Sin red", vm.viewState.value.errorMessage)
+        assertFalse(vm.viewState.value.isEmpty)
+
+        vm.dispatchIntent(FavoritesViewIntent.Refresh)
+        advanceUntilIdle()
+        assertNull(vm.viewState.value.errorMessage)
+        assertFalse(vm.viewState.value.isRefreshing)
+
+        favoritesFlow.value = listOf(FavoriteOffer(activeOffer))
+        advanceUntilIdle()
+        assertEquals(setOf("fav-1"), vm.viewState.value.favoriteOfferIds)
+        assertFalse(vm.viewState.value.isEmpty)
+    }
+
+    @Test
+    fun syncAndToggleHandleAuthErrorsNetworkFailureAndUnfavoriteMessage() = runTest(dispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.viewEffect.test {
+            coEvery { repository.syncFavorites(1, 20) } returns
+                Result.Failure(AppError.Unauthorized("401")) andThen
+                Result.Failure(AppError.Forbidden("403"))
+            vm.dispatchIntent(FavoritesViewIntent.Load)
+            advanceUntilIdle()
+            assertEquals(FavoritesViewEffect.RequireAuth, awaitItem())
+
+            vm.dispatchIntent(FavoritesViewIntent.Load)
+            advanceUntilIdle()
+            assertEquals(FavoritesViewEffect.RequireAuth, awaitItem())
+
+            coEvery { repository.toggleFavorite(activeOffer) } returns
+                Result.Success(FavoriteToggleResult("fav-1", favorited = false, favoriteCount = 0)) andThen
+                Result.Failure(AppError.Unauthorized("401")) andThen
+                Result.Failure(AppError.Forbidden("403")) andThen
+                Result.Failure(AppError.Network("Timeout"))
+
+            vm.dispatchIntent(FavoritesViewIntent.ToggleFavorite(activeOffer))
+            advanceUntilIdle()
+            assertEquals("Quitado de favoritos", (awaitItem() as FavoritesViewEffect.ShowMessage).message)
+
+            vm.dispatchIntent(FavoritesViewIntent.ToggleFavorite(activeOffer))
+            advanceUntilIdle()
+            assertEquals(FavoritesViewEffect.RequireAuth, awaitItem())
+
+            vm.dispatchIntent(FavoritesViewIntent.ToggleFavorite(activeOffer))
+            advanceUntilIdle()
+            assertEquals(FavoritesViewEffect.RequireAuth, awaitItem())
+
+            vm.dispatchIntent(FavoritesViewIntent.ToggleFavorite(activeOffer))
+            advanceUntilIdle()
+            assertEquals("Timeout", (awaitItem() as FavoritesViewEffect.ShowMessage).message)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

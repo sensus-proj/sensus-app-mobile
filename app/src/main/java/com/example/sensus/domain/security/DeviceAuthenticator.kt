@@ -22,3 +22,6 @@ fun DeviceAuthOutcome.userFacingErrorMessage(): String? = when (this) {
     DeviceAuthOutcome.Unavailable -> "Configura un bloqueo biométrico o PIN en tu dispositivo para continuar."
     is DeviceAuthOutcome.Error -> message.ifBlank { "No fue posible verificar tu identidad en el dispositivo." }
 }
+
+suspend fun runDeviceAuthentication(authenticator: DeviceAuthenticator?, prompt: DeviceAuthPrompt): DeviceAuthOutcome =
+    authenticator?.authenticate(prompt) ?: DeviceAuthOutcome.Authenticated

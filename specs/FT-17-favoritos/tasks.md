@@ -22,7 +22,7 @@
 
 ## Fase D — Presentación y navegación
 
-- [x] T17.9 Crear `FavoritesContract.kt`, `FavoritesViewModel.kt`, `FavoritesScreen.kt` y `ProductOfferCard.kt` (`P-23`, chips `C-37`, estados Loading/Loaded/Empty/Error, 4 `@Preview`) — verif: `compileDebugKotlin`, `detekt` y `ktlintCheck` PASS.
+- [x] T17.9 Crear `FavoritesContract.kt`, `FavoritesViewModel.kt`, `FavoritesScreen.kt` y `ProductOfferComponents.kt` (`P-23`, chips `C-37`, estados Loading/Loaded/Empty/Error, 4 `@Preview`) — verif: `compileDebugKotlin`, `detekt` y `ktlintCheck` PASS.
 - [x] T17.10 Agregar ruta/overlay de `FavoritesScreen` (`MainAppBuyerOverlays.kt`, `MainAppMenu.kt`, `MainAppContainer.kt`) y entrada «Mis favoritos» desde `BuyerProfileScreen` — verif: `compileDebugKotlin` PASS.
 - [x] T17.11 Reconciliar `ProductDetailScreen`/`ProductDetailComponents` con `FavoritesViewModel` (`CircleFavoriteIconButton` para ofertas y `GuestPromptDialog` a invitados, eliminando la doble acción `ProductSaveInterestPill`); se preserva `SavedOffersRepository` exclusivo para publicaciones de Comunidad — verif: `compileDebugKotlin` PASS.
 - [x] T17.12 Integrar corazón de favorito en `BuyerHomeScreen` reutilizando `FavoriteProductOfferCard` y `FavoritesViewModel` — verif: `compileDebugKotlin` PASS.
