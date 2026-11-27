@@ -28,3 +28,14 @@ Implementación y ampliación del alcance solicitadas por el usuario. Validació
 El video original del gato es la única presentación de arranque.
 
 El amarillo de los fotogramas llena los márgenes del video hasta los bordes de la ventana.
+
+## Comercio — fidelidad a la maqueta Figma (frames 13 a 17)
+Rediseñar las pantallas existentes del vendedor según los frames del lienzo SENSUS: 13 y 13b (registro del negocio y foto), 14 y 14b (panel sin ofertas e inventario), 14d (editar oferta), 14e (escanear código), 15 (nueva oferta), 16 (ventas y canjes) y 17 (perfil del comercio).
+
+Requisitos:
+- Mantener ViewModels, intents, estados, callbacks, rutas y contratos. El cambio es solo de presentación.
+- Fondo lila de la maqueta, tarjetas blancas con borde suave, encabezado con flecha en círculo y título, acciones primarias violetas, contenedor naranja para el canje y para avisos.
+- Textos de interfaz nuevos en `strings.xml`. Conservar los textos que validan las pruebas instrumentadas de canje y edición.
+- Lo que la maqueta muestra sin datos en el contrato actual no se inventa: resumen del día y pedidos recientes (16), métodos de pago, RFC y stock (13), y métricas por oferta (14c).
+
+Fuera de alcance, pendiente de contrato o de una slice propia: 14c (métricas por oferta), 14f (canje validado con cliente, producto y monto), 15b (oferta publicada con vista previa), 17b (verificación del comercio) y 17c (horarios y contacto editables).

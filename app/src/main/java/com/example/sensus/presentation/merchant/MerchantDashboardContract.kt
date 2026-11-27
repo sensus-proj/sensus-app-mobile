@@ -8,6 +8,7 @@ import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.base.ViewEffect
 import com.example.sensus.presentation.base.ViewIntent
 import com.example.sensus.presentation.base.ViewState
+import com.example.sensus.presentation.common.ComposeUiModel
 
 enum class MerchantOfferFilter(val labelResource: Int) {
     ACTIVE(R.string.merchant_inventory_active),
@@ -44,3 +45,11 @@ sealed interface MerchantDashboardViewIntent : ViewIntent {
 }
 
 sealed interface MerchantDashboardViewEffect : ViewEffect
+
+@ComposeUiModel
+data class MerchantDashboardCallbacks(
+    val onNewOfferClick: () -> Unit,
+    val onScanQrClick: () -> Unit,
+    val onSwitchToBuyer: () -> Unit,
+    val onEditOfferClick: (ProductOffer) -> Unit = {}
+)
