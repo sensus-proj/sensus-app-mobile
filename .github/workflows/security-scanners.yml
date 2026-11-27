@@ -173,10 +173,13 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Herramienta 10: Aqua Security Trivy (Versión oficial con prefijo v)
+      # La acción v0.36.0 instala por defecto Trivy v0.70.0, retirada de los releases de
+      # aquasecurity/trivy; se fija una versión publicada para que el escáner se ejecute.
       - name: "10. Trivy (Misconfigurations y CVEs en Repositorio)"
         if: ${{ !cancelled() }}
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: 'v0.76.2'
           scan-type: 'fs'
           scan-ref: '.'
           format: 'sarif'
@@ -186,7 +189,7 @@ jobs:
 
       - name: Subir reporte SARIF de Trivy
         uses: github/codeql-action/upload-sarif@d2aacf54c2fbc910db8d7ec338fdb54ea48c692d # v3
-        if: always()
+        if: ${{ always() && hashFiles('trivy-results.sarif') != '' }}
         with:
           sarif_file: 'trivy-results.sarif'
 

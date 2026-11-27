@@ -1337,3 +1337,8 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - Se integró `origin/Fin_Beto` (`03dfa6b`: multi-QR, media moderada, muro comunitario, FT-41..43) con el commit de merge `f49a2b8`, sin conflictos contra el último commit.
 - Al reaplicar el rediseño del vendedor y del QR (sin commit) chocaron `ClaimOfferScreen`, `MerchantSalesScreen`, `memoria.md` y la checklist y tareas de FT-38. Se conservó la lógica de Fin_Beto (varias unidades en un QR, `SensitiveQrGate`, `SecureScreenEffect`) dentro del nuevo diseño, y las notas de ambos en la documentación.
 - Validación: compilación de app e instrumentadas, Lint, Detekt, ktlint, pruebas unitarias, Kover 89.96 % y los cinco gates SDD en verde.
+
+### FT-27 — Trivy no se instalaba en security-scanners (2026-11-27)
+
+- En el push de `Fin_Rocio`, el paso 10 falló porque `trivy-action` v0.36.0 instala por defecto Trivy v0.70.0, que ya no existe en los releases de aquasecurity/trivy (`unable to find 'v0.70.0'`). Sin binario no hubo SARIF, falló la subida del reporte y con ella la consolidación de escáneres.
+- Se fijó `version: 'v0.76.2'` y la subida del SARIF solo corre si el archivo existe. Trivy sigue bloqueante con CRITICAL,HIGH y `exit-code: 1`; no se suprimió ningún hallazgo. `develop` tiene el mismo flujo y necesita esta corrección.
