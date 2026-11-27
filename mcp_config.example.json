@@ -4,11 +4,10 @@
       "command": "node",
       "args": [
         "C:\\Users\\<USER>\\AppData\\Roaming\\npm\\node_modules\\figma-developer-mcp\\dist\\bin.js",
-        "--figma-api-key=YOUR_FIGMA_API_KEY",
         "--stdio"
       ],
       "env": {
-        "FIGMA_API_KEY": "YOUR_FIGMA_API_KEY"
+        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
       }
     },
     "FigmaRemote": {
