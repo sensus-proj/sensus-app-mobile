@@ -1316,3 +1316,35 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 - **Apartado multi-producto (misma tienda) y `N` unidades -> 1 QR (`FT-13`):** `CreateClaimUseCase(items)`, `ClaimsRepositoryImpl.createCartClaim` (`POST /api/v1/offers/claims`), `PrepareCartClaimUseCase` (misma tienda obligatoria) y `ClaimOfferViewModel` descuentan las `N` unidades exactas por artículo únicamente tras recibir HTTP 200 y muestran el resumen consolidado en un único QR (`ClaimOfferScreen`), indexando todos los `offerId` en `EncryptedClaimIndex`. Sin variables SSM nuevas.
 - **Muro comunitario activo (`FT-18`):** activadas en `CommunityScreen` las 3 subpestañas (**Muro**, **Actividad**, **Amigos y QR**); `CreateFeedPostSheet` añade captura de cámara (`rememberSafeMerchantCameraLauncher`) junto a galería, aviso visible de moderación obligatoria y selector deduplicado de comercio etiquetado (`merchantId`); `FeedApiService`/`FeedRepositoryImpl` envían `radiusKm`, leen `PagedResult.items` y envían `SetFeedPostLikeRequest(liked)` explícito.
 - **Cobertura >= 90 %:** añadidos casos en `DomainCoverageGapTest.kt`, `BuyerPresentationGapTest.kt`, `MerchantPushAndRootGapTest.kt`, `PublishedCartClaimTest.kt` y tests de comunidad/publicación; renombrado `FriendsActivityContent.kt` -> `FriendsActivityComponents.kt` acorde con el patrón de exclusión Compose UI (`*Components.kt`). Suite unitaria verificada >= 90 % Kover Debug (`check_coverage.py --min 90`). Pendientes externos: pruebas instrumentadas `androidTest` en dispositivo y E2E contra backend desplegado (`§5.Z-2..3`).
+
+### FT-13 — Rediseño visual de la pantalla de reserva con QR (2026-11-26)
+
+- `ClaimOfferScreen` adopta la maqueta "08 · Reserva con código QR": barra "Tu apartado", encabezado "¡Oferta apartada!", tarjeta de producto con precio, tarjeta del QR con el código del backend, contador hacia `expiresAtEpochMs`, ubicación y botón naranja "Abrir en GPS / Cómo llegar". Los componentes viven en `ClaimOfferComponents.kt` y los textos en `strings_claims.xml`.
+- No cambia la lógica: el ViewModel, los intents, el tick con `Clock` y la regla de vencimiento siguen igual. El contador solo da formato a la fecha del servidor, y la fecha ISO "Vence:" se conserva como leyenda.
+- No se añadió "Cancelar apartado" porque `ClaimsScreenActions` no tiene esa acción y la spec FT-13 §7 deja la cancelación fuera de esta pantalla.
+- `ClaimsScreensTest` se ajustó al nuevo texto del botón de ruta.
+
+### FT-38 — Pantallas del vendedor según Figma (2026-11-27)
+
+- Se capturaron los frames del vendedor del lienzo SENSUS en modo presentación (IDs de nodo: 13 `255:4171`, 13b `255:3022`, 14 `255:4598`, 14b `255:4477`, 14c `276:9`, 14d `276:113`, 14e `276:188`, 14f `276:244`, 15 `255:4058`, 15b `277:9`, 16 `255:4382`, 17 `255:4269`, 17b `277:65`, 17c `277:129`).
+- Se rediseñaron ventas y canje, panel e inventario (agrupado por categoría y plegable), nueva oferta, editar oferta, registro con foto de fachada y perfil del comercio. Los componentes compartidos están en `MerchantDesignComponents.kt` y `MerchantInventoryComponents.kt`, y los textos en `strings_merchant_ui.xml`.
+- No cambia la lógica: ViewModels, intents, estados, callbacks y rutas quedan igual. Se conservaron las acciones que la maqueta no muestra (filtros Activas/Pausadas/Finalizadas, ajuste de stock, escaneo desde el panel, descripción y stock en la oferta, código postal en el registro, apariencia en el perfil).
+- La pausa en editar oferta ahora es el interruptor "Oferta activa"; sigue pidiendo confirmación. `MerchantEditOfferContentTest` busca "Pausar promoción" como descripción del interruptor.
+- Quedan fuera por falta de datos en el contrato: resumen del día y pedidos recientes (16), métodos de pago y RFC (13), filas de notificaciones, ayuda, cerrar sesión y eliminar cuenta en el perfil (17), y las pantallas 14c, 14f, 15b, 17b y 17c.
+
+### Integración de Fin_Beto en movil_Rocio (2026-11-27)
+
+- Se integró `origin/Fin_Beto` (`03dfa6b`: multi-QR, media moderada, muro comunitario, FT-41..43) con el commit de merge `f49a2b8`, sin conflictos contra el último commit.
+- Al reaplicar el rediseño del vendedor y del QR (sin commit) chocaron `ClaimOfferScreen`, `MerchantSalesScreen`, `memoria.md` y la checklist y tareas de FT-38. Se conservó la lógica de Fin_Beto (varias unidades en un QR, `SensitiveQrGate`, `SecureScreenEffect`) dentro del nuevo diseño, y las notas de ambos en la documentación.
+- Validación: compilación de app e instrumentadas, Lint, Detekt, ktlint, pruebas unitarias, Kover 89.96 % y los cinco gates SDD en verde.
+
+### FT-27 — Trivy no se instalaba en security-scanners (2026-11-27)
+
+- En el push de `Fin_Rocio`, el paso 10 falló porque `trivy-action` v0.36.0 instala por defecto Trivy v0.70.0, que ya no existe en los releases de aquasecurity/trivy (`unable to find 'v0.70.0'`). Sin binario no hubo SARIF, falló la subida del reporte y con ella la consolidación de escáneres.
+- Se fijó `version: 'v0.76.2'` y la subida del SARIF solo corre si el archivo existe. Trivy sigue bloqueante con CRITICAL,HIGH y `exit-code: 1`; no se suprimió ningún hallazgo. `develop` tiene el mismo flujo y necesita esta corrección.
+- Segundo intento: con `version: 'v0.76.2'` el instalador de `setup-trivy` seguía fallando (`unable to find 'v0.76.2'`) aunque el release existe. Se instala Trivy en un paso propio (binario oficial verificado con el checksum publicado) y la acción corre con `skip-setup-trivy: true`.
+
+### FT-38 — Quality Gate de SonarCloud en el PR #47 (2026-11-27)
+
+- SonarCloud marcó 1.2 % de cobertura en código nuevo (62 líneas, 61 sin cubrir): todas en `OfferExpirationPicker.kt` y `MerchantPhotoHelper.kt`, que son UI de Compose pero no tenían un sufijo excluido en `sonar.coverage.exclusions` ni en Kover.
+- La lógica de fecha límite pasó a `OfferExpirationTime.kt` (`combineExpiration` ahora es pura) con `OfferExpirationTimeTest` (4 pruebas). La UI quedó en `OfferExpirationComponents.kt` y `MerchantPhotoComponents.kt`, como en el patrón `*Components.kt` ya usado en FT-18. No se cambiaron exclusiones ni umbrales.

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="merchant_ui_back">Regresar</string>
+
+    <!-- 16 · Ventas y canjes / 14e · Escanear código -->
+    <string name="merchant_sales_title">Ventas y Canjes</string>
+    <string name="merchant_sales_scan_title">ESCANEAR CÓDIGO QR</string>
+    <string name="merchant_sales_scan_subtitle">Validar entrega en caja para liberar pago</string>
+    <string name="merchant_sales_manual_title">¿No se puede escanear? Escribe el folio</string>
+    <string name="merchant_sales_redeemed_title">¡Canje validado!</string>
+
+    <!-- 14 / 14b · Panel de vendedor -->
+    <string name="merchant_dashboard_title">Mi tienda</string>
+    <string name="merchant_dashboard_open">Abierta</string>
+    <string name="merchant_dashboard_closed">Cerrada</string>
+    <string name="merchant_dashboard_switch_buyer">Cambiar a modo comprador</string>
+    <string name="merchant_dashboard_active_offers">Ofertas activas</string>
+    <string name="merchant_dashboard_metrics_line">%1$d piezas disponibles · %2$d con 3 piezas o menos</string>
+    <string name="merchant_dashboard_publish">Publicar Nueva Oferta</string>
+    <string name="merchant_dashboard_scan">Escanear QR</string>
+    <string name="merchant_dashboard_inventory">Tu inventario</string>
+    <string name="merchant_dashboard_inventory_count">%1$d productos · %2$d categorías</string>
+    <plurals name="merchant_dashboard_products">
+        <item quantity="one">%d producto</item>
+        <item quantity="other">%d productos</item>
+    </plurals>
+    <string name="merchant_dashboard_offer_units">%1$s · %2$d unidades</string>
+    <string name="merchant_dashboard_manage">Gestionar</string>
+    <string name="merchant_dashboard_stock">Stock</string>
+    <string name="merchant_dashboard_empty_title">Aquí se mostrarán las ofertas que agregues</string>
+    <string name="merchant_dashboard_empty_hint">Publica tu primera oferta para empezar a vender y verla reflejada en este panel.</string>
+    <string name="merchant_dashboard_empty_action">+ Publicar mi primera oferta</string>
+    <string name="merchant_status_active">Activo</string>
+    <string name="merchant_status_expired">Expirada</string>
+    <string name="merchant_status_archived">De baja</string>
+
+    <!-- 15 · Nueva oferta -->
+    <string name="merchant_new_offer_title">Nueva oferta</string>
+    <string name="merchant_new_offer_subtitle">Dale una segunda oportunidad a tu producto</string>
+    <string name="merchant_new_offer_photo_title">Cargar foto</string>
+    <string name="merchant_new_offer_photo_hint">Que se vea rico y claro. JPG o PNG · hasta 10 MB</string>
+    <string name="merchant_new_offer_photo_preview">Foto del producto</string>
+    <string name="merchant_new_offer_change_photo">Cambiar foto</string>
+    <string name="merchant_new_offer_name">Nombre del producto</string>
+    <string name="merchant_new_offer_name_hint">Ej. Jugo de naranja natural · 1 L</string>
+    <string name="merchant_new_offer_category">Categoría</string>
+    <string name="merchant_new_offer_description">Descripción</string>
+    <string name="merchant_new_offer_description_hint">Detalla el estado, empaque o motivo...</string>
+    <string name="merchant_new_offer_original_price">Precio original</string>
+    <string name="merchant_new_offer_original_price_hint">$48.00</string>
+    <string name="merchant_new_offer_sensus_price">Precio Oferta Sensus</string>
+    <string name="merchant_new_offer_sensus_price_hint">$24.00</string>
+    <string name="merchant_new_offer_currency_hint">Precios en pesos mexicanos (MXN)</string>
+    <string name="merchant_new_offer_discount">%1$d%% OFF</string>
+    <string name="merchant_new_offer_units">Unidades disponibles</string>
+    <string name="merchant_new_offer_units_hint">Stock total de este lote</string>
+    <string name="merchant_new_offer_less">Menos</string>
+    <string name="merchant_new_offer_more">Más</string>
+    <string name="merchant_new_offer_deadline">Fecha y hora límite</string>
+    <string name="merchant_new_offer_deadline_hint">La oferta se retirará del mapa al llegar a esta hora.</string>
+    <string name="merchant_new_offer_notice">Del mostrador al mapa en menos de 1 minuto.</string>
+    <string name="merchant_new_offer_publish">Publicar Oferta Ahora</string>
+    <string name="merchant_new_offer_publishing">Verificando seguridad...</string>
+    <string name="merchant_new_offer_map_hint">Tu oferta aparecerá en el mapa de Sensus.</string>
+
+    <!-- 14d · Editar oferta -->
+    <string name="merchant_edit_title">Editar oferta</string>
+    <string name="merchant_edit_status_paused">Pausada</string>
+    <string name="merchant_edit_product">Producto</string>
+    <string name="merchant_edit_offer_price">Precio oferta</string>
+    <string name="merchant_edit_normal_price">Precio normal</string>
+    <string name="merchant_edit_discount">Descuento aplicado: -%1$d%%</string>
+    <string name="merchant_edit_units">Unidades</string>
+    <string name="merchant_edit_units_value">%1$d u.</string>
+    <string name="merchant_edit_stock_less">Disminuir stock</string>
+    <string name="merchant_edit_stock_more">Aumentar stock</string>
+    <string name="merchant_edit_active_title">Oferta activa</string>
+    <string name="merchant_edit_active_hint">Apágala para pausarla sin borrarla</string>
+    <string name="merchant_edit_pause">Pausar promoción</string>
+    <string name="merchant_edit_reactivate">Reactivar promoción</string>
+    <string name="merchant_edit_reactivate_hint">Primero aumenta el stock a 1 o más piezas y guarda cambios para poder reactivarla.</string>
+    <string name="merchant_edit_delete">Eliminar oferta</string>
+    <string name="merchant_edit_save">Guardar cambios</string>
+    <string name="merchant_edit_archived">Esta promoción ya fue dada de baja y no es visible en el mapa ni catálogo público.</string>
+
+    <!-- 13 / 13b · Registro de vendedor -->
+    <string name="merchant_register_title">¿Cambiarte a vendedor?</string>
+    <string name="merchant_register_subtitle">Completa los siguientes datos para poder vender tus productos</string>
+    <string name="merchant_register_photo_label">Foto del negocio</string>
+    <string name="merchant_register_photo_hint">Comparte una foto de tu negocio</string>
+    <string name="merchant_register_photo_main">Principal</string>
+    <string name="merchant_register_photo_main_hint">La foto principal aparecerá en tu perfil de negocio.</string>
+    <string name="merchant_register_photo_description">Foto de fachada del comercio</string>
+    <string name="merchant_register_photo_change">Cambiar foto de fachada</string>
+    <string name="merchant_register_name">Nombre del negocio</string>
+    <string name="merchant_register_name_hint">Ej. Tienda de la esquina</string>
+    <string name="merchant_register_location">Ubicación</string>
+    <string name="merchant_register_address">Dirección completa del local</string>
+    <string name="merchant_register_address_hint">Calle, número y colonia</string>
+    <string name="merchant_register_postal">Código postal</string>
+    <string name="merchant_register_postal_hint">Ej. 42800</string>
+    <string name="merchant_register_submit">Registrar negocio ahora</string>
+    <string name="merchant_register_map_hint">Tu negocio aparecerá en el mapa de Sensus.</string>
+
+    <!-- 17 · Perfil del comercio -->
+    <string name="merchant_profile_title">Perfil del Comercio</string>
+    <string name="merchant_profile_no_rating">Sin calificaciones aún</string>
+    <string name="merchant_profile_rating">★ %1$s (%2$d reseñas)</string>
+    <string name="merchant_profile_edit">Editar datos del local</string>
+    <string name="merchant_profile_change_photo">Cambiar foto de tienda</string>
+    <string name="merchant_profile_store_open">Estado de la Tienda: Abierta</string>
+    <string name="merchant_profile_store_closed">Estado de la Tienda: Cerrada</string>
+    <string name="merchant_profile_store_open_hint">Recibiendo reservas</string>
+    <string name="merchant_profile_store_closed_hint">Oculta del mapa · No se recibirán reservas</string>
+    <string name="merchant_profile_info_section">INFORMACIÓN DEL LOCAL</string>
+    <string name="merchant_profile_address">Dirección: %1$s</string>
+    <string name="merchant_profile_postal">C.P. %1$s</string>
+    <string name="merchant_profile_schedule">Horarios: %1$s</string>
+    <string name="merchant_profile_phone">Teléfono: %1$s</string>
+    <string name="merchant_profile_back_to_buyer">Regresar al panel de cliente</string>
+</resources>
