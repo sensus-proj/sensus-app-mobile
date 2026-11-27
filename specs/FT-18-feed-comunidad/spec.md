@@ -17,10 +17,10 @@
 
 | ID | Requisito |
 |---|---|
-| RF-18-01 | `GET /api/v1/feed/nearby` consulta publicaciones dentro del radio del usuario (`lat`, `lng`, `radiusMeters`, `page`, `pageSize = 20`) respetando los 2000 m si aplica o restringiendo creación/interacción a usuarios autenticados. |
-| RF-18-02 | `CommunityScreen` soporta gesto *Pull-to-Refresh* y paginación al hacer scroll hacia abajo. |
-| RF-18-03 | Al pulsar el botón de nueva publicación (bloqueado con `GuestPromptDialog` si es invitado), permitir redactar texto, adjuntar imagen opcional (comprimida y subida con moderación previa vía `MediaRepository`) y seleccionar opcionalmente un comercio cercano (`merchantId`). |
-| RF-18-04 | `POST /api/v1/feed/posts` envía texto, `mediaId` opcional, `merchantId` opcional y coordenadas del usuario; si el texto o imagen incumple moderación (`400`/`422`), bloquear sin publicar. |
+| RF-18-01 | `GET /api/v1/feed/nearby` consulta publicaciones dentro del radio del usuario (`lat`, `lng`, `radiusKm`, `page`, `pageSize = 20`) recibiendo `PagedResult` (`items`, `authorDisplayName`, `content`, `createdAtUtc`, `merchantId`, `merchantName`, `likesCount`, `commentsCount`, `isLikedByMe`, `isMine`). |
+| RF-18-02 | `CommunityScreen` expone la pestaña `Muro` junto con `Actividad` y `Amigos y QR`, soportando gesto *Pull-to-Refresh* y paginación al hacer scroll hacia abajo. |
+| RF-18-03 | Al pulsar el botón de nueva publicación (bloqueado con `GuestPromptDialog` si es invitado), permitir redactar texto, capturar foto por **Cámara** o **Galería** (compresión <= 4 MB con submuestreo `inSampleSize` y subida con `textContext` y moderación previa obligatoria vía `MediaRepository`) y seleccionar opcionalmente un comercio cercano único (`merchantId`). |
+| RF-18-04 | `POST /api/v1/feed/posts` envía texto, `mediaAssetId` opcional, `merchantId` opcional y coordenadas del usuario; si el texto o imagen incumple moderación (`400`/`422`) o queda en `202 Quarantined`, bloquear sin publicar (fail-closed). |
 | RF-18-05 | Al pulsar el nombre del comercio etiquetado dentro de una publicación, navegar a las ofertas de ese comercio. |
 
 ## 3. Requisitos no funcionales

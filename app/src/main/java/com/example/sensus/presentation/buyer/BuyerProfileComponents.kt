@@ -269,8 +269,18 @@ private suspend fun resolveUploadedPhotoUrl(context: Context, viewModel: BuyerPr
 
 private suspend fun compressAndStripExif(context: Context, uri: Uri): ByteArray? = withContext(Dispatchers.IO) {
     try {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, bounds)
+        }
+        val options = BitmapFactory.Options().apply {
+            var sample = 1
+            val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
+            while (maxDim / sample > MAX_AVATAR_DIM * 2) sample *= 2
+            inSampleSize = sample
+        }
         val originalBitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream)
+            BitmapFactory.decodeStream(stream, null, options)
         } ?: return@withContext null
         val scaledBitmap = scaleBitmapDownIfNeeded(originalBitmap)
         val out = ByteArrayOutputStream()

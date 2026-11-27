@@ -240,9 +240,10 @@ class CommunityViewModel @Inject constructor(
         val useCase = togglePostLikeUseCase ?: return
         val previous = viewState.value.posts.firstOrNull { it.id == postId }
         if (previous != null && postId !in viewState.value.likingPostIds) {
+            val desiredLiked = !previous.isLikedByMe
             applyOptimisticLike(postId, previous)
             viewModelScope.launch {
-                when (val result = useCase(postId)) {
+                when (val result = useCase(postId, desiredLiked)) {
                     is Result.Success -> reconcileLike(postId, result.data.isLikedByMe, result.data.likesCount)
                     is Result.Failure -> rollbackLike(postId, previous, result.error)
                 }

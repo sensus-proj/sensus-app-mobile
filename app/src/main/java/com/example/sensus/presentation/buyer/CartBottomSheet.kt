@@ -72,9 +72,18 @@ private const val LIST_MAX_HEIGHT_DP = 240
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CartBottomSheet(viewModel: CartViewModel = hiltViewModel(), onDismiss: () -> Unit, onClaimOffer: (ProductOffer) -> Unit) {
+fun CartBottomSheet(
+    viewModel: CartViewModel = hiltViewModel(),
+    onDismiss: () -> Unit,
+    onClaimOffer: (ProductOffer) -> Unit,
+    onClaimItems: ((List<com.example.sensus.domain.model.CartItem>) -> Unit)? = null
+) {
     LaunchedEffect(viewModel) {
-        viewModel.viewEffect.collect { effect -> if (effect is CartViewEffect.OpenClaim) onClaimOffer(effect.offer) }
+        viewModel.viewEffect.collect { effect ->
+            if (effect is CartViewEffect.OpenClaim) {
+                if (onClaimItems != null) onClaimItems(effect.items) else onClaimOffer(effect.offer)
+            }
+        }
     }
     val cartState by viewModel.viewState.collectAsState()
     val cart = cartState.storeCart

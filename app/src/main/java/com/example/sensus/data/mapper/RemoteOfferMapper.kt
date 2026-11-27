@@ -93,7 +93,7 @@ object RemoteOfferMapper {
             status = resolvedStatus,
             version = version.coerceAtLeast(1),
             expiresAtMillis = expiresMillis,
-            viewCount = viewCount?.takeIf { it >= 0 },
+            viewCount = (viewCount ?: viewsCount)?.takeIf { it >= 0 },
             likesCount = likesCount,
             isLikedByMe = isLikedByMe
         )

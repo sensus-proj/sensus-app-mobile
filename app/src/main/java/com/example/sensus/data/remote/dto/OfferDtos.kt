@@ -43,18 +43,22 @@ data class OfferDto(
     val distanceMeters: Double? = null,
     val version: Int = 1,
     val viewCount: Int? = null,
+    val viewsCount: Int? = null,
     val likesCount: Int = 0,
     val isLikedByMe: Boolean = false
 )
 
-/** Respuesta paginada de `GET /api/v1/offers/nearby` (Spec 007). */
+/** Respuesta paginada de `GET /api/v1/offers/nearby` y `GET /api/v1/merchants/my-offers` (Specs 007 y 037). */
 @Serializable
 data class PagedOffersResponseDto(
     val items: List<OfferDto> = emptyList(),
     val totalCount: Int = 0,
     val page: Int = 1,
+    val pageNumber: Int? = null,
     val pageSize: Int = 20
-)
+) {
+    fun resolvedPage(): Int = pageNumber ?: page
+}
 
 /** Cuerpo de `PUT /api/v1/offers/{id}` (Spec 035). */
 @Serializable

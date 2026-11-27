@@ -26,7 +26,12 @@ class AndroidImageCompressor(
 
     override suspend fun compressForUpload(rawBytes: ByteArray): ByteArray? = withContext(Dispatchers.Default) {
         if (rawBytes.isEmpty()) return@withContext null
-        val decoded = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size) ?: return@withContext null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, bounds)
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = ImageUploadPolicy.calculateInSampleSize(bounds.outWidth, bounds.outHeight, MAX_DIMENSION_PX)
+        }
+        val decoded = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, decodeOptions) ?: return@withContext null
         var bitmap = scaleToMaxDimension(decoded, MAX_DIMENSION_PX)
         var result = compressToLimit(maxBytes, JPEG_QUALITY_STEPS) { quality -> encodeJpeg(bitmap, quality) }
         while (result == null && minOf(bitmap.width, bitmap.height) > MIN_DIMENSION_PX) {

@@ -14,7 +14,11 @@ class TogglePostLikeUseCase(
     private val repository: FeedRepository,
     private val session: SessionRepository
 ) {
-    suspend operator fun invoke(postId: String): Result<TogglePostLikeResult> {
+    suspend operator fun invoke(postId: String): Result<TogglePostLikeResult> = execute(postId, null)
+
+    suspend operator fun invoke(postId: String, desiredLiked: Boolean): Result<TogglePostLikeResult> = execute(postId, desiredLiked)
+
+    private suspend fun execute(postId: String, desiredLiked: Boolean?): Result<TogglePostLikeResult> {
         val current = session.sessionState.value
         if (current.isGuest || !current.isSessionActive) {
             return Result.Failure(AppError.Unauthorized("Inicia sesión para dar me gusta."))
@@ -23,7 +27,7 @@ class TogglePostLikeUseCase(
         if (cleanId.isEmpty()) {
             return Result.Failure(AppError.Validation("Publicación inválida."))
         }
-        return repository.toggleLike(cleanId)
+        return if (desiredLiked != null) repository.setPostLike(cleanId, desiredLiked) else repository.toggleLike(cleanId)
     }
 }
 

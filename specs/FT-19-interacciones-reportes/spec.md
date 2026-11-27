@@ -17,7 +17,7 @@ Las tarjetas del feed comunitario y el detalle de producto (`ProductDetailScreen
 
 | ID | Requisito |
 |---|---|
-| RF-19-01 | Alternar `'Me gusta'` con `POST /api/v1/feed/posts/{id}/like` (actualización optimista y rollback si falla; bloqueado en invitado). |
+| RF-19-01 | Alternar `'Me gusta'` enviando `{ "liked": boolean }` a `POST /api/v1/feed/posts/{id}/like` y leyendo `liked` / `likeCount` (`FeedPostLikeStatusDto`) con actualización optimista y rollback si falla; bloqueado en invitado. |
 | RF-19-02 | Desplegar hilo de comentarios paginado con `GET /api/v1/feed/posts/{id}/comments` y publicar comentarios nuevos vía `POST /api/v1/feed/posts/{id}/comments` (moderados antes de mostrarse). |
 | RF-19-03 | Permitir eliminar únicamente publicaciones propias mediante diálogo de confirmación y `DELETE /api/v1/feed/posts/{id}` (`204` o `200`). |
 | RF-19-04 | Incluir menú `'Reportar'` en tarjetas del feed (`CommunityScreen`) y enlace discreto `'Reportar producto'` (`C-27`) en `ProductDetailScreen` abriendo formulario `P-22` con motivos (`SPAM`, `OFFENSIVE`, `FALSE_OFFER`, `PRICE_MISMATCH`, `OTHER`) y detalle opcional (`<= 300` caracteres). |

@@ -82,6 +82,12 @@ private fun MyClaimCard(claim: ClaimSummary, nowEpochMs: Long) {
     Card(Modifier.fillMaxWidth().testTag("my_claim_${claim.claimId}")) {
         Column(Modifier.padding(MY_CLAIMS_SPACING.dp), verticalArrangement = Arrangement.spacedBy(MY_CLAIMS_SPACING.dp)) {
             Text(claim.offerTitle ?: stringResource(R.string.my_claims_untitled), fontWeight = FontWeight.SemiBold)
+            if (claim.totalUnits > 1 || claim.items.size > 1) {
+                Text(stringResource(R.string.claims_reserved_units, claim.totalUnits))
+                claim.items.forEach { item ->
+                    Text(stringResource(R.string.claims_item_line, item.quantity, item.offerTitle ?: item.offerId))
+                }
+            }
             Text(stringResource(claimStatusLabel(claim, active)))
             Text(stringResource(R.string.claims_expiry, Instant.ofEpochMilli(claim.expiresAtEpochMs).toString()))
             if (active) {

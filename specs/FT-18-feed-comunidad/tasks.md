@@ -60,3 +60,8 @@
 - En la revisión posterior, AWS respondió HTTP 404 a `GET /api/v1/feed/nearby`, mientras que ofertas cercanas y ajustes de usuario respondieron HTTP 401 a peticiones sin credenciales. T18.16 sigue pendiente de validar el feed autenticado y su contrato desplegado.
 - Se retiró la dependencia residual de datos de amigos de ejemplo en CommunityViewModel. Una falla de caché ya no invalida una página remota válida, y al leer offline se descartan filas con JSON corrupto sin perder las válidas. Se conserva el error de red si la caché no se puede leer.
 - Validación local: 453 pruebas unitarias sin fallos, Kover Debug 80.79 %, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+## Activación del Muro comunitario, cámara/galería moderada y etiqueta de comercio — 2026-11-27
+
+- [x] T18.17 `CommunityScreen`: activar pestañas **Muro** (`CommunityFeedContent`), **Actividad** (`FriendsActivityFeedContent`) y **Amigos y QR**, junto con `CreateFeedPostSheet` (cámara con `rememberSafeMerchantCameraLauncher`, galería, advertencia de moderación obligatoria y etiqueta opcional de comercio cercano `merchantId`) y `PostCommentsSheet`.
+- [x] T18.18 Alineación HTTP con Specs 024/026/039: `FeedApiService`/`FeedRepositoryImpl` (`radiusKm` en `/feed/nearby`, lectura de `PagedResult.items`, `SetFeedPostLikeRequest(liked)` explícito en `/like`, `textContext` en `/media/upload` y `202 -> Unprocessable` fail-closed) — verif: `FeedAvailabilityApiTest`, `PublishingApiTest`, `CommunityViewModelInteractionsTest`.

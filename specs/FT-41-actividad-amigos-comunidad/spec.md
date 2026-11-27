@@ -6,13 +6,13 @@
 | Estado | `En revision` |
 | Depende de | `FT-25-amigos-qr`, `FT-26-resenas-comercio`, `FT-40-me-gusta-ofertas` |
 | Spec backend | [`058-actividad-amigos-comunidad`](../../../sensus-back/specs/058-actividad-amigos-comunidad/spec.md) |
-| Pantalla / Componentes | `CommunityScreen`, `FriendsActivityContent`, `FriendsActivityViewModel` |
+| Pantalla / Componentes | `CommunityScreen`, `FriendsActivityComponents` (`FriendsActivityFeedContent`), `FriendsActivityViewModel` |
 
 ## 1. Contexto y objetivo
 
-Mostrar en la pestaña **Comunidad** únicamente las interacciones sociales relevantes de tus amigos conectados y las tuyas: comentarios/respuestas dejados en comercios (`StoreReview` / `ReviewReply`) y productos que les gustaron (`OfferLike`), para compartir actividad mutua sin ruido de publicaciones genéricas.
+Mostrar en la subpestaña **Actividad** de **Comunidad** únicamente las interacciones sociales relevantes de tus amigos conectados y las tuyas: comentarios/respuestas dejados en comercios (`StoreReview` / `ReviewReply`) y productos que les gustaron (`OfferLike`), coexistiendo en `CommunityScreen` junto al **Muro** vecinal (`FT-18-feed-comunidad`) y **Amigos y QR** (`FT-25-amigos-qr`).
 
-> Distinta de `FT-18-feed-comunidad` (muro público `/api/v1/feed/nearby` y `/api/v1/feed/posts`): esta feature consume `GET /api/v1/community/friends-activity`.
+> Distinta de `FT-18-feed-comunidad` (muro público `/api/v1/feed/nearby` y `/api/v1/feed/posts`): esta feature consume `GET /api/v1/community/friends-activity` (`PagedResult<CommunityActivityItemDto>`).
 
 ## 2. Usuarios y flujo principal
 

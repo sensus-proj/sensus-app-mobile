@@ -91,43 +91,88 @@ data class CommunityCallbacks(
     val onSelectFriendsTab: (Boolean) -> Unit = {}
 )
 
+private enum class CommunitySubTab {
+    WALL,
+    ACTIVITY,
+    FRIENDS
+}
+
 @Composable
 fun CommunityScreen(
     viewModel: FriendsActivityViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
     callbacks: CommunityCallbacks = CommunityCallbacks(),
-    openFriendsSignal: Int = 0
+    openFriendsSignal: Int = 0,
+    feedViewModel: CommunityViewModel = hiltViewModel()
 ) {
-    val state by viewModel.viewState.collectAsStateWithLifecycle()
-    var localShowFriends by rememberSaveable { mutableStateOf(callbacks.isFriendsSelected) }
-    LaunchedEffect(callbacks.isFriendsSelected) { localShowFriends = callbacks.isFriendsSelected }
+    var selectedTab by rememberSaveable {
+        mutableStateOf(if (callbacks.isFriendsSelected) CommunitySubTab.FRIENDS else CommunitySubTab.WALL)
+    }
+    LaunchedEffect(callbacks.isFriendsSelected) {
+        selectedTab = when {
+            callbacks.isFriendsSelected -> CommunitySubTab.FRIENDS
+            selectedTab == CommunitySubTab.FRIENDS -> CommunitySubTab.WALL
+            else -> selectedTab
+        }
+    }
     LaunchedEffect(openFriendsSignal) {
         if (openFriendsSignal > 0) {
-            localShowFriends = true
+            selectedTab = CommunitySubTab.FRIENDS
             callbacks.onSelectFriendsTab(true)
         }
     }
+    LaunchedEffect(feedViewModel) {
+        feedViewModel.viewEffect.collect { effect ->
+            if (effect is CommunityViewEffect.RequireAuth) callbacks.onRequireAuth()
+        }
+    }
     Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Row(modifier = Modifier.statusBarsPadding()) {
-            TextButton(colors = sensusTextButtonColors(), onClick = {
-                localShowFriends = false
-                callbacks.onSelectFriendsTab(false)
-            }) { Text(stringResource(R.string.community_tab)) }
-            TextButton(colors = sensusTextButtonColors(), onClick = {
-                localShowFriends = true
-                callbacks.onSelectFriendsTab(true)
-            }) { Text(stringResource(R.string.community_friends_tab)) }
+        CommunitySubTabBar(selectedTab) { tab ->
+            selectedTab = tab
+            callbacks.onSelectFriendsTab(tab == CommunitySubTab.FRIENDS)
         }
-        if (localShowFriends) {
-            FriendsCommunityTab(onRequireAuth = callbacks.onRequireAuth, onFriendClick = callbacks.onFriendClick, modifier = Modifier.weight(1f))
-        } else {
-            FriendsActivityFeedContent(
-                state = state,
-                onRefresh = { viewModel.dispatchIntent(FriendsActivityViewIntent.Refresh) },
-                onRequireAuth = callbacks.onRequireAuth,
-                modifier = Modifier.weight(1f)
-            )
+        CommunitySubTabBody(selectedTab, feedViewModel, viewModel, callbacks, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun CommunitySubTabBar(selectedTab: CommunitySubTab, onSelectTab: (CommunitySubTab) -> Unit) {
+    Row(modifier = Modifier.statusBarsPadding().padding(horizontal = 8.dp)) {
+        listOf(
+            CommunitySubTab.WALL to R.string.community_wall_tab,
+            CommunitySubTab.ACTIVITY to R.string.community_activity_tab,
+            CommunitySubTab.FRIENDS to R.string.community_friends_tab
+        ).forEach { (tab, labelRes) ->
+            TextButton(colors = sensusTextButtonColors(), onClick = { onSelectTab(tab) }) {
+                Text(stringResource(labelRes), fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal)
+            }
         }
+    }
+}
+
+@Composable
+private fun CommunitySubTabBody(
+    selectedTab: CommunitySubTab,
+    feedViewModel: CommunityViewModel,
+    activityViewModel: FriendsActivityViewModel,
+    callbacks: CommunityCallbacks,
+    modifier: Modifier
+) {
+    val activityState by activityViewModel.viewState.collectAsStateWithLifecycle()
+    val feedState by feedViewModel.viewState.collectAsStateWithLifecycle()
+    when (selectedTab) {
+        CommunitySubTab.WALL -> CommunityFeedContent(feedState, feedViewModel::dispatchIntent, callbacks.onMerchantClick, modifier)
+        CommunitySubTab.ACTIVITY -> FriendsActivityFeedContent(
+            state = activityState,
+            onRefresh = { activityViewModel.dispatchIntent(FriendsActivityViewIntent.Refresh) },
+            onRequireAuth = callbacks.onRequireAuth,
+            modifier = modifier
+        )
+        CommunitySubTab.FRIENDS -> FriendsCommunityTab(
+            onRequireAuth = callbacks.onRequireAuth,
+            onFriendClick = callbacks.onFriendClick,
+            modifier = modifier
+        )
     }
 }
 

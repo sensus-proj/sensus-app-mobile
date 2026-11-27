@@ -90,13 +90,13 @@ class CommunityViewModelInteractionsTest {
         val vm = buildVm()
         dispatcher.scheduler.advanceUntilIdle()
 
-        coEvery { toggleLike("p1") } returns Result.Success(TogglePostLikeResult("p1", 3, true))
+        coEvery { toggleLike("p1", true) } returns Result.Success(TogglePostLikeResult("p1", 3, true))
         vm.dispatchIntent(CommunityViewIntent.ToggleLike("p1"))
         dispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.viewState.value.posts.first().isLikedByMe)
         assertEquals(3, vm.viewState.value.posts.first().likesCount)
 
-        coEvery { toggleLike("p1") } returns Result.Failure(AppError.Network("Sin red"))
+        coEvery { toggleLike("p1", false) } returns Result.Failure(AppError.Network("Sin red"))
         vm.viewEffect.test {
             vm.dispatchIntent(CommunityViewIntent.ToggleLike("p1"))
             dispatcher.scheduler.advanceUntilIdle()

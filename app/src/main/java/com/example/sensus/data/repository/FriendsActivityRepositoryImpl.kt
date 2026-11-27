@@ -11,10 +11,10 @@ class FriendsActivityRepositoryImpl(private val api: FriendsApiService) : Friend
 
     override suspend fun getFriendsActivity(limit: Int): Result<List<CommunityActivityItem>> =
         safeNetworkCall("No se pudo cargar la actividad de tus amigos.") {
-            val response = api.getFriendsActivity(limit)
+            val response = api.getFriendsActivity(limit = limit, page = 1, pageSize = limit)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                Result.Success(body.mapNotNull { it.toDomainOrNull() })
+                Result.Success(body.items.mapNotNull { it.toDomainOrNull() })
             } else {
                 Result.Failure(
                     mapCommonHttpStatus(

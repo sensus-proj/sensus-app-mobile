@@ -2,6 +2,7 @@ package com.example.sensus.presentation.buyer
 
 import androidx.lifecycle.viewModelScope
 import com.example.sensus.common.Result
+import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.ClaimsSessionIdentity
 import com.example.sensus.domain.model.OfferClaim
 import com.example.sensus.domain.repository.CartRepository
@@ -42,23 +43,31 @@ class ClaimOfferViewModel @Inject constructor(
 
     override fun processIntent(intent: ClaimOfferViewIntent) {
         when (intent) {
-            is ClaimOfferViewIntent.Initialize -> initialize(intent.offerId, intent.expectExisting)
-            is ClaimOfferViewIntent.Submit -> submit(intent.value)
+            is ClaimOfferViewIntent.Initialize -> initialize(intent.offerId, intent.expectExisting, intent.items)
+            is ClaimOfferViewIntent.Submit -> submit(intent.value, intent.items)
         }
     }
 
-    private fun initialize(offerId: String, expectExisting: Boolean) {
+    private fun initialize(offerId: String, expectExisting: Boolean, items: List<CartItem>) {
         if (expectExisting) expectedClaims.add(offerId)
-        if (viewState.value.offerId == offerId) {
-            if (offerId in expectedClaims) updateState { copy(expectExisting = true) }
+        val sameOffer = viewState.value.offerId == offerId
+        if (sameOffer) {
+            updateSameOfferState(offerId, expectExisting, items)
             if (expectExisting && confirmedClaims[offerId] == null && requestJob?.isActive != true) restoreExisting(offerId)
             return
         }
         requestJob?.cancel()
         updateState {
-            ClaimOfferViewState(offerId = offerId, expectExisting = offerId in expectedClaims, result = confirmedClaims[offerId])
+            ClaimOfferViewState(offerId = offerId, items = items, expectExisting = offerId in expectedClaims, result = confirmedClaims[offerId])
         }
         if (offerId in expectedClaims && confirmedClaims[offerId] == null) restoreExisting(offerId)
+    }
+
+    private fun updateSameOfferState(offerId: String, expectExisting: Boolean, items: List<CartItem>) {
+        if (offerId !in expectedClaims && items.isEmpty()) return
+        updateState {
+            copy(expectExisting = expectExisting || (offerId in expectedClaims), items = items.ifEmpty { this.items })
+        }
     }
 
     private fun restoreExisting(offerId: String) {
@@ -77,22 +86,38 @@ class ClaimOfferViewModel @Inject constructor(
         }
     }
 
-    private fun submit(value: String) {
-        if (!viewState.value.canSubmit || confirmedClaims.containsKey(value)) return
-        if (viewState.value.offerId != null && viewState.value.offerId != value) return
-        updateState { copy(offerId = value, loading = true, error = null) }
+    private fun submit(value: String, items: List<CartItem>) {
+        val mismatchOffer = viewState.value.offerId != null && viewState.value.offerId != value
+        if (!viewState.value.canSubmit || confirmedClaims.containsKey(value) || mismatchOffer) return
+        val activeItems = items.ifEmpty { viewState.value.items }
+        val isCartBatch = activeItems.size > 1 || (activeItems.singleOrNull()?.quantity ?: 1) > 1
+        updateState { copy(offerId = value, items = activeItems, loading = true, error = null) }
         requestJob = viewModelScope.launch {
-            val response = action(value)
+            val response = if (isCartBatch) action(activeItems) else action(value)
             ensureActive()
-            when (response) {
-                is Result.Success -> {
-                    cartRepository.removeReservedUnit(response.data.offerId)
-                    confirmedClaims[value] = response.data
-                    updateState { copy(loading = false, result = response.data) }
-                    emitEffect(ClaimOfferViewEffect.Confirmed(value))
-                }
-                is Result.Failure -> updateState { copy(loading = false, error = response.error) }
+            handleSubmitResponse(value, isCartBatch, activeItems, response)
+        }
+    }
+
+    private fun handleSubmitResponse(value: String, isCartBatch: Boolean, activeItems: List<CartItem>, response: Result<OfferClaim>) {
+        when (response) {
+            is Result.Success -> {
+                releaseReservedUnits(isCartBatch, activeItems, response.data.offerId)
+                confirmedClaims[value] = response.data
+                updateState { copy(loading = false, result = response.data) }
+                emitEffect(ClaimOfferViewEffect.Confirmed(value))
             }
+            is Result.Failure -> updateState { copy(loading = false, error = response.error) }
+        }
+    }
+
+    private fun releaseReservedUnits(isCartBatch: Boolean, activeItems: List<CartItem>, fallbackOfferId: String) {
+        if (!isCartBatch) {
+            cartRepository.removeReservedUnit(fallbackOfferId)
+            return
+        }
+        activeItems.forEach { item ->
+            repeat(item.quantity.coerceAtLeast(1)) { cartRepository.removeReservedUnit(item.offer.id) }
         }
     }
 }

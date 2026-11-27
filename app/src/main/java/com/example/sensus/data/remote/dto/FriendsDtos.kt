@@ -102,3 +102,11 @@ data class CommunityActivityItemDto(
     val rating: Int? = null,
     val createdAtUtc: String = ""
 )
+
+@Serializable
+data class PagedCommunityActivityResponseDto(
+    val items: List<CommunityActivityItemDto> = emptyList(),
+    val totalCount: Int = 0,
+    val pageNumber: Int = 1,
+    val pageSize: Int = 20
+)

@@ -15,6 +15,7 @@ interface FeedRepository {
     suspend fun nearby(query: FeedQuery): Result<PagedFeed>
     suspend fun createPost(input: CreatePostInput, media: UploadedMedia?): Result<FeedPost>
     suspend fun toggleLike(postId: String): Result<TogglePostLikeResult>
+    suspend fun setPostLike(postId: String, liked: Boolean): Result<TogglePostLikeResult> = toggleLike(postId)
     suspend fun getComments(postId: String, page: Int = 1, pageSize: Int = FeedPolicy.DEFAULT_PAGE_SIZE): Result<PagedFeedComments>
     suspend fun addComment(postId: String, content: String): Result<FeedComment>
     suspend fun deletePost(postId: String): Result<Unit>
