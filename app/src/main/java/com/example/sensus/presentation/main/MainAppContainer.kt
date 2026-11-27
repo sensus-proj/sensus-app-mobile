@@ -249,7 +249,10 @@ private fun RenderMerchantEditOfferOverlay(state: MainAppState) {
     MerchantEditOfferScreen(
         offer = offer,
         onNavigateBack = { state.selectedOfferForEdit = null },
-        onOfferChanged = { state.selectedOfferForEdit = null }
+        onOfferChanged = {
+            state.selectedOfferForEdit = null
+            state.merchantDashboardRefreshSignal += 1
+        }
     )
 }
 
@@ -424,7 +427,8 @@ private fun MerchantTabContent(state: MainAppState) {
                 onScanQrClick = { state.merchantTabIndex = MERCHANT_TAB_SALES },
                 onSwitchToBuyer = { state.isMerchantMode = false },
                 onEditOfferClick = { offer -> state.selectedOfferForEdit = offer }
-            )
+            ),
+            refreshSignal = state.merchantDashboardRefreshSignal
         )
         1 -> MerchantNewOfferScreen(
             onNavigateBack = { state.merchantTabIndex = 0 },

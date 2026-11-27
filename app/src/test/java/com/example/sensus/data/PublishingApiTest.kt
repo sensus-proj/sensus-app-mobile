@@ -3,28 +3,22 @@ package com.example.sensus.data
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.SecurePreferences
-import com.example.sensus.data.local.db.dao.FeedPostDao
 import com.example.sensus.data.local.db.dao.OfferDao
-import com.example.sensus.data.local.db.entity.FeedPostEntity
 import com.example.sensus.data.mapper.OfferMapper.toDomain
 import com.example.sensus.data.mapper.OfferMapper.toEntity
 import com.example.sensus.data.mapper.RemoteOfferMapper.toDomain as remoteToDomain
 import com.example.sensus.data.mapper.RemoteOfferMapper.toRequest
 import com.example.sensus.data.media.compressToLimit
 import com.example.sensus.data.remote.NetworkClient
-import com.example.sensus.data.remote.api.FeedApiService
 import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.dto.OfferDto
 import com.example.sensus.data.remote.dto.UploadMediaResponse
-import com.example.sensus.data.repository.FeedRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
 import com.example.sensus.data.repository.OffersRepositoryImpl
 import com.example.sensus.data.repository.RetrofitMerchantRepository
 import com.example.sensus.domain.media.ImageUploadPolicy
 import com.example.sensus.domain.model.CreateOfferInput
-import com.example.sensus.domain.model.CreatePostInput
-import com.example.sensus.domain.model.FeedQuery
 import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.NearbyOffersQuery
 import com.example.sensus.domain.model.OfferLifecycleStatus
@@ -39,7 +33,6 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.test.runTest
@@ -60,8 +53,6 @@ import retrofit2.Response
 class PublishingApiTest {
     private val server = MockWebServer()
     private lateinit var client: NetworkClient
-    private val dao = mockk<FeedPostDao>(relaxed = true)
-    private val postJson = """{"id":"post-1","authorName":"Vecino","text":"Pan recién hecho","createdAt":"2026-11-12T12:00:00Z","merchantId":"shop-1"}"""
 
     @Before
     fun setup() {
@@ -185,6 +176,23 @@ class PublishingApiTest {
         val failure = repo.fetchMerchantOffers() as Result.Failure
         assertTrue(failure.error is AppError.Forbidden)
         verify { dao wasNot Called }
+    }
+
+    @Test
+    fun merchantInventoryAcceptsLegacyArrayContract() = runTest {
+        val repo = OffersRepositoryImpl(mockk<OfferDao>(), client.offersApi)
+        val arrayJson = """
+            [
+              {"id":"o1","title":"Pan","originalPrice":50.0,"discountedPrice":25.0,"stock":4,"status":"Published"},
+              {"id":"o2","title":"Café","originalPrice":40.0,"discountedPrice":20.0,"stock":0,"status":"Paused"}
+            ]
+        """.trimIndent()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(arrayJson))
+
+        val inventory = repo.fetchMerchantOffers().getOrNull().orEmpty()
+        assertEquals(listOf("o1", "o2"), inventory.map { it.id })
+        assertEquals(listOf(4, 0), inventory.map { it.unitsLeft })
+        assertEquals(listOf(OfferLifecycleStatus.ACTIVE, OfferLifecycleStatus.PAUSED), inventory.map { it.status })
     }
 
     @Test
@@ -334,65 +342,6 @@ class PublishingApiTest {
         assertTrue((result as Result.Failure).error is AppError.Network)
         coVerify(exactly = 1) { api.createOffer(any()) }
         verify(exactly = 0) { offerDao.insertOffer(any()) }
-    }
-
-    @Test
-    fun nearbyFeed_sendsProximityAndPaginationAndCachesResults() = runTest {
-        server.enqueue(MockResponse().setBody("""{"posts":[$postJson],"page":2,"hasMore":false}"""))
-        val result = FeedRepositoryImpl(client.feedApi, dao).nearby(FeedQuery(20.0, -99.0, page = 2))
-        assertEquals("post-1", (result as Result.Success).data.posts.single().id)
-        val request = server.takeRequest()
-        assertTrue(request.path!!.contains("lat=20.0&lng=-99.0&radiusKm=2.0&page=2&pageSize=20"))
-        verify { dao.replacePage(any(), 2, match { it.single().id == "post-1" }) }
-    }
-
-    @Test
-    fun postCreation201_andModeration422_neverCachesRejectedContent() = runTest {
-        val repository = FeedRepositoryImpl(client.feedApi, dao)
-        server.enqueue(MockResponse().setResponseCode(201).setBody(postJson))
-        assertTrue(repository.createPost(CreatePostInput("Pan", 20.0, -99.0, "shop-1"), null) is Result.Success)
-        assertEquals("/api/v1/feed/posts", server.takeRequest().path)
-        server.enqueue(MockResponse().setResponseCode(422).setBody("""{"message":"Contenido rechazado"}"""))
-        assertTrue((repository.createPost(CreatePostInput("Pan", 20.0, -99.0), null) as Result.Failure).error is AppError.ContentRejected)
-        verify(exactly = 0) { dao.insertPosts(any()) }
-    }
-
-    @Test
-    fun offlineFeed_usesOnlyCacheForTheSameQuery() = runTest {
-        val api = mockk<FeedApiService>()
-        coEvery { api.nearby(any(), any(), any(), any(), any()) } throws IOException("offline")
-        val cacheKey = "20.0:-99.0:2000:20"
-        every { dao.getPage(cacheKey, 1) } returns listOf(
-            FeedPostEntity("broken", cacheKey, 1, 0, "{invalid"),
-            FeedPostEntity("post-1", cacheKey, 1, 1, postJson)
-        )
-        val result = FeedRepositoryImpl(api, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Success
-        assertTrue(result.data.isCached)
-        assertFalse(result.data.hasMore)
-        assertEquals("post-1", result.data.posts.single().id)
-    }
-
-    @Test
-    fun nearbyFeed_stillDisplaysServerPageWhenCacheWriteFails() = runTest {
-        every { dao.replacePage(any(), any(), any()) } throws IllegalStateException("Database unavailable")
-        server.enqueue(MockResponse().setBody("""{"posts":[$postJson],"page":1,"hasMore":true}"""))
-
-        val page = (FeedRepositoryImpl(client.feedApi, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Success).data
-
-        assertEquals("post-1", page.posts.single().id)
-        assertTrue(page.hasMore)
-        assertFalse(page.isCached)
-    }
-
-    @Test
-    fun offlineFeed_preservesNetworkFailureWhenCacheReadFails() = runTest {
-        val api = mockk<FeedApiService>()
-        coEvery { api.nearby(any(), any(), any(), any(), any()) } throws IOException("offline")
-        every { dao.getPage(any(), any()) } throws IllegalStateException("Database unavailable")
-
-        val result = FeedRepositoryImpl(api, dao).nearby(FeedQuery(20.0, -99.0)) as Result.Failure
-
-        assertTrue(result.error is AppError.Network)
     }
 
     @Test

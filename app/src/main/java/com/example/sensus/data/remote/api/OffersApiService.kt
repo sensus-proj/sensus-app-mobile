@@ -7,6 +7,7 @@ import com.example.sensus.data.remote.dto.PagedOffersResponseDto
 import com.example.sensus.data.remote.dto.UpdateOfferRequestDto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -39,7 +40,7 @@ interface OffersApiService {
         @Query("status") status: String? = null,
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 100
-    ): Response<PagedOffersResponseDto>
+    ): Response<JsonElement>
 
     @PUT("api/v1/offers/{id}")
     suspend fun updateOffer(@Path("id") id: String, @Body request: UpdateOfferRequestDto): Response<OfferDto>

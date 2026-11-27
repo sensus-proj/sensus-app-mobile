@@ -30,8 +30,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -58,7 +56,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.sensus.R
-import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ComposeUiModel
 import com.example.sensus.theme.Ink
@@ -81,23 +78,18 @@ private const val IMAGE_CORNER_DP = 12
 private const val THUMBNAIL_SIZE_DP = 76
 private const val IMAGE_BG_ALPHA = 0.08f
 private const val STOCK_BG_ALPHA = 0.12f
-private const val DISTANCE_ROUNDING = 100
 
 @ComposeUiModel
 data class SavedInterestsCallbacks(
     val onNavigateBack: () -> Unit = {},
     val onOfferClick: (ProductOffer) -> Unit = {},
-    val onMerchantClick: (String) -> Unit = {},
     val onExploreOffers: () -> Unit = {}
 )
 
 @ComposeUiModel
 private data class SavedInterestsActions(
-    val onSelectTab: (SavedInterestFilterTab) -> Unit,
     val onOfferClick: (ProductOffer) -> Unit,
     val onRemoveOffer: (String) -> Unit,
-    val onMerchantClick: (String) -> Unit,
-    val onRemovePost: (String) -> Unit,
     val onExploreOffers: () -> Unit
 )
 
@@ -138,11 +130,8 @@ fun SavedInterestsScreen(callbacks: SavedInterestsCallbacks, modifier: Modifier 
         SavedInterestsBody(
             state = state,
             actions = SavedInterestsActions(
-                onSelectTab = { viewModel.dispatchIntent(SavedInterestsViewIntent.SelectTab(it)) },
                 onOfferClick = callbacks.onOfferClick,
                 onRemoveOffer = { viewModel.dispatchIntent(SavedInterestsViewIntent.RemoveOffer(it)) },
-                onMerchantClick = callbacks.onMerchantClick,
-                onRemovePost = { viewModel.dispatchIntent(SavedInterestsViewIntent.RemovePost(it)) },
                 onExploreOffers = callbacks.onExploreOffers
             ),
             modifier = Modifier.fillMaxSize().padding(innerPadding)
@@ -185,57 +174,16 @@ private fun SavedInterestsBody(state: SavedInterestsViewState, actions: SavedInt
         return
     }
 
-    val visibleOffers = if (state.selectedTab == SavedInterestFilterTab.POSTS) emptyList() else state.savedOffers
-    val visiblePosts = if (state.selectedTab == SavedInterestFilterTab.OFFERS) emptyList() else state.savedPosts
-
-    Column(modifier = modifier) {
-        if (state.savedOffers.isNotEmpty() && state.savedPosts.isNotEmpty()) {
-            SavedInterestsFilterRow(selectedTab = state.selectedTab, onSelectTab = actions.onSelectTab)
-        }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(visibleOffers, key = { "offer_${it.id}" }) { offer ->
-                SavedOfferCard(
-                    offer = offer,
-                    onClick = { actions.onOfferClick(offer) },
-                    onRemoveClick = { actions.onRemoveOffer(offer.id) }
-                )
-            }
-            items(visiblePosts, key = { "post_${it.id}" }) { post ->
-                SavedPostCard(
-                    post = post,
-                    onMerchantClick = actions.onMerchantClick,
-                    onRemoveClick = { actions.onRemovePost(post.id) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SavedInterestsFilterRow(selectedTab: SavedInterestFilterTab, onSelectTab: (SavedInterestFilterTab) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        val tabs = listOf(
-            SavedInterestFilterTab.ALL to stringResource(R.string.saved_interests_tab_all),
-            SavedInterestFilterTab.OFFERS to stringResource(R.string.saved_interests_tab_offers),
-            SavedInterestFilterTab.POSTS to stringResource(R.string.saved_interests_tab_posts)
-        )
-        tabs.forEach { (tab, label) ->
-            val selected = selectedTab == tab
-            FilterChip(
-                selected = selected,
-                onClick = { onSelectTab(tab) },
-                label = { Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = SensusPurple,
-                    selectedLabelColor = Color.White
-                )
+        items(state.savedOffers, key = { "offer_${it.id}" }) { offer ->
+            SavedOfferCard(
+                offer = offer,
+                onClick = { actions.onOfferClick(offer) },
+                onRemoveClick = { actions.onRemoveOffer(offer.id) }
             )
         }
     }
@@ -353,63 +301,6 @@ private fun SavedOfferPricesRow(offer: ProductOffer) {
                 color = SensusSuccess,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
-        }
-    }
-}
-
-@Composable
-private fun SavedPostCard(post: FeedPost, onMerchantClick: (String) -> Unit, onRemoveClick: () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(CARD_CORNER_DP.dp),
-        colors = CardDefaults.cardColors(containerColor = SensusSurface),
-        border = BorderStroke(1.dp, SensusCardBorder),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = post.authorName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-                IconButton(onClick = onRemoveClick, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Filled.PushPin,
-                        contentDescription = stringResource(R.string.saved_interests_unpin),
-                        tint = SensusVioletInk,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            Text(text = post.text, fontSize = 13.sp, color = SensusTextSecondary)
-            post.imageUrl?.let { url ->
-                AsyncImage(
-                    model = url,
-                    contentDescription = stringResource(R.string.community_post_photo),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(IMAGE_CORNER_DP.dp))
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${post.distanceMeters / DISTANCE_ROUNDING * DISTANCE_ROUNDING} m aprox. · ${post.createdAt}",
-                    fontSize = 11.sp,
-                    color = SensusTextMuted
-                )
-                post.merchantId?.let { id ->
-                    Text(
-                        text = post.merchantName ?: stringResource(R.string.community_merchant_offers),
-                        color = SensusVioletInk,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable { onMerchantClick(id) }
-                    )
-                }
-            }
         }
     }
 }

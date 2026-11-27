@@ -67,11 +67,16 @@ import com.example.sensus.theme.SensusVioletInk
 import com.example.sensus.theme.sensusTextButtonColors
 
 @Composable
-fun MerchantDashboardScreen(callbacks: MerchantDashboardCallbacks, viewModel: MerchantDashboardViewModel = hiltViewModel(), modifier: Modifier = Modifier) {
+fun MerchantDashboardScreen(
+    callbacks: MerchantDashboardCallbacks,
+    viewModel: MerchantDashboardViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier,
+    refreshSignal: Int = 0
+) {
     val dashState by viewModel.viewState.collectAsStateWithLifecycle()
     var selectedOfferForStock by remember { mutableStateOf<ProductOffer?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshSignal) {
         viewModel.dispatchIntent(MerchantDashboardViewIntent.Refresh)
     }
 
@@ -130,12 +135,12 @@ private fun MerchantDashboardFeed(
         if (visibleOffers.isEmpty() && showContent) {
             item { EmptyMerchantOffersCard(dashState.selectedFilter, callbacks.onNewOfferClick) }
         } else {
-            items(groups, key = { it.first }) { (category, offers) ->
+            items(groups, key = { "${dashState.selectedFilter.name}_${it.first}" }) { (category, offers) ->
                 MerchantCategoryGroup(
                     category = category,
                     offers = offers,
                     initiallyExpanded = category == groups.first().first,
-                    actions = MerchantInventoryActions(callbacks.onEditOfferClick, onAdjustStockClick),
+                    actions = MerchantInventoryActions(callbacks.onEditOfferClick, onAdjustStockClick, dashState.selectedFilter.name),
                     modifier = Modifier.animateItem()
                 )
             }

@@ -3,7 +3,7 @@
 ## Spec y alcance
 
 - [x] `spec.md` con las 7 secciones canónicas + `## Aprobación`
-- [x] Diferencia frente a `FT-19` (`POST /api/v1/feed/posts/{id}/like`) documentada
+- [x] Contrato `POST /api/v1/offers/{id}/like` documentado
 - [x] Endpoints registrados en `docs/endpoints-internos.md`
 
 ## Arquitectura y calidad

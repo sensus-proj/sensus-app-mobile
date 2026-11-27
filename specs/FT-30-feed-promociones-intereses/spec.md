@@ -6,7 +6,7 @@
 
 ## 1. Contexto y objetivo
 
-El usuario registrado no tiene un lugar donde ver, en *scroll* continuo, las promociones cercanas que más le interesan. El feed de Comunidad (FT-18) muestra publicaciones en orden cronológico, no ofertas. Por decisión del responsable del producto (2026-11-20), el «ML» de Sensus se materializa como un **feed de promociones propio, separado del feed social**, ordenado en el servidor según los intereses del usuario.
+El usuario registrado requiere un lugar donde ver, en *scroll* continuo, las promociones cercanas que más le interesan. Por decisión del responsable del producto (2026-11-20), el «ML» de Sensus se materializa como un **feed de promociones propio**, ordenado en el servidor según los intereses del usuario.
 
 **Objetivo:** añadir la pestaña **Promociones** con un feed paginado de ofertas desde `GET /api/v1/feed/offers`, y permitir que el usuario elija sus categorías de interés de forma **opcional** al terminar el registro y las edite después desde su perfil (`GET`/`PUT /api/v1/users/me/interests`).
 

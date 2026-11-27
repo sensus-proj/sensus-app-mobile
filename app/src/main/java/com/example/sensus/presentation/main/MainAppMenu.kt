@@ -148,6 +148,7 @@ internal class MainAppState {
     var selectedStoreForReviews by mutableStateOf<MapStoreCluster?>(null)
     var selectedFriendForOffers by mutableStateOf<ConnectedFriend?>(null)
     var selectedOfferForEdit by mutableStateOf<ProductOffer?>(null)
+    var merchantDashboardRefreshSignal by mutableIntStateOf(0)
     var activeApartadoOffer by mutableStateOf<ProductOffer?>(null)
     var activeApartadoItems by mutableStateOf<List<com.example.sensus.domain.model.CartItem>>(emptyList())
     var activeClaimExpected by mutableStateOf(false)
@@ -594,10 +595,6 @@ internal fun MainAppDialogs(state: MainAppState, isGuest: Boolean, onLogout: () 
 
 internal fun buildCommunityCallbacks(state: MainAppState): CommunityCallbacks = CommunityCallbacks(
     onRequireAuth = { state.showGuestPrompt = true },
-    onMerchantClick = { id ->
-        state.communityMerchantId = id
-        state.buyerTabIndex = 1
-    },
     onFriendClick = { friend ->
         state.isCommunityFriendsSelected = true
         state.selectedFriendForOffers = friend

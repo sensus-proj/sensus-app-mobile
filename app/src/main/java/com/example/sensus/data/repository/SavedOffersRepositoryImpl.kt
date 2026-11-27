@@ -2,7 +2,6 @@ package com.example.sensus.data.repository
 
 import com.example.sensus.data.local.db.dao.UserPreferenceDao
 import com.example.sensus.data.local.db.entity.UserPreferenceEntity
-import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.repository.SavedOffersRepository
@@ -24,7 +23,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private const val KEY_OFFERS_PREFIX = "saved_interested_offers_"
-private const val KEY_POSTS_PREFIX = "saved_interested_posts_"
 private const val DEFAULT_SCOPE_KEY = "default"
 private const val GUEST_SCOPE_KEY = "guest"
 private val savedJson = Json { ignoreUnknownKeys = true }
@@ -58,20 +56,8 @@ private data class SavedOfferRecord(
     val expiresAtMillis: Long? = null
 )
 
-@Serializable
-private data class SavedPostRecord(
-    val id: String,
-    val authorName: String,
-    val text: String,
-    val createdAt: String,
-    val distanceMeters: Int = 0,
-    val imageUrl: String? = null,
-    val merchantId: String? = null,
-    val merchantName: String? = null
-)
-
 /**
- * Persiste ofertas y publicaciones marcadas como "Me interesa" por el usuario
+ * Persiste ofertas marcadas como "Me interesa" por el usuario
  * usando la tabla cifrada `user_preferences` en Room/SQLCipher.
  */
 class SavedOffersRepositoryImpl(
@@ -84,9 +70,6 @@ class SavedOffersRepositoryImpl(
     private val lock = Any()
     private val _savedOffers = MutableStateFlow<List<ProductOffer>>(emptyList())
     override val savedOffers: StateFlow<List<ProductOffer>> = _savedOffers.asStateFlow()
-
-    private val _savedPosts = MutableStateFlow<List<FeedPost>>(emptyList())
-    override val savedPosts: StateFlow<List<FeedPost>> = _savedPosts.asStateFlow()
 
     init {
         if (sessionRepository != null) {
@@ -103,8 +86,6 @@ class SavedOffersRepositoryImpl(
 
     override fun isOfferSaved(offerId: String): Boolean = _savedOffers.value.any { it.id == offerId }
 
-    override fun isPostSaved(postId: String): Boolean = _savedPosts.value.any { it.id == postId }
-
     override suspend fun toggleSavedOffer(offer: ProductOffer): Boolean {
         val current = _savedOffers.value
         val alreadySaved = current.any { it.id == offer.id }
@@ -118,29 +99,10 @@ class SavedOffersRepositoryImpl(
         return !alreadySaved
     }
 
-    override suspend fun toggleSavedPost(post: FeedPost): Boolean {
-        val current = _savedPosts.value
-        val alreadySaved = current.any { it.id == post.id }
-        val updated = if (alreadySaved) {
-            current.filterNot { it.id == post.id }
-        } else {
-            listOf(post) + current.filterNot { it.id == post.id }
-        }
-        synchronized(lock) { _savedPosts.value = updated }
-        persistJson("$KEY_POSTS_PREFIX${currentScopeKey()}") { savedJson.encodeToString(updated.map { it.toRecord() }) }
-        return !alreadySaved
-    }
-
     override suspend fun removeSavedOffer(offerId: String) {
         val updated = _savedOffers.value.filterNot { it.id == offerId }
         synchronized(lock) { _savedOffers.value = updated }
         persistJson("$KEY_OFFERS_PREFIX${currentScopeKey()}") { savedJson.encodeToString(updated.map { it.toRecord() }) }
-    }
-
-    override suspend fun removeSavedPost(postId: String) {
-        val updated = _savedPosts.value.filterNot { it.id == postId }
-        synchronized(lock) { _savedPosts.value = updated }
-        persistJson("$KEY_POSTS_PREFIX${currentScopeKey()}") { savedJson.encodeToString(updated.map { it.toRecord() }) }
     }
 
     private fun currentScopeKey(): String {
@@ -152,16 +114,13 @@ class SavedOffersRepositoryImpl(
         if (scopeKey == GUEST_SCOPE_KEY) {
             synchronized(lock) {
                 _savedOffers.value = emptyList()
-                _savedPosts.value = emptyList()
             }
             return
         }
         val dao = userPreferenceDao ?: return
         val loadedOffers = readRawJson(dao, "$KEY_OFFERS_PREFIX$scopeKey")?.let(::decodeOffers).orEmpty()
-        val loadedPosts = readRawJson(dao, "$KEY_POSTS_PREFIX$scopeKey")?.let(::decodePosts).orEmpty()
         synchronized(lock) {
             _savedOffers.value = loadedOffers
-            _savedPosts.value = loadedPosts
         }
     }
 
@@ -196,14 +155,6 @@ private fun resolveScopeKey(isGuest: Boolean, userEmail: String?): String = when
 
 private fun decodeOffers(raw: String): List<ProductOffer> = try {
     savedJson.decodeFromString<List<SavedOfferRecord>>(raw).map { it.toDomain() }
-} catch (_: SerializationException) {
-    emptyList()
-} catch (_: IllegalArgumentException) {
-    emptyList()
-}
-
-private fun decodePosts(raw: String): List<FeedPost> = try {
-    savedJson.decodeFromString<List<SavedPostRecord>>(raw).map { it.toDomain() }
 } catch (_: SerializationException) {
     emptyList()
 } catch (_: IllegalArgumentException) {
@@ -272,25 +223,3 @@ private fun SavedOfferRecord.toDomain(): ProductOffer {
         expiresAtMillis = expiresAtMillis
     )
 }
-
-private fun FeedPost.toRecord(): SavedPostRecord = SavedPostRecord(
-    id = id,
-    authorName = authorName,
-    text = text,
-    createdAt = createdAt,
-    distanceMeters = distanceMeters,
-    imageUrl = imageUrl,
-    merchantId = merchantId,
-    merchantName = merchantName
-)
-
-private fun SavedPostRecord.toDomain(): FeedPost = FeedPost(
-    id = id,
-    authorName = authorName,
-    text = text,
-    createdAt = createdAt,
-    distanceMeters = distanceMeters,
-    imageUrl = imageUrl,
-    merchantId = merchantId,
-    merchantName = merchantName
-)

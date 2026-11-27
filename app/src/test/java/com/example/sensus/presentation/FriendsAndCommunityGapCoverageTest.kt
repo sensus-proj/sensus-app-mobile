@@ -1,34 +1,16 @@
 package com.example.sensus.presentation
 
 import app.cash.turbine.test
-import com.example.sensus.common.AppError
-import com.example.sensus.common.Result
 import com.example.sensus.domain.model.AddFriendResult
 import com.example.sensus.domain.model.ConnectedFriend
-import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.FriendInviteCodec
 import com.example.sensus.domain.model.FriendNoticeType
-import com.example.sensus.domain.model.PagedFeed
 import com.example.sensus.domain.model.PendingFriendRequest
-import com.example.sensus.domain.model.ReportReason
 import com.example.sensus.domain.model.SentFriendRequest
 import com.example.sensus.domain.model.ShareOfferOutcome
-import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.repository.FriendsRepository
-import com.example.sensus.domain.repository.LocationRepository
-import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
-import com.example.sensus.domain.usecase.AddFeedCommentUseCase
-import com.example.sensus.domain.usecase.CreateFeedPostUseCase
-import com.example.sensus.domain.usecase.DeleteFeedPostUseCase
-import com.example.sensus.domain.usecase.GetFeedCommentsUseCase
-import com.example.sensus.domain.usecase.GetNearbyFeedUseCase
-import com.example.sensus.domain.usecase.SubmitContentReportUseCase
-import com.example.sensus.domain.usecase.TogglePostLikeUseCase
-import com.example.sensus.presentation.buyer.CommunityViewEffect
-import com.example.sensus.presentation.buyer.CommunityViewIntent
-import com.example.sensus.presentation.buyer.CommunityViewModel
 import com.example.sensus.presentation.buyer.FriendsViewEffect
 import com.example.sensus.presentation.buyer.FriendsViewIntent
 import com.example.sensus.presentation.buyer.FriendsViewModel
@@ -49,7 +31,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -160,127 +141,5 @@ class FriendsAndCommunityGapCoverageTest {
             cancelAndIgnoreRemainingEvents()
         }
         assertNull(FriendInviteCodec.parseInvite("sensus://invitacion?code=bad"))
-    }
-
-    private data class CommunityErrorDeps(
-        val commentsUc: GetFeedCommentsUseCase? = mockk(),
-        val toggleUc: TogglePostLikeUseCase? = mockk(),
-        val addCommentUc: AddFeedCommentUseCase? = mockk(),
-        val deleteUc: DeleteFeedPostUseCase? = mockk(),
-        val reportUc: SubmitContentReportUseCase? = mockk()
-    )
-
-    private fun buildCommunityVm(isGuest: Boolean, hasPermission: Boolean, deps: CommunityErrorDeps = CommunityErrorDeps()): CommunityViewModel {
-        val samplePost = FeedPost("p1", "Sofía", "2x1", "Hoy", likesCount = 1, isLikedByMe = false, commentsCount = 1, isMine = true)
-        val getFeed = mockk<GetNearbyFeedUseCase>()
-        val locations = mockk<LocationRepository>()
-        val session = mockk<SessionRepository> {
-            every { sessionState } returns MutableStateFlow(SessionState(isSessionActive = !isGuest, isGuest = isGuest))
-        }
-        every { locations.hasLocationPermission() } returns hasPermission
-        coEvery { locations.getCurrentLocation() } returns UserLocation(20.0, -99.0)
-        coEvery { getFeed(any()) } returns Result.Success(PagedFeed(listOf(samplePost), 1, false))
-        return CommunityViewModel(
-            getFeed,
-            mockk<CreateFeedPostUseCase>(),
-            locations,
-            session,
-            mockk<OffersRepository>(relaxed = true),
-            deps.toggleUc,
-            deps.commentsUc,
-            deps.addCommentUc,
-            deps.deleteUc,
-            deps.reportUc
-        ).also { it.ioDispatcher = dispatcher }
-    }
-
-    @Test
-    fun communityViewModel_guestActionsEmitRequireAuthAndMissingLocationBlocksSubmit() = runTest(dispatcher) {
-        val samplePost = FeedPost("p1", "Sofía", "2x1", "Hoy", isMine = true)
-        val guestVm = buildCommunityVm(isGuest = true, hasPermission = true)
-        advanceUntilIdle()
-        guestVm.viewEffect.test {
-            guestVm.dispatchIntent(CommunityViewIntent.Submit)
-            guestVm.dispatchIntent(CommunityViewIntent.ToggleLike("p1"))
-            guestVm.dispatchIntent(CommunityViewIntent.SubmitComment)
-            guestVm.dispatchIntent(CommunityViewIntent.OpenReportPost(samplePost))
-            repeat(4) { assertEquals(CommunityViewEffect.RequireAuth, awaitItem()) }
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        val noLocVm = buildCommunityVm(isGuest = false, hasPermission = false, deps = CommunityErrorDeps(commentsUc = null))
-        advanceUntilIdle()
-        noLocVm.dispatchIntent(CommunityViewIntent.ImageReadFailed)
-        assertTrue(noLocVm.viewState.value.publishError is AppError.Validation)
-        noLocVm.dispatchIntent(CommunityViewIntent.Submit)
-        assertTrue(noLocVm.viewState.value.publishError is AppError.Validation)
-        noLocVm.dispatchIntent(CommunityViewIntent.OpenComments(samplePost))
-        assertFalse(noLocVm.viewState.value.isLoadingComments)
-        noLocVm.dispatchIntent(CommunityViewIntent.CloseComments)
-        assertNull(noLocVm.viewState.value.activeCommentPost)
-    }
-
-    @Test
-    fun communityViewModel_errorPathsEmitRequireAuthAndErrorMessages() = runTest(dispatcher) {
-        val samplePost = FeedPost("p1", "Sofía", "2x1", "Hoy", isMine = true)
-        val commentsUc = mockk<GetFeedCommentsUseCase>()
-        val toggleUc = mockk<TogglePostLikeUseCase>()
-        val addCommentUc = mockk<AddFeedCommentUseCase>()
-        val deleteUc = mockk<DeleteFeedPostUseCase>()
-        val reportUc = mockk<SubmitContentReportUseCase>()
-        coEvery { commentsUc("p1") } returns Result.Failure(AppError.Network("Err comentarios"))
-        coEvery { toggleUc("p1", any()) } returns Result.Failure(AppError.Unauthorized("Auth like"))
-        coEvery { addCommentUc("p1", any()) } returns Result.Failure(AppError.Unauthorized("Auth comment"))
-        coEvery { deleteUc("p1") } returns Result.Failure(AppError.Network("Err delete")) andThen Result.Failure(AppError.Unauthorized("Auth delete"))
-        coEvery { reportUc(any()) } returns
-            Result.Failure(AppError.Network("Err report")) andThen
-            Result.Failure(AppError.Conflict("Ya reportado")) andThen
-            Result.Failure(AppError.Unauthorized("Auth report"))
-
-        val vm = buildCommunityVm(
-            isGuest = false,
-            hasPermission = true,
-            deps = CommunityErrorDeps(commentsUc, toggleUc, addCommentUc, deleteUc, reportUc)
-        )
-        advanceUntilIdle()
-        vm.viewEffect.test {
-            vm.dispatchIntent(CommunityViewIntent.OpenComments(samplePost))
-            advanceUntilIdle()
-            assertEquals("Err comentarios", vm.viewState.value.commentError)
-
-            vm.dispatchIntent(CommunityViewIntent.ToggleLike("p1"))
-            advanceUntilIdle()
-            assertEquals(CommunityViewEffect.RequireAuth, awaitItem())
-
-            vm.dispatchIntent(CommunityViewIntent.CommentDraftChanged("Hola"))
-            vm.dispatchIntent(CommunityViewIntent.SubmitComment)
-            advanceUntilIdle()
-            assertEquals(CommunityViewEffect.RequireAuth, awaitItem())
-
-            vm.dispatchIntent(CommunityViewIntent.RequestDeletePost(samplePost))
-            vm.dispatchIntent(CommunityViewIntent.ConfirmDeletePost)
-            advanceUntilIdle()
-            assertEquals("Err delete", (awaitItem() as CommunityViewEffect.ShowMessage).message)
-
-            vm.dispatchIntent(CommunityViewIntent.RequestDeletePost(samplePost))
-            vm.dispatchIntent(CommunityViewIntent.ConfirmDeletePost)
-            advanceUntilIdle()
-            assertEquals(CommunityViewEffect.RequireAuth, awaitItem())
-
-            vm.dispatchIntent(CommunityViewIntent.OpenReportPost(samplePost))
-            vm.dispatchIntent(CommunityViewIntent.SubmitReport(ReportReason.SPAM, ""))
-            advanceUntilIdle()
-            assertEquals("Err report", vm.viewState.value.reportError)
-
-            vm.dispatchIntent(CommunityViewIntent.SubmitReport(ReportReason.SPAM, ""))
-            advanceUntilIdle()
-            assertEquals("Ya reportado", (awaitItem() as CommunityViewEffect.ShowMessage).message)
-
-            vm.dispatchIntent(CommunityViewIntent.OpenReportPost(samplePost))
-            vm.dispatchIntent(CommunityViewIntent.SubmitReport(ReportReason.SPAM, ""))
-            advanceUntilIdle()
-            assertEquals(CommunityViewEffect.RequireAuth, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
     }
 }

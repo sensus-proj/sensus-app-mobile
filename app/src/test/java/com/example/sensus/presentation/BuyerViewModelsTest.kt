@@ -38,7 +38,6 @@ import com.example.sensus.presentation.buyer.BuyerProfileViewIntent
 import com.example.sensus.presentation.buyer.BuyerProfileViewModel
 import com.example.sensus.presentation.buyer.CartViewIntent
 import com.example.sensus.presentation.buyer.CartViewModel
-import com.example.sensus.presentation.buyer.CommunityViewModel
 import com.example.sensus.presentation.buyer.NotificationsViewModel
 import com.example.sensus.presentation.buyer.RouteMapViewIntent
 import com.example.sensus.presentation.buyer.RouteMapViewModel
@@ -554,22 +553,6 @@ class BuyerViewModelsTest {
         assertTrue(vm.viewState.value.hasActiveMerchant)
         assertEquals("Panadería Sensus", vm.viewState.value.merchantStoreName)
         coVerify(exactly = 1) { sessionRepo.setMerchantStatus(true, "Panadería Sensus") }
-    }
-
-    @Test
-    fun community_loadsData() = runTest {
-        val sessionRepo = mockk<SessionRepository>(relaxed = true)
-        coEvery { sessionRepo.sessionState } returns MutableStateFlow(SessionState(activeEmail = "test@sensus.com"))
-
-        val vm = CommunityViewModel(
-            mockk(relaxed = true),
-            mockk(relaxed = true),
-            mockk(relaxed = true),
-            sessionRepo,
-            mockk(relaxed = true)
-        )
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals("test@sensus.com", vm.viewState.value.currentUserName)
     }
 
     @Test

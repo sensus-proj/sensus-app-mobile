@@ -70,7 +70,7 @@ presentation/common/
 ## 7. Riesgos, limites y deuda
 
 - Desvío documentado del Drive: el mapa usa **OSMDroid** en lugar de Google Maps SDK para evitar costos y facturación de API Key en capa gratuita (decisión D-1).
-- El retiro completo de `MockDataProvider.kt` ocurrirá cuando `StoreRepositoryImpl` también migre en `FT-18`/`FT-21`/`FT-24`.
+- El retiro completo de `MockDataProvider.kt` ocurrió en `FT-27` al migrar `StoreRepositoryImpl` y repositorios remotos.
 - Requiere Spec `007-ofertas-cercanas` desplegada en AWS para pruebas contra entorno real; entretanto opera con `MockWebServer` en CI y pruebas.
 
 ## Aprobación

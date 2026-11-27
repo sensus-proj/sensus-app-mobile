@@ -57,3 +57,4 @@ Validación integración principal T16.12: contrato y Allow POST oficial verific
 
 - [x] T16.13 Parseo de `PagedResult<MerchantOfferDto>` (`items`) y `viewsCount`/`viewCount` en `GET /api/v1/merchants/my-offers` para mostrar el inventario y métricas del propietario sin fallo por objeto paginado.
 - [x] T16.14 Endurecimiento de `AndroidImageCompressor`/`ImageUploadPolicy` (`MAX_UPLOAD_BYTES = 4_000_000`, muestreo `inSampleSize` en cámara/galería) y mapeo diferenciado `400 -> Validation`, `202 -> Unprocessable`, `422 -> ContentRejected` al subir fotos moderadas.
+- [x] T16.15 Soporte dual en `OffersRepositoryImpl.fetchMerchantOffers` para respuesta paginada (`PagedOffersResponseDto`) y arreglo JSON legado, recarga del panel tras editar/pausar en `MainAppContainer`, clave de expansión por filtro en `MerchantCategoryGroup` y acceso al inventario/edición con tienda temporalmente cerrada (`sensus-back`).

@@ -130,4 +130,11 @@ public final class SensusDatabaseMigrations {
             db.execSQL(MIGRATION_8_9_DDL);
         }
     };
+
+    public static final Migration MIGRATION_9_10 = new Migration(9, 10) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("DROP TABLE IF EXISTS `feed_posts`");
+        }
+    };
 }

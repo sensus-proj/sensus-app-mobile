@@ -3,7 +3,6 @@ package com.example.sensus.data
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.sensus.data.local.db.SensusDatabase
-import com.example.sensus.data.local.db.entity.FeedPostEntity
 import com.example.sensus.data.mapper.OfferMapper.toEntity
 import com.example.sensus.data.media.AndroidImageCompressor
 import com.example.sensus.domain.media.ImageUploadPolicy
@@ -31,11 +30,6 @@ class PublishingCacheIntegrationTest {
             )
             database.offerDao().insertOffer(offer.toEntity())
             assertEquals(17, database.offerDao().getOfferById("offer-1").unitsLeft)
-            val dao = database.feedPostDao()
-            dao.replacePage("nearby", 1, listOf(FeedPostEntity("p1", "nearby", 1, 0, "approved")))
-            assertEquals("p1", dao.getPage("nearby", 1).single().id)
-            dao.replacePage("nearby", 1, emptyList())
-            assertTrue(dao.getPage("nearby", 1).isEmpty())
         } finally {
             database.close()
         }

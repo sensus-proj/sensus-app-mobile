@@ -8,8 +8,6 @@ import com.example.sensus.domain.model.ClaimStatus
 import com.example.sensus.domain.model.ClaimSummary
 import com.example.sensus.domain.model.ClaimsSessionIdentity
 import com.example.sensus.domain.model.CreateOfferInput
-import com.example.sensus.domain.model.CreatePostInput
-import com.example.sensus.domain.model.FeedQuery
 import com.example.sensus.domain.model.FeedSlot
 import com.example.sensus.domain.model.MapLayer
 import com.example.sensus.domain.model.MapStoreClusterBuilder
@@ -24,21 +22,17 @@ import com.example.sensus.domain.model.OfferLifecycleStatus
 import com.example.sensus.domain.model.OfferSearchItem
 import com.example.sensus.domain.model.OfferSearchPage
 import com.example.sensus.domain.model.OfferSearchRequest
-import com.example.sensus.domain.model.PagedFeed
-import com.example.sensus.domain.model.PagedFeedComments
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.RepublishOfferInput
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.StoreClusterQuery
 import com.example.sensus.domain.model.ToggleOfferLikeResult
-import com.example.sensus.domain.model.TogglePostLikeResult
 import com.example.sensus.domain.model.UpdateOfferInput
 import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.domain.repository.ClaimsRepository
 import com.example.sensus.domain.repository.DiscoveryRepository
-import com.example.sensus.domain.repository.FeedRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
 import com.example.sensus.domain.repository.MerchantRepository
@@ -51,17 +45,13 @@ import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
 import com.example.sensus.domain.sync.SyncManager
 import com.example.sensus.domain.sync.SyncResult
-import com.example.sensus.domain.usecase.AddFeedCommentUseCase
 import com.example.sensus.domain.usecase.ChangeOfferStatusUseCase
 import com.example.sensus.domain.usecase.CreateClaimUseCase
-import com.example.sensus.domain.usecase.DeleteFeedPostUseCase
-import com.example.sensus.domain.usecase.GetFeedCommentsUseCase
 import com.example.sensus.domain.usecase.GetMerchantInventoryUseCase
 import com.example.sensus.domain.usecase.GetMyInterestsUseCase
 import com.example.sensus.domain.usecase.GetOfferFeedUseCase
 import com.example.sensus.domain.usecase.GetUserLocationUseCase
 import com.example.sensus.domain.usecase.ToggleOfferLikeUseCase
-import com.example.sensus.domain.usecase.TogglePostLikeUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import com.example.sensus.domain.usecase.UpdateProfileUseCase
 import com.example.sensus.domain.usecase.uploadMediaIfPresent
@@ -194,16 +184,6 @@ class DomainCoverageGapTest {
         assertTrue(claimRepo.createCartClaim(emptyList()).isFailure)
         assertTrue(claimRepo.createCartClaim(listOf(CartItem(baseOffer, 2))).isSuccess)
 
-        val feedRepo = object : FeedRepository {
-            override suspend fun nearby(query: FeedQuery) = Result.Success(PagedFeed(emptyList(), 1, false))
-            override suspend fun createPost(input: CreatePostInput, media: UploadedMedia?) = Result.Failure(AppError.Network())
-            override suspend fun toggleLike(postId: String) = Result.Success(TogglePostLikeResult(postId, 1, true))
-            override suspend fun getComments(postId: String, page: Int, pageSize: Int) = Result.Success(PagedFeedComments(emptyList(), 0, 1, 20, false))
-            override suspend fun addComment(postId: String, content: String) = Result.Failure(AppError.Network())
-            override suspend fun deletePost(postId: String) = Result.Success(Unit)
-        }
-        assertTrue((feedRepo.setPostLike("p1", true) as Result.Success).data.isLikedByMe)
-
         assertEquals("1.2 km", baseOffer.formattedDistance)
         assertEquals("800 m", baseOffer.copy(distanceMeters = 800).formattedDistance)
         assertEquals(20.0, baseOffer.savedAmount, 0.01)
@@ -270,12 +250,6 @@ class DomainCoverageGapTest {
     fun useCaseValidationAndFailurePathsAreCovered() = runTest {
         val guestSession = mockk<SessionRepository> { every { sessionState } returns MutableStateFlow(SessionState(true, true)) }
         val authSession = mockk<SessionRepository> { every { sessionState } returns MutableStateFlow(SessionState(true, false)) }
-        val feedRepo = mockk<FeedRepository>(relaxed = true)
-
-        assertTrue(TogglePostLikeUseCase(feedRepo, authSession)("", true).isFailure)
-        assertTrue(GetFeedCommentsUseCase(feedRepo)("  ").isFailure)
-        assertTrue(AddFeedCommentUseCase(feedRepo, guestSession)("p1", "Hola").isFailure)
-        assertTrue(DeleteFeedPostUseCase(feedRepo, authSession)("  ").isFailure)
 
         val offerDetailsRepo = mockk<OfferDetailsRepository>(relaxed = true) {
             coEvery { toggleLike("o1") } returns Result.Success(ToggleOfferLikeResult("o1", 4, true))

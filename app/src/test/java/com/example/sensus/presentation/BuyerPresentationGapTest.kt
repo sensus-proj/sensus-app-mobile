@@ -7,20 +7,16 @@ import com.example.sensus.domain.model.AiConversation
 import com.example.sensus.domain.model.AiTurn
 import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.CitedOffer
-import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.NotificationsPreferences
 import com.example.sensus.domain.model.OfferAlternativeItem
 import com.example.sensus.domain.model.OfferDetails
 import com.example.sensus.domain.model.OfferDiscoveryFilters
-import com.example.sensus.domain.model.PagedFeed
-import com.example.sensus.domain.model.PagedFeedComments
 import com.example.sensus.domain.model.PagedOffers
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.ReportReason
 import com.example.sensus.domain.model.ScreenContext
 import com.example.sensus.domain.model.SensiResult
 import com.example.sensus.domain.repository.AiChatRepository
-import com.example.sensus.domain.repository.FeedRepository
 import com.example.sensus.domain.repository.FriendsRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
@@ -28,11 +24,6 @@ import com.example.sensus.domain.repository.OffersRepository
 import com.example.sensus.domain.repository.SavedOffersRepository
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
-import com.example.sensus.domain.usecase.AddFeedCommentUseCase
-import com.example.sensus.domain.usecase.CreateFeedPostUseCase
-import com.example.sensus.domain.usecase.DeleteFeedPostUseCase
-import com.example.sensus.domain.usecase.GetFeedCommentsUseCase
-import com.example.sensus.domain.usecase.GetNearbyFeedUseCase
 import com.example.sensus.domain.usecase.GetNearbyMerchantsUseCase
 import com.example.sensus.domain.usecase.GetNearbyOffersUseCase
 import com.example.sensus.domain.usecase.GetOfferAlternativesUseCase
@@ -46,13 +37,10 @@ import com.example.sensus.domain.usecase.RegisterOfferViewUseCase
 import com.example.sensus.domain.usecase.SendSensiMessageUseCase
 import com.example.sensus.domain.usecase.SubmitContentReportUseCase
 import com.example.sensus.domain.usecase.ToggleOfferLikeUseCase
-import com.example.sensus.domain.usecase.TogglePostLikeUseCase
 import com.example.sensus.presentation.buyer.BuyerHomeViewIntent
 import com.example.sensus.presentation.buyer.BuyerHomeViewModel
 import com.example.sensus.presentation.buyer.BuyerMapViewIntent
 import com.example.sensus.presentation.buyer.ClaimOfferViewState
-import com.example.sensus.presentation.buyer.CommunityViewIntent
-import com.example.sensus.presentation.buyer.CommunityViewModel
 import com.example.sensus.presentation.buyer.FriendsViewIntent
 import com.example.sensus.presentation.buyer.FriendsViewModel
 import com.example.sensus.presentation.buyer.NotificationsError
@@ -286,33 +274,10 @@ class BuyerPresentationGapTest {
 
         val savedRepo = mockk<SavedOffersRepository>(relaxed = true) {
             every { savedOffers } returns MutableStateFlow(emptyList())
-            every { savedPosts } returns MutableStateFlow(listOf(FeedPost("p1", "Ana", "Texto", "2026-11-26")))
         }
         val savedVm = com.example.sensus.presentation.buyer.SavedInterestsViewModel(savedRepo, sessionRepo)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(setOf("p1"), savedVm.viewState.value.savedPostIds)
-        savedVm.dispatchIntent(com.example.sensus.presentation.buyer.SavedInterestsViewIntent.RemovePost("p1"))
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val feedRepo = mockk<FeedRepository>(relaxed = true) {
-            coEvery { nearby(any()) } returns Result.Success(PagedFeed(emptyList(), 1, false))
-            coEvery { getComments(any(), any(), any()) } returns Result.Success(PagedFeedComments(emptyList(), 0, 1, 20, false))
-        }
-        val commVm = CommunityViewModel(
-            GetNearbyFeedUseCase(feedRepo, sessionRepo),
-            CreateFeedPostUseCase(feedRepo, sessionRepo, mockk(relaxed = true), mockk(relaxed = true)),
-            okLoc,
-            sessionRepo,
-            offersRepo,
-            TogglePostLikeUseCase(feedRepo, sessionRepo),
-            GetFeedCommentsUseCase(feedRepo),
-            AddFeedCommentUseCase(feedRepo, sessionRepo),
-            DeleteFeedPostUseCase(feedRepo, sessionRepo)
-        )
-        val post = FeedPost("p1", "Ana", "Hola", "2026-11-26T10:00:00Z")
-        commVm.dispatchIntent(CommunityViewIntent.OpenComments(post))
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(post, commVm.viewState.value.activeCommentPost)
+        assertEquals(0, savedVm.viewState.value.totalCount)
 
         val friendsVm = FriendsViewModel(mockk<FriendsRepository>(relaxed = true), sessionRepo)
         friendsVm.dispatchIntent(FriendsViewIntent.NotificationShown)
