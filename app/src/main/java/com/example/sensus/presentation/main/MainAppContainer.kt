@@ -357,6 +357,7 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
                 onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
                 onTermsClick = onNavigateToTerms,
                 onHistoryClick = { runWhenAuthenticated(state, isGuest) { state.showSavedInterests = true } },
+                onFavoritesClick = { runWhenAuthenticated(state, isGuest) { state.showFavorites = true } },
                 onMyClaimsClick = { runWhenAuthenticated(state, isGuest) { state.showMyClaims = true } },
                 onEditInterestsClick = { runWhenAuthenticated(state, isGuest) { state.showInterestsPicker = true } },
                 onHelpSupportClick = { state.showHelpCenter = true },

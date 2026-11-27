@@ -1,7 +1,6 @@
 package com.example.sensus.presentation.buyer
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,14 +32,9 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,11 +54,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,19 +70,14 @@ import com.example.sensus.domain.usecase.nearbyRadiusKm
 import com.example.sensus.presentation.common.CommerceFeedFeedback
 import com.example.sensus.presentation.common.CommerceHero
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.presentation.common.OfferThumbnailSize
 import com.example.sensus.presentation.common.OsmMapUtils
-import com.example.sensus.presentation.common.PublicOfferThumbnail
 import com.example.sensus.presentation.common.RadiusSelectorBottomSheet
 import com.example.sensus.presentation.common.formatRadiusText
 import com.example.sensus.presentation.common.getCategoryIcon
 import com.example.sensus.presentation.components.states.LocationDisabledState
 import com.example.sensus.presentation.components.states.OfflineErrorState
 import com.example.sensus.presentation.components.states.ShimmerOfferList
-import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusBackground
-import com.example.sensus.theme.SensusCardBorder
-import com.example.sensus.theme.SensusDiscountTag
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusSurface
 import com.example.sensus.theme.SensusTextMuted
@@ -104,9 +90,6 @@ import com.example.sensus.theme.sensusTextButtonColors
 import java.util.Locale
 
 private const val METERS_PER_KM = 1000
-private const val OFFER_PHOTO_RATIO = 1.85f
-private const val UNITS_BADGE_ALPHA = 0.10f
-private const val DISTANCE_BADGE_ALPHA = 0.08f
 
 private val categoryKeywords = mapOf(
     StoreCategory.GROCERY to "Abarrotes",
@@ -197,12 +180,12 @@ fun BuyerHomeScreen(
     callbacks: BuyerHomeCallbacks,
     modifier: Modifier = Modifier
 ) {
-    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
+    val favoritesViewModel: FavoritesViewModel = hiltViewModel()
     val merchantId = callbacks.merchantId
     val context = LocalContext.current
     val homeState by homeViewModel.viewState.collectAsStateWithLifecycle()
     val cartState by cartViewModel.viewState.collectAsStateWithLifecycle()
-    val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
+    val favoritesState by favoritesViewModel.viewState.collectAsStateWithLifecycle()
     val effectiveIsGuest = callbacks.isGuest || homeState.isGuest
     val effectiveRadiusKm = nearbyRadiusKm(homeState.selectedRadiusKm, effectiveIsGuest)
 
@@ -217,7 +200,7 @@ fun BuyerHomeScreen(
             if (effect is BuyerHomeViewEffect.RequireAuthForRadius) callbacks.onRequireAuth()
         }
     }
-    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
+    FavoritesEffectHandler(favoritesViewModel = favoritesViewModel, onRequireAuth = callbacks.onRequireAuth)
     LaunchedEffect(homeState.userLocation) { locationLabel = OsmMapUtils.resolveLocationLabel(context, homeState.userLocation) }
 
     val filteredOffers = rememberFilteredHomeOffers(homeState, searchQuery, selectedCategory, effectiveRadiusKm, merchantId)
@@ -229,7 +212,7 @@ fun BuyerHomeScreen(
                 filteredOffers = filteredOffers,
                 cart = cartState.storeCart,
                 showRadiusSheet = showRadiusSheet,
-                savedOfferIds = savedState.savedOfferIds,
+                savedOfferIds = favoritesState.favoriteOfferIds,
                 isLoading = homeState.isLoading,
                 errorMessage = homeState.errorMessage,
                 nextPage = homeState.nextPage,
@@ -245,7 +228,7 @@ fun BuyerHomeScreen(
                 onCategoryToggle = { clicked -> selectedCategory = if (selectedCategory == clicked) StoreCategory.ALL else clicked },
                 onToggleRadiusSheet = { showRadiusSheet = it },
                 onRadiusSelected = { km -> homeViewModel.dispatchIntent(BuyerHomeViewIntent.RadiusSelected(km)) },
-                onToggleSaveOffer = { offer -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(offer)) },
+                onToggleSaveOffer = { offer -> favoritesViewModel.dispatchIntent(FavoritesViewIntent.ToggleFavorite(offer)) },
                 onRefreshOffers = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.RefreshOffers) },
                 onLoadNextPage = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.LoadNextPage) },
                 onChangeFilters = { homeViewModel.dispatchIntent(BuyerHomeViewIntent.ChangeFilters(it)) }
@@ -322,12 +305,12 @@ private fun BuyerHomeLazyFeed(data: HomeContentData, callbacks: BuyerHomeCallbac
             item { ShimmerOfferList() }
         } else {
             items(data.filteredOffers, key = { it.id }) { offer ->
-                ProductOfferCard(
+                FavoriteProductOfferCard(
                     offer = offer,
-                    modifier = Modifier.animateItem(),
+                    isFavorite = offer.id in data.savedOfferIds,
                     onClick = { callbacks.onProductClick(offer) },
-                    isSaved = offer.id in data.savedOfferIds,
-                    onSaveClick = { actions.onToggleSaveOffer(offer) }
+                    onFavoriteClick = { actions.onToggleSaveOffer(offer) },
+                    modifier = Modifier.animateItem()
                 )
             }
         }
@@ -540,104 +523,6 @@ private fun FloatingHomeCartPill(totalItems: Int, totalDiscountPrice: Double, on
                 fontWeight = FontWeight.Bold
             )
         }
-    }
-}
-
-@Composable
-fun ProductOfferCard(offer: ProductOffer, onClick: () -> Unit, modifier: Modifier = Modifier, isSaved: Boolean = false, onSaveClick: (() -> Unit)? = null) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SensusSurface),
-        border = BorderStroke(1.dp, SensusCardBorder),
-        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)
-            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.commerce_offer_details), onClick = onClick)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            offer.imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
-                PublicOfferThumbnail(
-                    url = url,
-                    size = OfferThumbnailSize.CATALOG,
-                    description = offer.name,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(OFFER_PHOTO_RATIO).clip(RoundedCornerShape(12.dp)).background(SensusVioletBg)
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-            ProductOfferCardBadgesRow(offer = offer, isSaved = isSaved, onSaveClick = onSaveClick)
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(text = offer.name, style = MaterialTheme.typography.titleMedium, color = SensusTextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Storefront, contentDescription = "Tienda", tint = SensusVioletInk, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "${offer.storeName} • Caduca ${offer.expirationDate}", fontSize = 13.sp, color = SensusTextSecondary)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            if (offer.merchantProfile?.isVerified == true) Text(stringResource(R.string.discovery_verified))
-            MerchantOpenStatusText(offer.merchantProfile)
-            ProductOfferCardPriceFooter(offer = offer)
-        }
-    }
-}
-
-@Composable
-private fun ProductOfferCardBadgesRow(offer: ProductOffer, isSaved: Boolean = false, onSaveClick: (() -> Unit)? = null) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-        FlowRow(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Surface(color = SensusDiscountTag, shape = RoundedCornerShape(6.dp)) {
-                Text(
-                    text = "-${offer.discountPercent}%",
-                    color = Ink,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-            Surface(color = SensusPurple.copy(alpha = UNITS_BADGE_ALPHA), shape = RoundedCornerShape(6.dp)) {
-                Text(
-                    text = "Quedan ${offer.unitsLeft} u.",
-                    color = SensusVioletInk,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-            Surface(color = SensusPurple.copy(alpha = DISTANCE_BADGE_ALPHA), shape = RoundedCornerShape(6.dp)) {
-                Text(
-                    text = "A ${offer.formattedDistance}",
-                    color = SensusVioletInk,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-        }
-        val pinIcon = if (isSaved) Icons.Filled.PushPin else Icons.Outlined.PushPin
-        val pinTint = if (isSaved) SensusVioletInk else SensusTextMuted
-        val pinDesc = if (isSaved) stringResource(R.string.saved_interests_pin_saved) else stringResource(R.string.saved_interests_pin_add)
-        if (onSaveClick != null) {
-            IconButton(onClick = onSaveClick, modifier = Modifier.size(48.dp)) {
-                Icon(imageVector = pinIcon, contentDescription = pinDesc, tint = pinTint, modifier = Modifier.size(20.dp))
-            }
-        } else {
-            Icon(imageVector = pinIcon, contentDescription = pinDesc, tint = pinTint, modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
-@Composable
-private fun ProductOfferCardPriceFooter(offer: ProductOffer) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            text = "$${String.format(Locale.US, "%.2f", offer.originalPrice)} MXN",
-            style = MaterialTheme.typography.labelMedium,
-            color = SensusTextSecondary,
-            textDecoration = TextDecoration.LineThrough
-        )
-        Text(
-            text = "$${String.format(Locale.US, "%.2f", offer.discountPrice)} MXN",
-            style = MaterialTheme.typography.titleLarge,
-            color = SensusVioletInk
-        )
     }
 }
 

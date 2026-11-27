@@ -41,4 +41,4 @@
 
 - [x] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
 - [x] `Memoria.md` §6 actualizado con decisiones y evidencia
-- [ ] `CHECKLIST_PR.md` completo (pendiente al abrir PR)
+- [ ] `CHECKLIST_PR.md` completo (acción del usuario: completar checklist manual de PR antes del merge; ver plan cierre móvil §5.Z-5)

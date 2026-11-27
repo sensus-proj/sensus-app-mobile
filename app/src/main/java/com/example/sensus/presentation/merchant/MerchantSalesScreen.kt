@@ -1,7 +1,5 @@
 package com.example.sensus.presentation.merchant
 
-import android.view.WindowManager.LayoutParams.FLAG_SECURE
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +19,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
 import com.example.sensus.presentation.common.QrScannerDialog
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.presentation.common.claimsErrorText
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusRed
@@ -48,12 +46,7 @@ private const val MENU_CLEARANCE = 96
 
 @Composable
 fun MerchantSalesScreen(modifier: Modifier = Modifier) {
-    val window = LocalActivity.current?.window
-    DisposableEffect(window) {
-        val shouldSetSecure = window != null && window.attributes.flags and FLAG_SECURE == 0
-        if (shouldSetSecure) window.addFlags(FLAG_SECURE)
-        onDispose { if (shouldSetSecure) window.clearFlags(FLAG_SECURE) }
-    }
+    SecureScreenEffect()
     val viewModel: MerchantSalesViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     MerchantSalesContent(state, viewModel::processIntent, modifier)

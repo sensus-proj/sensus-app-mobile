@@ -1,6 +1,8 @@
 package com.example.sensus.presentation.main
 
 import androidx.compose.runtime.Composable
+import com.example.sensus.presentation.buyer.FavoritesCallbacks
+import com.example.sensus.presentation.buyer.FavoritesScreen
 import com.example.sensus.presentation.buyer.InterestsPickerCallbacks
 import com.example.sensus.presentation.buyer.InterestsPickerScreen
 import com.example.sensus.presentation.buyer.SavedInterestsCallbacks
@@ -10,6 +12,7 @@ import com.example.sensus.presentation.buyer.SearchOffersScreen
 @Composable
 internal fun RenderBuyerUtilityOverlay(state: MainAppState): Boolean {
     when {
+        state.showFavorites -> RenderFavoritesOverlay(state)
         state.showSavedInterests -> RenderSavedInterestsOverlay(state)
         state.showInterestsPicker -> InterestsPickerScreen(
             isOnboarding = false,
@@ -45,6 +48,24 @@ private fun RenderSavedInterestsOverlay(state: MainAppState) {
             onExploreOffers = {
                 state.showSavedInterests = false
                 state.buyerTabIndex = 1
+            }
+        )
+    )
+}
+
+@Composable
+private fun RenderFavoritesOverlay(state: MainAppState) {
+    FavoritesScreen(
+        callbacks = FavoritesCallbacks(
+            onNavigateBack = { state.showFavorites = false },
+            onOfferClick = { offer -> state.selectedProductForDetail = offer },
+            onExploreOffers = {
+                state.showFavorites = false
+                state.buyerTabIndex = 1
+            },
+            onRequireAuth = {
+                state.showFavorites = false
+                state.showGuestPrompt = true
             }
         )
     )

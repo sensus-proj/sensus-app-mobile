@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
+import com.example.sensus.domain.security.DeviceAuthOutcome
+import com.example.sensus.domain.security.DeviceAuthPrompt
+import com.example.sensus.domain.security.runDeviceAuthentication
+import com.example.sensus.domain.security.userFacingErrorMessage
+import com.example.sensus.presentation.common.SecureScreenEffect
+import com.example.sensus.presentation.common.currentDeviceAuthenticator
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
@@ -47,6 +56,7 @@ import com.example.sensus.theme.StatusRed
 import com.example.sensus.theme.sensusOutlinedButtonColors
 import com.example.sensus.theme.sensusOutlinedTextFieldColors
 import com.example.sensus.theme.sensusTextButtonColors
+import kotlinx.coroutines.launch
 
 private const val ICON_BG_ALPHA = 0.12f
 private const val OFFLINE_SLATE_HEX = 0xFF64748B
@@ -82,39 +92,50 @@ fun ConfirmLogoutDialog(onDismiss: () -> Unit, onConfirmLogout: () -> Unit) {
 
 @Composable
 fun ConfirmDeleteAccountDialog(onDismiss: () -> Unit, onConfirmDeleteWithPassword: (password: String) -> Unit, onConfirmDelete: (() -> Unit)? = null) {
+    SecureScreenEffect()
+    val authenticator = currentDeviceAuthenticator()
+    val scope = rememberCoroutineScope()
     var passwordConfirmation by remember { mutableStateOf("") }
+    var authError by remember { mutableStateOf<String?>(null) }
+    var isAuthenticating by remember { mutableStateOf(false) }
+    val executeDelete = {
+        onConfirmDeleteWithPassword(passwordConfirmation)
+        onConfirmDelete?.invoke()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         shape = RoundedCornerShape(18.dp),
         containerColor = SensusSurface,
         icon = { DialogIconBadge(Icons.Default.DeleteForever, SensusRed, SensusRed.copy(alpha = ICON_BG_ALPHA)) },
-        title = {
-            Text(
-                text = "¿Eliminar cuenta definitivamente?",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = SensusTextPrimary
-            )
-        },
-        text = {
-            DeleteAccountDialogBody(
-                passwordConfirmation = passwordConfirmation,
-                onPasswordChanged = { passwordConfirmation = it }
-            )
-        },
+        title = { Text("¿Eliminar cuenta definitivamente?", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary) },
+        text = { DeleteAccountDialogBody(passwordConfirmation, { passwordConfirmation = it }, authError) },
         confirmButton = {
-            Button(
+            DeleteAccountConfirmButton(
+                enabled = passwordConfirmation.isNotBlank() && !isAuthenticating,
                 onClick = {
-                    onConfirmDeleteWithPassword(passwordConfirmation)
-                    onConfirmDelete?.invoke()
-                },
-                enabled = passwordConfirmation.isNotBlank(),
-                shape = SensusButtonShape,
-                colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
-            ) {
-                Text("Eliminar definitivamente", fontWeight = FontWeight.Bold, color = Color.White)
-            }
+                    if (authenticator == null) {
+                        executeDelete()
+                    } else {
+                        scope.launch {
+                            isAuthenticating = true
+                            val prompt = DeviceAuthPrompt(
+                                title = "Confirmar eliminación de cuenta",
+                                subtitle = "Verifica tu identidad para eliminar definitivamente tu cuenta"
+                            )
+                            val outcome = runDeviceAuthentication(authenticator, prompt)
+                            isAuthenticating = false
+                            if (outcome == DeviceAuthOutcome.Authenticated) {
+                                authError = null
+                                executeDelete()
+                            } else {
+                                authError = outcome.userFacingErrorMessage()
+                            }
+                        }
+                    }
+                }
+            )
         },
         dismissButton = {
             TextButton(colors = sensusTextButtonColors(), onClick = onDismiss) { Text("Cancelar", color = SensusTextSecondary) }
@@ -123,7 +144,19 @@ fun ConfirmDeleteAccountDialog(onDismiss: () -> Unit, onConfirmDeleteWithPasswor
 }
 
 @Composable
-private fun DeleteAccountDialogBody(passwordConfirmation: String, onPasswordChanged: (String) -> Unit) {
+private fun DeleteAccountConfirmButton(enabled: Boolean, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = SensusButtonShape,
+        colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
+    ) {
+        Text("Eliminar definitivamente", fontWeight = FontWeight.Bold, color = Color.White)
+    }
+}
+
+@Composable
+private fun DeleteAccountDialogBody(passwordConfirmation: String, onPasswordChanged: (String) -> Unit, authError: String? = null) {
     Column {
         Text(
             text = "Esta acción es irreversible. Se eliminarán de forma permanente tus ahorros " +
@@ -149,6 +182,10 @@ private fun DeleteAccountDialogBody(passwordConfirmation: String, onPasswordChan
             colors = sensusOutlinedTextFieldColors(),
             singleLine = true
         )
+        if (!authError.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = authError, fontSize = 12.sp, color = SensusRed)
+        }
     }
 }
 

@@ -1,3 +1,7 @@
+import org.cyclonedx.Version
+import org.cyclonedx.gradle.CyclonedxDirectTask
+import org.cyclonedx.model.Component
+import org.gradle.api.file.RegularFile
 import org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask
 import java.io.File
 import java.io.StringReader
@@ -12,6 +16,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.cyclonedx)
     kotlin("kapt")
 }
 
@@ -161,6 +166,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     // Sprint 1 Core Libraries: Coil, Location, Crypto & Serialization
+    implementation(libs.androidx.biometric)
     implementation(libs.coil.compose)
     implementation(libs.play.services.location)
     implementation(libs.androidx.security.crypto)
@@ -290,6 +296,14 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
 ktlint {
     android.set(true)
     ignoreFailures.set(false)
+}
+
+tasks.withType<CyclonedxDirectTask>().configureEach {
+    includeConfigs = listOf("releaseRuntimeClasspath")
+    projectType = Component.Type.APPLICATION
+    schemaVersion = Version.VERSION_16
+    jsonOutput.set(layout.buildDirectory.file("reports/bom.json"))
+    xmlOutput.convention(null as RegularFile?)
 }
 
 // FT-27: OSV-Scanner necesita un lockfile como fuente de dependencias. El CI lo genera con

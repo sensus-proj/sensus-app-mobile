@@ -4,32 +4,32 @@
 
 ## Spec y alcance
 
-- [ ] `spec.md` con las 7 secciones canónicas + tabla `## Aprobación` resuelta
-- [ ] Historias y pantallas del alcance cubiertas por pruebas de éxito, error y borde
-- [ ] `plan.md` y `tasks.md` alineados sin cambios de alcance ocultos
-- [ ] Sin `TODO`, `FIXME` ni `STOPSHIP` sin issue trazado
+- [ ] `spec.md` con las 7 secciones canónicas + tabla `## Aprobación` resuelta (`7 secciones` PASS en `check_sdd.py`; falta cierre formal de aprobación: (acción del usuario: aprobar tabla en `spec.md`; ver plan cierre móvil §5.Z-5))
+- [x] Historias y pantallas del alcance cubiertas por pruebas de éxito, error y borde (`PublishingUseCasesTest`, `PublishingBoundariesTest`, `PublishingApiTest`, `OfferPublishingViewModelTest`, `OfferPublishingE2ETest`)
+- [x] `plan.md` y `tasks.md` alineados sin cambios de alcance ocultos
+- [x] Sin `TODO`, `FIXME` ni `STOPSHIP` sin issue trazado
 
 ## Funcionalidad y reglas de negocio
 
-- [ ] Validación en dominio de `offerPrice < originalPrice`, `stock >= 1` y `expiresAt > startsAt`
-- [ ] Compresión de imagen en `Dispatchers.IO` (`<= 1 MB`, máx. `1600 px`) antes de enviar
-- [ ] `POST /api/v1/offers` envía imagen y texto juntos para moderación fail-closed
-- [ ] Manejo de rechazo de moderación (`422`) mostrando motivo claro sin perder el formulario
-- [ ] `CreateOfferScreen` (`P-32`) gobernada por `CreateOfferViewModel` MVI
+- [x] Validación en dominio de `offerPrice < originalPrice`, `stock >= 1` y `expiresAt > startsAt`
+- [x] Compresión de imagen en `Dispatchers.IO` (`<= 1 MB`, máx. `1600 px`) antes de enviar
+- [x] `POST /api/v1/offers` envía imagen y texto juntos para moderación fail-closed
+- [x] Manejo de rechazo de moderación (`422`) mostrando motivo claro sin perder el formulario
+- [x] `CreateOfferScreen` (`P-32`) gobernada por `CreateOfferViewModel` MVI (`MerchantNewOfferViewModel`)
 
 ## Arquitectura y seguridad
 
-- [ ] `domain/` puro (sin `android.*`, Retrofit, Room ni serializadores JSON)
-- [ ] `presentation/` no importa `data/` (`check_layers.py` en PASS)
-- [ ] ViewModels heredan de `MviViewModel<ViewState, ViewIntent, ViewEffect>`
-- [ ] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
-- [ ] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
+- [x] `domain/` puro (sin `android.*`, Retrofit, Room ni serializadores JSON)
+- [x] `presentation/` no importa `data/` (`check_layers.py` en PASS)
+- [x] ViewModels heredan de `MviViewModel<ViewState, ViewIntent, ViewEffect>` (`MerchantNewOfferViewModel`)
+- [x] Sin `MockDataProvider` ni datos fake en `app/src/main/java/**`
+- [x] Logger sanitizado, sin PII, JWT ni payloads sensibles en consola
 
 ## UI y accesibilidad
 
-- [ ] Previews `@Preview` para estados `Loading`, `Loaded`, `Empty` y `Error`
-- [ ] Paleta morada de marca (`#7C3AED` / `#8B5CF6`); sin ámbar (`SensusAmber`) ni emojis
-- [ ] Touch targets `>= 48x48 dp` y `contentDescription` en controles interactivos
+- [ ] Previews `@Preview` para estados `Loading`, `Loaded`, `Empty` y `Error` (acción del usuario: decidir refactor UI para añadir `@Preview` de 4 estados en formulario `MerchantNewOfferScreen` heredado; ver plan cierre móvil §5.Z-5)
+- [x] Paleta morada de marca (`#7C3AED` / `#8B5CF6`); sin ámbar (`SensusAmber`) ni emojis
+- [x] Touch targets `>= 48x48 dp` y `contentDescription` en controles interactivos
 
 ## Gates automatizados
 
@@ -45,10 +45,10 @@
 
 ## Cierre SDD
 
-- [ ] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
-- [ ] `Memoria.md` §6 actualizado con decisiones y evidencia
-- [ ] `CHECKLIST_PR.md` completo
-- [ ] Tag `v1.18.0-ft15`
+- [x] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
+- [x] `Memoria.md` §6 actualizado con decisiones y evidencia
+- [ ] `CHECKLIST_PR.md` completo (acción del usuario: completar checklist manual de PR antes del merge; ver plan cierre móvil §5.Z-5)
+- [ ] Tag `v1.18.0-ft15` (acción del usuario: crear commit/PR/tag tras revisión; ver plan cierre móvil §5.Z-5)
 
 ### Evidencia local de las HU — 2026-11-13
 

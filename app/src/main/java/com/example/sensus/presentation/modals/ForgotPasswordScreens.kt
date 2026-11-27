@@ -56,6 +56,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.sensus.common.Result
 import com.example.sensus.domain.model.PasswordPolicy
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
@@ -111,6 +112,7 @@ fun ForgotPasswordScreen(
     onPasswordResetSuccess: () -> Unit,
     initialToken: String? = null
 ) {
+    SecureScreenEffect()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var uiState by remember {

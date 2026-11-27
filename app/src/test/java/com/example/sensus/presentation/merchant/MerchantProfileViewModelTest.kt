@@ -10,8 +10,10 @@ import com.example.sensus.domain.repository.StoreRepository
 import com.example.sensus.domain.usecase.GetMyMerchantUseCase
 import com.example.sensus.domain.usecase.UpdateMerchantProfileUseCase
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -101,5 +103,28 @@ class MerchantProfileViewModelTest {
         vm.dispatchIntent(MerchantProfileViewIntent.ClearMessages)
         assertNull(vm.viewState.value.errorMessage)
         assertNull(vm.viewState.value.statusMessage)
+    }
+
+    @Test
+    fun toggleStoreOpen_sharesInFlightProfileRequest_andReconcilesAuthoritativeServerState() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Result<MerchantProfile>>()
+        coEvery { merchantRepository.getMyMerchant() } coAnswers { gate.await() }
+        coEvery { merchantRepository.updateMerchantProfile(any()) } returns Result.Success(profile.copy(activo = true))
+
+        val vm = MerchantProfileViewModel(
+            storeRepository = storeRepository,
+            updateMerchantProfileUseCase = UpdateMerchantProfileUseCase(merchantRepository),
+            getMyMerchantUseCase = GetMyMerchantUseCase(merchantRepository)
+        )
+        dispatcher.scheduler.runCurrent()
+        vm.dispatchIntent(MerchantProfileViewIntent.ToggleStoreOpen(false))
+        dispatcher.scheduler.runCurrent()
+
+        gate.complete(Result.Success(profile))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { merchantRepository.getMyMerchant() }
+        assertTrue(vm.viewState.value.store.isOpen)
+        assertEquals("El servidor aún no tiene desplegado el cambio de estado de tienda.", vm.viewState.value.errorMessage)
     }
 }

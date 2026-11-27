@@ -10,5 +10,4 @@ interface ClaimsRepository {
     suspend fun createClaim(offerId: String): Result<OfferClaim>
     suspend fun redeemClaim(code: String): Result<ClaimRedemption>
     suspend fun getMyClaims(): Result<List<ClaimSummary>>
-    suspend fun cancelClaim(claimId: String): Result<ClaimSummary>
 }

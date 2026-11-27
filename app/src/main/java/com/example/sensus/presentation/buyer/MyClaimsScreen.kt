@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
@@ -27,7 +26,10 @@ import com.example.sensus.R
 import com.example.sensus.domain.model.ClaimStatus
 import com.example.sensus.domain.model.ClaimSummary
 import com.example.sensus.presentation.common.ConfirmedClaimQr
+import com.example.sensus.presentation.common.SecureScreenEffect
+import com.example.sensus.presentation.common.SensitiveQrGate
 import com.example.sensus.presentation.common.claimsErrorText
+import com.example.sensus.presentation.common.currentDeviceAuthenticator
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.sensusTextButtonColors
 import java.time.Clock
@@ -38,6 +40,7 @@ private const val MY_CLAIMS_SPACING = 12
 
 @Composable
 fun MyClaimsScreen(onNavigateBack: () -> Unit, modifier: Modifier = Modifier, viewModel: MyClaimsViewModel = hiltViewModel()) {
+    SecureScreenEffect()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.processIntent(MyClaimsViewIntent.Load) }
     MyClaimsContent(state = state, onNavigateBack = onNavigateBack, onIntent = viewModel::processIntent, modifier = modifier)
@@ -57,30 +60,10 @@ fun MyClaimsContent(
         MyClaimsStatusContent(state, onIntent)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(MY_CLAIMS_SPACING.dp)) {
             items(state.claims, key = { it.claimId }) { claim ->
-                MyClaimCard(claim, state.cancellingClaimId == claim.claimId, clock.millis()) { onIntent(MyClaimsViewIntent.RequestCancel(claim.claimId)) }
+                MyClaimCard(claim, clock.millis())
             }
         }
     }
-    if (state.pendingCancelClaimId != null) CancelClaimDialog(onIntent)
-}
-
-@Composable
-private fun CancelClaimDialog(onIntent: (MyClaimsViewIntent) -> Unit) {
-    AlertDialog(
-        onDismissRequest = { onIntent(MyClaimsViewIntent.DismissCancel) },
-        title = { Text(stringResource(R.string.my_claims_cancel_title)) },
-        text = { Text(stringResource(R.string.my_claims_cancel_message)) },
-        confirmButton = {
-            TextButton(colors = sensusTextButtonColors(), onClick = { onIntent(MyClaimsViewIntent.ConfirmCancel) }) {
-                Text(stringResource(R.string.my_claims_cancel_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(colors = sensusTextButtonColors(), onClick = { onIntent(MyClaimsViewIntent.DismissCancel) }) {
-                Text(stringResource(R.string.my_claims_cancel_keep))
-            }
-        }
-    )
 }
 
 @Composable
@@ -90,12 +73,11 @@ private fun MyClaimsStatusContent(state: MyClaimsViewState, onIntent: (MyClaimsV
         Text(claimsErrorText(error))
         OutlinedButton(shape = SensusButtonShape, onClick = { onIntent(MyClaimsViewIntent.Load) }) { Text(stringResource(R.string.my_claims_retry)) }
     }
-    state.cancelError?.let { Text(claimsErrorText(it)) }
     if (state.isEmpty) Text(stringResource(R.string.my_claims_empty))
 }
 
 @Composable
-private fun MyClaimCard(claim: ClaimSummary, cancelling: Boolean, nowEpochMs: Long, onCancel: () -> Unit) {
+private fun MyClaimCard(claim: ClaimSummary, nowEpochMs: Long) {
     val active = claim.isActiveAt(nowEpochMs)
     Card(Modifier.fillMaxWidth().testTag("my_claim_${claim.claimId}")) {
         Column(Modifier.padding(MY_CLAIMS_SPACING.dp), verticalArrangement = Arrangement.spacedBy(MY_CLAIMS_SPACING.dp)) {
@@ -103,11 +85,10 @@ private fun MyClaimCard(claim: ClaimSummary, cancelling: Boolean, nowEpochMs: Lo
             Text(stringResource(claimStatusLabel(claim, active)))
             Text(stringResource(R.string.claims_expiry, Instant.ofEpochMilli(claim.expiresAtEpochMs).toString()))
             if (active) {
-                claim.qrPayload?.let { ConfirmedClaimQr(it) }
-                if (cancelling) {
-                    CircularProgressIndicator()
-                } else {
-                    OutlinedButton(shape = SensusButtonShape, onClick = onCancel) { Text(stringResource(R.string.my_claims_cancel_action)) }
+                claim.qrPayload?.let { payload ->
+                    SensitiveQrGate(unlockKey = claim.claimId, deviceAuthenticator = currentDeviceAuthenticator()) {
+                        ConfirmedClaimQr(payload)
+                    }
                 }
             }
         }

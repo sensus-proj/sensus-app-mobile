@@ -17,13 +17,20 @@ import java.io.IOException
 import java.time.Instant
 import java.time.format.DateTimeParseException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
 import retrofit2.Response
 
 private const val MAX_QR_PAYLOAD_BYTES = 2048
+private const val MAX_PARALLEL_CLAIM_FETCHES = 4
 private const val HTTP_OK = 200
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_FORBIDDEN = 403
@@ -31,10 +38,17 @@ private const val HTTP_NOT_FOUND = 404
 private const val HTTP_CONFLICT = 409
 private const val HTTP_TOO_MANY_REQUESTS = 429
 
+private sealed interface FetchClaimOutcome {
+    data class Loaded(val summary: ClaimSummary?) : FetchClaimOutcome
+    data object NotFound : FetchClaimOutcome
+    data class Failed(val error: AppError) : FetchClaimOutcome
+}
+
 class ClaimsRepositoryImpl(
     private val api: ClaimsApiService,
     private val sessions: SessionRepository,
-    private val claimIndex: EncryptedClaimIndex? = null
+    private val claimIndex: EncryptedClaimIndex? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ClaimsRepository {
     override suspend fun createClaim(offerId: String): Result<OfferClaim> {
         val session = sessions.sessionState.value
@@ -53,48 +67,90 @@ class ClaimsRepositoryImpl(
     override suspend fun restoreClaim(offerId: String): Result<OfferClaim> {
         val session = sessions.sessionState.value
         val account = session.activeEmail ?: return Result.Failure(AppError.NotFound())
-        val claimId = withContext(Dispatchers.IO) { claimIndex?.findClaimId(account, offerId) }
-            ?: return restoreFromClaimList(offerId, account, session)
+        val claimId = withContext(ioDispatcher) { claimIndex?.findClaimId(account, offerId) }
+            ?: return Result.Failure(AppError.NotFound())
         return restoreById(offerId, claimId, session)
     }
 
     private suspend fun restoreById(offerId: String, claimId: String, session: SessionState): Result<OfferClaim> =
         request(false, { api.getClaim(claimId) }, session) { it.toActiveOfferClaim(offerId, claimId) }
 
-    /** FT-13: recupera el QR cuando la instalacion desconoce el ID de la reserva activa. */
-    private suspend fun restoreFromClaimList(offerId: String, account: String, session: SessionState): Result<OfferClaim> {
-        val listed = request(false, { api.getMyClaims() }, session) { claims ->
-            claims.firstOrNull { it.offerId == offerId && ClaimStatus.from(it.status) == ClaimStatus.ACTIVE }
-        }
-        val match = when (listed) {
-            is Result.Failure -> return listed
-            is Result.Success -> listed.data ?: return Result.Failure(AppError.NotFound())
-        }
-        val restored = if (match.qrPayload.isNullOrBlank()) {
-            restoreById(offerId, match.claimId, session)
-        } else {
-            execute { Result.Success(match.toActiveOfferClaim(offerId, match.claimId)) }
-        }
-        if (restored is Result.Success) rememberClaim(account, offerId, restored.data.claimId, session)
-        return restored
-    }
-
     private suspend fun rememberClaim(account: String, offerId: String, claimId: String, session: SessionState) {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             if (ClaimsSessionIdentity.from(sessions.sessionState.value) == ClaimsSessionIdentity.from(session)) {
                 claimIndex?.rememberClaimId(account, offerId, claimId)
             }
         }
     }
 
-    override suspend fun getMyClaims(): Result<List<ClaimSummary>> = request(false, { api.getMyClaims() }) { claims ->
-        claims.mapNotNull { dto -> runCatching { dto.toSummary() }.getOrNull() }
+    override suspend fun getMyClaims(): Result<List<ClaimSummary>> {
+        val session = sessions.sessionState.value
+        val identity = ClaimsSessionIdentity.from(session)
+        return if (!session.isAuthenticated() || ClaimsSessionIdentity.from(sessions.sessionState.value) != identity) {
+            Result.Failure(AppError.Unauthorized())
+        } else {
+            val account = session.activeEmail?.takeIf { it.isNotBlank() }
+            val claimIds = if (account == null) emptyList() else withContext(ioDispatcher) { claimIndex?.getClaimIds(account).orEmpty() }
+            if (account == null || claimIds.isEmpty()) {
+                Result.Success(emptyList())
+            } else {
+                aggregateClaimOutcomes(fetchSummariesBounded(claimIds, account, identity))
+            }
+        }
     }
 
-    override suspend fun cancelClaim(claimId: String): Result<ClaimSummary> = request(false, { api.cancelClaim(claimId) }) {
-        val summary = it.toSummary()
-        require(summary.claimId == claimId && summary.status == ClaimStatus.CANCELLED)
-        summary
+    private suspend fun fetchSummariesBounded(claimIds: List<String>, account: String, identity: ClaimsSessionIdentity): List<FetchClaimOutcome> =
+        coroutineScope {
+            val semaphore = Semaphore(MAX_PARALLEL_CLAIM_FETCHES)
+            claimIds.map { claimId ->
+                async(ioDispatcher) {
+                    semaphore.withPermit {
+                        fetchClaimSummary(claimId, account, identity)
+                    }
+                }
+            }.awaitAll()
+        }
+
+    private suspend fun fetchClaimSummary(claimId: String, account: String, identity: ClaimsSessionIdentity): FetchClaimOutcome =
+        when (val result = execute { fetchSingleClaim(claimId, identity) }) {
+            is Result.Success -> FetchClaimOutcome.Loaded(result.data)
+            is Result.Failure -> {
+                if (result.error is AppError.NotFound) {
+                    claimIndex?.removeClaimId(account, claimId)
+                    FetchClaimOutcome.NotFound
+                } else {
+                    FetchClaimOutcome.Failed(result.error)
+                }
+            }
+        }
+
+    private suspend fun fetchSingleClaim(claimId: String, identity: ClaimsSessionIdentity): Result<ClaimSummary?> {
+        if (ClaimsSessionIdentity.from(sessions.sessionState.value) != identity) {
+            return Result.Failure(AppError.Unauthorized())
+        }
+        val response = api.getClaim(claimId)
+        if (ClaimsSessionIdentity.from(sessions.sessionState.value) != identity) {
+            return Result.Failure(AppError.Unauthorized())
+        }
+        val body = response.body()
+        return if (response.code() == HTTP_OK && body != null) {
+            Result.Success(runCatching { body.toSummary() }.getOrNull())
+        } else {
+            failure(response.code())
+        }
+    }
+
+    private fun aggregateClaimOutcomes(outcomes: List<FetchClaimOutcome>): Result<List<ClaimSummary>> {
+        val authFailure = outcomes.filterIsInstance<FetchClaimOutcome.Failed>()
+            .firstOrNull { it.error is AppError.Unauthorized || it.error is AppError.Forbidden }
+        if (authFailure != null) return Result.Failure(authFailure.error)
+        val loaded = outcomes.filterIsInstance<FetchClaimOutcome.Loaded>().mapNotNull { it.summary }
+        val firstError = outcomes.filterIsInstance<FetchClaimOutcome.Failed>().firstOrNull()?.error
+        return if (firstError != null && loaded.isEmpty()) {
+            Result.Failure(firstError)
+        } else {
+            Result.Success(loaded)
+        }
     }
 
     override suspend fun redeemClaim(code: String): Result<ClaimRedemption> = request(true, { api.redeemClaim(code) }) {

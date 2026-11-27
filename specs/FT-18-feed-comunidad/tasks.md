@@ -42,7 +42,7 @@
 - [x] T18.13 Separar fallos de lectura/publicación en CommunityViewState/MVI; conservar borrador/foto y evitar que errores de carga aparezcan en el formulario.
 - [x] T18.14 Mostrar estado de servicio no disponible para NotFound y ocultar estado vacío al fallar carga; textos en recursos Android.
 - [x] T18.15 Agregar regresiones HTTP 404/autenticación, ViewModel y Compose; ejecutar compilación, tests, Kover, análisis y gates sin APK/AAB.
-- [ ] T18.16 Integración E2E con backend implementado/desplegado y contrato de respuesta aprobado (dependencia backend 024/026, no resuelta desde el cliente).
+- [ ] T18.16 Integración E2E con backend implementado/desplegado y contrato de respuesta aprobado (acción del usuario: validar E2E contra backend 024/026 desplegado en AWS; ver plan cierre móvil §5.Z-3).
 
 
 ### Evidencia de corrección local — 2026-11-14

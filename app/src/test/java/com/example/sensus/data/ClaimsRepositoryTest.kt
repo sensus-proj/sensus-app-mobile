@@ -67,7 +67,6 @@ class ClaimsRepositoryTest {
         coEvery { api.getClaim("claim") } returns Response.success(details.copy(offerId = "other"))
         assertTrue(repo.restoreClaim("offer") is Result.Failure)
         state.value = state.value.copy(activeEmail = "other@example.invalid")
-        coEvery { api.getMyClaims() } returns Response.error(404, "".toResponseBody())
         assertTrue(repo.restoreClaim("offer") is Result.Failure)
         coVerify(exactly = 1) { api.createClaim(any()) }
         coVerify(exactly = 3) { api.getClaim("claim") }
