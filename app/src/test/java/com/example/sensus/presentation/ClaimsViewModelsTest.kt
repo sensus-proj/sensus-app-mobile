@@ -93,6 +93,39 @@ class ClaimsViewModelsTest {
     }
 
     @Test
+    fun buyerCartMultiQuantitySubtractsExactReservedUnitsFromCart() = runTest(dispatcher) {
+        val offerA = com.example.sensus.domain.model.ProductOffer("o1", "Pan", "Tienda", "Panadería", 40.0, 20.0, 50, 10, 100, merchantId = "m1")
+        val offerB = offerA.copy(id = "o2", name = "Leche")
+        val cartItems = listOf(
+            com.example.sensus.domain.model.CartItem(offerA, 4),
+            com.example.sensus.domain.model.CartItem(offerB, 2)
+        )
+        val multiClaim = OfferClaim(
+            claimId = "claim-multi",
+            offerId = "o1",
+            code = "v1.multi",
+            qrPayload = "v1.multi",
+            expiresAtEpochMs = 999L,
+            totalUnits = 6,
+            items = listOf(
+                com.example.sensus.domain.model.ClaimItemSummary("o1", 4, "Pan"),
+                com.example.sensus.domain.model.ClaimItemSummary("o2", 2, "Leche")
+            )
+        )
+        coEvery { repository.createCartClaim(cartItems) } returns Result.Success(multiClaim)
+
+        val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))
+        dispatcher.scheduler.runCurrent()
+        vm.processIntent(ClaimOfferViewIntent.Initialize("o1", false, cartItems))
+        vm.processIntent(ClaimOfferViewIntent.Submit("o1", cartItems))
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals(6, vm.viewState.value.result?.totalUnits)
+        verify(exactly = 4) { cart.removeReservedUnit("o1") }
+        verify(exactly = 2) { cart.removeReservedUnit("o2") }
+    }
+
+    @Test
     fun sessionChangeRemovesConfirmedCode() = runTest(dispatcher) {
         coEvery { repository.createClaim("offer") } returns Result.Success(claim)
         val vm = ClaimOfferViewModel(CreateClaimUseCase(repository), sessions, cart, RestoreClaimUseCase(repository))

@@ -14,9 +14,9 @@ import com.example.sensus.domain.model.TogglePostLikeResult
 object FeedMapper {
     fun FeedPostDto.toDomain(): FeedPost = FeedPost(
         id = id,
-        authorName = authorName,
-        text = text,
-        createdAt = createdAt,
+        authorName = resolvedAuthorName(),
+        text = resolvedText(),
+        createdAt = resolvedCreatedAt(),
         distanceMeters = distanceMeters,
         imageUrl = imageUrl,
         merchantId = merchantId,
@@ -29,8 +29,8 @@ object FeedMapper {
 
     fun TogglePostLikeDto.toDomain(fallbackPostId: String): TogglePostLikeResult = TogglePostLikeResult(
         postId = postId.ifBlank { fallbackPostId },
-        likesCount = likesCount,
-        isLikedByMe = isLikedByMe
+        likesCount = (likeCount ?: likesCount ?: 0).coerceAtLeast(0),
+        isLikedByMe = liked ?: isLikedByMe ?: false
     )
 
     fun FeedCommentDto.toDomain(): FeedComment = FeedComment(

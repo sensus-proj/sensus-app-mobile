@@ -9,6 +9,7 @@ import com.example.sensus.data.remote.api.FeedApiService
 import com.example.sensus.data.remote.dto.CreateFeedCommentRequest
 import com.example.sensus.data.remote.dto.CreateFeedPostRequest
 import com.example.sensus.data.remote.dto.FeedPostDto
+import com.example.sensus.data.remote.dto.SetFeedPostLikeRequest
 import com.example.sensus.domain.model.CreatePostInput
 import com.example.sensus.domain.model.FeedComment
 import com.example.sensus.domain.model.FeedPost
@@ -26,9 +27,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private const val HTTP_CREATED = 201
+private const val HTTP_ACCEPTED = 202
 private const val HTTP_NO_CONTENT = 204
 private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_UNPROCESSABLE = 422
+private const val METERS_PER_KM = 1000.0
+private const val MIN_RADIUS_KM = 0.1
+private const val MAX_RADIUS_KM = 5.0
 
 class FeedRepositoryImpl(
     private val api: FeedApiService,
@@ -36,12 +41,14 @@ class FeedRepositoryImpl(
 ) : FeedRepository {
     override suspend fun nearby(query: FeedQuery): Result<PagedFeed> = withContext(Dispatchers.IO) {
         val key = "${query.latitude}:${query.longitude}:${query.radiusMeters}:${query.pageSize}"
+        val radiusKm = (query.radiusMeters / METERS_PER_KM).coerceIn(MIN_RADIUS_KM, MAX_RADIUS_KM)
         val result = safeNetworkCall("No se pudo cargar la comunidad.") {
-            val response = api.nearby(query.latitude, query.longitude, query.radiusMeters, query.page, query.pageSize)
+            val response = api.nearby(query.latitude, query.longitude, radiusKm, query.page, query.pageSize)
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                savePage(key, query.page, body.posts)
-                Result.Success(PagedFeed(body.posts.map { it.toDomain() }, query.page, body.hasMore))
+                val dtoPosts = body.resolvedPosts()
+                savePage(key, query.page, dtoPosts)
+                Result.Success(PagedFeed(dtoPosts.map { it.toDomain() }, body.resolvedPage(), body.resolvedHasMore()))
             } else {
                 Result.Failure(
                     mapCommonHttpStatus(
@@ -89,24 +96,38 @@ class FeedRepositoryImpl(
     }
 
     override suspend fun createPost(input: CreatePostInput, media: UploadedMedia?): Result<FeedPost> = safeNetworkCall("No se pudo publicar.") {
-        val request = CreateFeedPostRequest(input.text, input.latitude, input.longitude, media?.mediaId, input.merchantId)
+        val request = CreateFeedPostRequest(
+            text = input.text,
+            content = input.text,
+            latitude = input.latitude,
+            longitude = input.longitude,
+            mediaId = media?.mediaId,
+            merchantId = input.merchantId
+        )
         val response = api.createPost(request)
         val body = response.body()
-        if (response.code() == HTTP_CREATED && body != null) {
-            Result.Success(body.toDomain())
-        } else {
-            val message = parseBackendErrorMessage(response.errorBody()?.string())
-            val error = if (response.code() == HTTP_BAD_REQUEST || response.code() == HTTP_UNPROCESSABLE) {
-                AppError.ContentRejected(message ?: "La publicación no cumple las políticas de la comunidad.")
-            } else {
-                mapCommonHttpStatus(response.code(), message, "Inicia sesión para publicar.", "Servicio no disponible.")
-            }
-            Result.Failure(error)
+        when {
+            response.code() == HTTP_ACCEPTED || body?.status.equals("Quarantined", ignoreCase = true) ->
+                Result.Failure(AppError.Unprocessable("Tu publicación quedó en revisión preventiva antes de hacerse visible."))
+            response.isSuccessful && body != null -> Result.Success(body.toDomain())
+            else -> Result.Failure(mapCreatePostError(response))
         }
     }
 
-    override suspend fun toggleLike(postId: String): Result<TogglePostLikeResult> = safeNetworkCall("No se pudo actualizar tu me gusta.") {
-        val response = api.toggleLike(postId)
+    private fun <T> mapCreatePostError(response: retrofit2.Response<T>): AppError {
+        val message = parseBackendErrorMessage(response.errorBody()?.string())
+        val isRejection = response.code() == HTTP_BAD_REQUEST || response.code() == HTTP_UNPROCESSABLE
+        return if (isRejection) {
+            AppError.ContentRejected(message ?: "La publicación no cumple las políticas de la comunidad.")
+        } else {
+            mapCommonHttpStatus(response.code(), message, "Inicia sesión para publicar.", "Servicio no disponible.")
+        }
+    }
+
+    override suspend fun toggleLike(postId: String): Result<TogglePostLikeResult> = setPostLike(postId, true)
+
+    override suspend fun setPostLike(postId: String, liked: Boolean): Result<TogglePostLikeResult> = safeNetworkCall("No se pudo actualizar tu me gusta.") {
+        val response = api.toggleLike(postId, SetFeedPostLikeRequest(liked))
         val body = response.body()
         if (response.isSuccessful && body != null) {
             Result.Success(body.toDomain(postId))

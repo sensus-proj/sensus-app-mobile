@@ -52,3 +52,8 @@ Validación integración principal T16.12: contrato y Allow POST oficial verific
 ## Cierre de T16.7 — 2026-11-22
 
 - [x] T16.7: pestañas Activas, Pausadas y Finalizadas, acciones rápidas y contador de vistas por oferta (`viewCount` de `GET /merchants/my-offers`, incluido cero). Edición y pausa verificadas en teléfono. Pendiente externo: confirmar que el inventario desplegado publique `viewCount`; sin el dato no se muestra la línea de vistas.
+
+## Ajuste al contrato paginado y compresión de media — 2026-11-27
+
+- [x] T16.13 Parseo de `PagedResult<MerchantOfferDto>` (`items`) y `viewsCount`/`viewCount` en `GET /api/v1/merchants/my-offers` para mostrar el inventario y métricas del propietario sin fallo por objeto paginado.
+- [x] T16.14 Endurecimiento de `AndroidImageCompressor`/`ImageUploadPolicy` (`MAX_UPLOAD_BYTES = 4_000_000`, muestreo `inSampleSize` en cámara/galería) y mapeo diferenciado `400 -> Validation`, `202 -> Unprocessable`, `422 -> ContentRejected` al subir fotos moderadas.

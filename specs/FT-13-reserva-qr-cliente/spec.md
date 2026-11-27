@@ -4,11 +4,11 @@
 Integración real sobre backend main 01dad6e, OfferEndpoints.cs y OfferClaimDtos.cs.
 
 ## 2. Requisitos funcionales
-Solo POST /api/v1/offers/{id}/claim, GET /api/v1/offers/claims/{claimId} y POST /api/v1/offers/claims/{code}/redeem, sin rutas de listado remoto ni cancelación.
+Rutas activas: `POST /api/v1/offers/{id}/claim`, `POST /api/v1/offers/claims` (carrito del mismo comercio con múltiples productos y cantidades en 1 QR), `GET /api/v1/offers/claims/{claimId}` y `POST /api/v1/offers/claims/{code}/redeem`, sin rutas de listado remoto ni cancelación.
 RF-13-07 (reconstrucción local de Mis reservas): `EncryptedClaimIndex` conserva hasta 50 `claimId` recientes por cuenta autenticada (cifrado en `EncryptedSharedPreferences`, aislado por cuenta). `GetMyClaimsUseCase` reconstruye la lista llamando a `GET /api/v1/offers/claims/{claimId}` en paralelo acotado (máx. 4 en `Dispatchers.IO`), poda los 404 del índice, muestra estados activos/vencidos/canjeados y falla cerrado sin sesión o ante 401.
-Fuera de alcance por decisión del responsable (2026-11-26): listado remoto de apartados (`offers/claims`) y cancelación remota (`offers/claims/{id}/cancel`; Spec 033 del backend no incluye cancelación).
-Claim aparta exactamente una unidad por pulsación explícita; nunca al componer o reentrar.
-ClaimOfferResultDto: claimId, offerId, code, qrPayload, expiresAtUtc.
+Fuera de alcance por decisión del responsable (2026-11-26): listado remoto de apartados (`GET /api/v1/offers/claims`) y cancelación remota (`offers/claims/{id}/cancel`; Spec 033 del backend no incluye cancelación).
+Un apartado de carrito valida que todos los artículos pertenezcan al mismo comercio, descuenta exactamente `quantity` unidades por cada producto en el backend y emite un único código QR; el cliente descuenta esas mismas unidades de la bolsa local solo tras confirmación HTTP 200.
+ClaimOfferResultDto: claimId, offerId, code, qrPayload, expiresAtUtc, totalUnits, items.
 RedeemClaimResultDto: claimId, offerId, merchantId, redeemedAtUtc.
 El QR codifica exclusivamente qrPayload confirmado. Código y fecha proceden del backend.
 Canje manual sin normalizar mayúsculas, sin formato corto inventado, sin montos ni éxito local.

@@ -55,4 +55,20 @@ class PublishedCartClaimTest {
         verify(exactly = 0) { cart.clearCart() }
         assertEquals(state.value, vm.viewState.value.storeCart)
     }
+
+    @Test
+    fun checkoutMultiItemSameStoreEmitsAllItemsWithoutGeneratingLocalQr() = runTest(dispatcher) {
+        val second = offer.copy(id = "2", name = "Café")
+        val multiItems = listOf(CartItem(offer, 4), CartItem(second, 2))
+        state.value = StoreCart(items = multiItems)
+        val vm = CartViewModel(cart, PrepareCartClaimUseCase())
+        dispatcher.scheduler.advanceUntilIdle()
+        vm.viewEffect.test {
+            vm.dispatchIntent(CartViewIntent.CheckoutApartado)
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(CartViewEffect.OpenClaim(offer, multiItems), awaitItem())
+        }
+        verify(exactly = 0) { cart.createApartadoOrder() }
+        verify(exactly = 0) { cart.clearCart() }
+    }
 }

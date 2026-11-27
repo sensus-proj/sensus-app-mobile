@@ -74,6 +74,6 @@ presentation/merchant/
 
 Contrato confirmado en OfferEndpoints.cs (solo lectura): POST /api/v1/offers/{id}/republish, cuerpo newStartsAt/newEndsAt/newStock, HTTP 200 OfferDto. GET oficial reportado por coordinación: 405 Allow POST; no acredita mutación autenticada E2E. Esta slice sustituye la mención a republicar agotadas: solo EXPIRED/ARCHIVED; ACTIVE, PAUSED y SOLD_OUT excluidas. No modifica precio, descripción ni imagen. Inicio futuro con margen de un minuto, fin editable posterior al inicio y stock > 0. Dominio puro, repositorio remoto sin reintentos añadidos, caché con respuesta confirmada, Hilt y MVI. Error conserva formulario. No cambia URL, interceptor ni cliente oficial.
 
-### Contrato de inventario verificado en GitHub — 2026-11-21
+### Contrato de inventario verificado y alineado — 2026-11-26
 
-El GET de inventario de comercio devuelve una lista de ofertas propias y admite el parámetro status. La paginación, el filtro por periodo y las métricas de vistas y canjes por oferta quedan pendientes del backend. La app clasifica la lista recibida en Activas, Pausadas y Finalizadas. Si falla la consulta, muestra el error y permite reintentar, sin mostrar ofertas de otros comercios provenientes de la caché pública.
+`GET /api/v1/merchants/my-offers` devuelve `PagedResult<MerchantOfferDto>` (`items`, `pageNumber`, `hasNextPage`) con métricas `viewsCount`, `claimsCount` y `redeemedCount`. `OffersRepositoryImpl.fetchMerchantOffers` recorre las páginas solicitando `page` y `pageSize = 100` (máx. 20 páginas), mapea `viewCount ?: viewsCount` en `RemoteOfferMapper` y mantiene la clasificación local en Activas, Pausadas y Finalizadas sin exponer ofertas de otros comercios.

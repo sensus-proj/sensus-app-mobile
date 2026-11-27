@@ -47,3 +47,8 @@ Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisio
 - [x] T13.L5 UI MVI `MyClaimsScreen` ("Mis reservas" en Perfil): estados de carga, error con reintento, vacío, QR de reservas activas y estados vencido/canjeado, sin botón ni diálogo de cancelación — verif: `MyClaimsScreenTest`.
 - [x] T13.L6 Pruebas: `MyClaimsRepositoryTest` (`MockWebServer` + índice cifrado), `MyClaimsViewModelTest` (Turbine) y `MyClaimsScreenTest` (Compose).
 - [x] T13.L7 Reconciliado con decisión 2026-11-26: listado remoto y cancelación fuera de alcance; `MyClaimsScreen` reconstruye desde `GET /api/v1/offers/claims/{claimId}` (`EncryptedClaimIndex`). La prueba E2E en dispositivo pasa a 5.Z-2.
+
+## Apartado multi-producto (misma tienda) y multi-cantidad -> 1 QR — 2026-11-27
+
+- [x] T13.M1 Dominio/Red: `OfferClaim.items`/`totalUnits`, `ClaimItemSummary`, `CreateClaimUseCase(items)` (`quantity == 1` -> `POST /api/v1/offers/{id}/claim`; `N > 1` o múltiples productos de la misma tienda -> `POST /api/v1/offers/claims` sin mezclar comercios) y `PrepareCartClaimUseCase` — verif: `PublishedOfferUseCasesTest`, `PublishedCartClaimTest`, `ClaimsRepositoryTest`.
+- [x] T13.M2 Presentación: `ClaimOfferViewModel` descuenta las `N` unidades reservadas por cada artículo únicamente tras HTTP 200; `ClaimOfferScreen` y `CartBottomSheet` muestran el resumen del paquete y el QR único sin permitir mezcla entre tiendas — verif: `ClaimsViewModelsTest`.

@@ -98,7 +98,8 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | FT-26 | `GET /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/reviews/{reviewId}/like`, `POST /api/v1/merchants/reviews/{reviewId}/replies` | Calificación 1..5, comentarios/respuestas moderados (`ProfanityFilter` + IA), likes en reseñas y promedio real en `MerchantProfileScreen`. |
 | FT-40 | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/like` | Alternancia de Me gusta sobre ofertas de producto y conteo público (`LikesCount`). |
 | FT-41 | `GET /api/v1/community/friends-activity` | Solo comentarios y likes de ofertas de amigos conectados y del usuario actual. |
-| FT-19 | `POST /api/v1/feed/posts/{id}/like`, `GET`/`POST /api/v1/feed/posts/{id}/comments`, `DELETE /api/v1/feed/posts/{id}`, `POST /api/v1/reports` | Likes optimistas con rollback, comentarios moderados (max 300), borrado de autor y reporte tipificado con deduplicación 24h y exclusión CSAM. |
+| FT-19 | `POST /api/v1/feed/posts/{id}/like`, `GET`/`POST /api/v1/feed/posts/{id}/comments`, `DELETE /api/v1/feed/posts/{id}`, `POST /api/v1/reports` | Likes optimistas con rollback (`{ "liked": bool }`), comentarios moderados (max 300), borrado de autor y reporte tipificado con deduplicación 24h y exclusión CSAM. |
+| FT-13 | `POST /api/v1/offers/claims` | Reserva atómica de múltiples ofertas/cantidades de un mismo comercio generando un único código QR y descontando `N` unidades. |
 
 ## Plantilla para nuevas filas
 

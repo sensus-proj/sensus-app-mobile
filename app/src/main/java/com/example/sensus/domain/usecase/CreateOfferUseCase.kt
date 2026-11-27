@@ -31,7 +31,10 @@ class CreateOfferUseCase(
             ?: "Selecciona una categoría para la oferta.".takeIf { normalized.category.apiCode == null }
         if (validationMessage != null) return Result.Failure(AppError.Validation(validationMessage))
 
-        return when (val upload = compressAndUpload(mediaRepository, imageCompressor, imageBytes)) {
+        val textContext = listOf(normalized.title, normalized.description)
+            .filter { it.isNotBlank() }
+            .joinToString(" - ")
+        return when (val upload = compressAndUpload(mediaRepository, imageCompressor, imageBytes, textContext)) {
             is Result.Failure -> upload
             is Result.Success -> createAfterUpload(normalized, upload.data)
         }
@@ -44,16 +47,26 @@ class CreateOfferUseCase(
 }
 
 /** Compresion + subida moderada compartida por ofertas (FT-15) y publicaciones del feed (FT-18). */
-internal suspend fun uploadMediaIfPresent(mediaRepository: MediaRepository, imageCompressor: ImageCompressor, imageBytes: ByteArray?): Result<UploadedMedia?> {
+internal suspend fun uploadMediaIfPresent(
+    mediaRepository: MediaRepository,
+    imageCompressor: ImageCompressor,
+    imageBytes: ByteArray?,
+    textContext: String? = null
+): Result<UploadedMedia?> {
     return when {
         imageBytes == null -> Result.Success(null)
         imageBytes.isEmpty() -> Result.Failure(AppError.Validation("La imagen no puede estar vacía."))
-        else -> compressAndUpload(mediaRepository, imageCompressor, imageBytes)
+        else -> compressAndUpload(mediaRepository, imageCompressor, imageBytes, textContext)
     }
 }
 
-private suspend fun compressAndUpload(repository: MediaRepository, compressor: ImageCompressor, bytes: ByteArray): Result<UploadedMedia> {
+private suspend fun compressAndUpload(
+    repository: MediaRepository,
+    compressor: ImageCompressor,
+    bytes: ByteArray,
+    textContext: String? = null
+): Result<UploadedMedia> {
     val compressed = compressor.compressForUpload(bytes)
         ?: return Result.Failure(AppError.Validation(ImageUploadPolicy.TOO_LARGE_MESSAGE))
-    return repository.uploadAndModerate(compressed, ImageUploadPolicy.JPEG_MIME_TYPE)
+    return repository.uploadAndModerate(compressed, ImageUploadPolicy.JPEG_MIME_TYPE, textContext)
 }
