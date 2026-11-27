@@ -78,12 +78,12 @@ class PublishingUseCasesTest {
     @Test
     fun validOffer_compressesUploadsAndCreatesWithApprovedMedia() = runTest {
         coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
-        coEvery { media.uploadAndModerate(any(), "image/jpeg", any()) } returns Result.Success(uploaded)
+        coEvery { media.uploadAndModerate(any(), "image/jpeg", "Pan artesanal\nSellado") } returns Result.Success(uploaded)
         coEvery { offers.createOffer(input, uploaded) } returns Result.Success(offer)
         assertEquals(Result.Success(offer), CreateOfferUseCase(offers, media, compressor) { 1000L }(input, byteArrayOf(1)))
         coVerifyOrder {
             compressor.compressForUpload(any())
-            media.uploadAndModerate(any(), "image/jpeg", any())
+            media.uploadAndModerate(any(), "image/jpeg", "Pan artesanal\nSellado")
             offers.createOffer(input, uploaded)
         }
     }
