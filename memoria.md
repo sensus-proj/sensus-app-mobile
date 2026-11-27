@@ -1342,3 +1342,4 @@ Adoptada a partir de los proyectos de referencia del profesor (`MovilSDD`, `API_
 
 - En el push de `Fin_Rocio`, el paso 10 falló porque `trivy-action` v0.36.0 instala por defecto Trivy v0.70.0, que ya no existe en los releases de aquasecurity/trivy (`unable to find 'v0.70.0'`). Sin binario no hubo SARIF, falló la subida del reporte y con ella la consolidación de escáneres.
 - Se fijó `version: 'v0.76.2'` y la subida del SARIF solo corre si el archivo existe. Trivy sigue bloqueante con CRITICAL,HIGH y `exit-code: 1`; no se suprimió ningún hallazgo. `develop` tiene el mismo flujo y necesita esta corrección.
+- Segundo intento: con `version: 'v0.76.2'` el instalador de `setup-trivy` seguía fallando (`unable to find 'v0.76.2'`) aunque el release existe. Se instala Trivy en un paso propio (binario oficial verificado con el checksum publicado) y la acción corre con `skip-setup-trivy: true`.
