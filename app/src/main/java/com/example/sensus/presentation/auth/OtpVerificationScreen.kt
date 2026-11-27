@@ -49,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusCardBorder
@@ -72,6 +73,7 @@ data class OtpScreenConfig(
 
 @Composable
 fun OtpVerificationScreen(modifier: Modifier = Modifier, config: OtpScreenConfig = OtpScreenConfig(), onVerifySuccess: () -> Unit, onNavigateBack: () -> Unit) {
+    SecureScreenEffect()
     var otpCode by remember { mutableStateOf(config.initialCode.filter(Char::isDigit).take(OTP_LENGTH)) }
     var errorMessage by remember { mutableStateOf(config.initialError) }
 

@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.sensus.data.local.db.DatabaseFactory
 import com.example.sensus.data.local.db.SensusDatabase
+import com.example.sensus.data.local.db.SensusDatabaseMigrations
+import com.example.sensus.data.local.db.entity.FavoriteEntity
 import com.example.sensus.data.local.db.entity.OfferEntity
 import com.example.sensus.data.local.db.entity.PendingSyncEntity
 import com.example.sensus.data.local.db.entity.UserPreferenceEntity
@@ -37,7 +39,16 @@ class EncryptedDatabaseIntegrationTest {
         val factory = SupportOpenHelperFactory(testPassphrase)
         db = Room.databaseBuilder(context, SensusDatabase::class.java, testDbFile)
             .openHelperFactory(factory)
-            .addMigrations(DatabaseFactory.MIGRATION_1_2)
+            .addMigrations(
+                DatabaseFactory.MIGRATION_1_2,
+                SensusDatabaseMigrations.MIGRATION_2_3,
+                SensusDatabaseMigrations.MIGRATION_3_4,
+                SensusDatabaseMigrations.MIGRATION_4_5,
+                SensusDatabaseMigrations.MIGRATION_5_6,
+                SensusDatabaseMigrations.MIGRATION_6_7,
+                SensusDatabaseMigrations.MIGRATION_7_8,
+                SensusDatabaseMigrations.MIGRATION_8_9
+            )
             .allowMainThreadQueries()
             .build()
     }
@@ -148,5 +159,38 @@ class EncryptedDatabaseIntegrationTest {
 
         prefDao.deleteByKey("map_layer")
         assertNull(prefDao.getByKey("map_layer"))
+    }
+
+    @Test
+    fun favoriteDao_crudAndClear_workCorrectlyWithSQLCipher() {
+        val dao = db.favoriteDao()
+        val item = FavoriteEntity(
+            "fav-db-1",
+            "buyer@sensus.com",
+            "m-1",
+            "Panadería Centro",
+            "Bakery",
+            "Pan artesanal",
+            "Desc",
+            100.0,
+            50,
+            50.0,
+            2,
+            null,
+            "",
+            "2026-11-27T20:00:00Z",
+            1900000000000L,
+            20.05,
+            -99.34,
+            3,
+            "2026-11-26T12:00:00Z",
+            1700000000000L
+        )
+        dao.upsert(item)
+        val rows = dao.getByOwner("buyer@sensus.com")
+        assertEquals(1, rows.size)
+        assertEquals("fav-db-1", rows.first().offerId)
+        dao.clearAll()
+        assertTrue(dao.getByOwner("buyer@sensus.com").isEmpty())
     }
 }

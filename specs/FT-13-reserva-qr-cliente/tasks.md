@@ -22,7 +22,7 @@ Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisio
 - [x] Retener confirmaciones solo en memoria por oferta; Initialize(expectExisting) restaura o bloquea POST sin código; probar cambios de oferta y borrado por identidad.
 
 
-- [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación.
+- [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación (acción del usuario: validar `androidTest` y reserva/canje E2E en dispositivo físico; ver plan cierre móvil §5.Z-3).
 - [x] Retirar una unidad de la oferta en la bolsa tras la primera confirmación del servidor y conservar los demás artículos.
 - Suite remota de seguridad/CI no ejecutada sin push; paquete SAST p/mobile externo devuelve 404. No se cierran estas condiciones.
 
@@ -40,10 +40,10 @@ Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisio
 
 ## Listado, cancelación y recuperación del QR — 2026-11-22
 
-- [x] T13.L1 `ClaimsApiService`: `GET /api/v1/offers/claims` (lista `ClaimDetailDto` con `offerTitle` opcional) y `PATCH /api/v1/offers/claims/{claimId}/cancel`. Contrato propuesto; `sensus-back` (main f42ca81, Back_Rocio 77944e2, Back_Rodrigo fee4bf0) aún no publica estas rutas.
-- [x] T13.L2 Dominio: `ClaimSummary`, `ClaimStatus`, `GetMyClaimsUseCase` (activas primero) y `CancelClaimUseCase` (valida ID).
-- [x] T13.L3 `ClaimsRepositoryImpl`: listado tolerante a filas inválidas, cancelación que exige `Cancelled` con el mismo ID, sesión fail-closed.
-- [x] T13.L4 Recuperación del QR sin ID local: si el índice cifrado no conoce la reserva, se consulta el listado, se toma la reserva activa vigente de la oferta, se pide el detalle si falta el QR y se guarda el ID en el índice. No repite el POST ni descuenta la bolsa.
-- [x] T13.L5 UI MVI `MyClaimsScreen` ("Mis reservas" en Perfil): estados de carga, error con reintento, vacío, QR de reservas activas y cancelación con diálogo de confirmación.
-- [x] T13.L6 Pruebas: `MyClaimsRepositoryTest`, `MyClaimsViewModelTest` y `MyClaimsScreenTest` (Compose, compilada).
-- [ ] T13.L7 E2E contra backend cuando publique listado y cancelación. Mientras tanto la pantalla muestra "No se encontró la oferta o el apartado" (404) y la recuperación cae al mensaje de código no disponible.
+- [x] T13.L1 `ClaimsApiService`: eliminado el listado remoto y la cancelación propuestos; solo consume `GET /api/v1/offers/claims/{claimId}`, `POST /api/v1/offers/{id}/claim` y `POST /api/v1/offers/claims/{code}/redeem` — verif: `python scripts/check_endpoints.py` (PASS, 58 endpoints, 2026-11-26).
+- [x] T13.L2 Dominio: `ClaimSummary`, `ClaimStatus` y `GetMyClaimsUseCase` (activas primero); `CancelClaimUseCase` retirado (fuera de alcance, decisión 2026-11-26).
+- [x] T13.L3 `ClaimsRepositoryImpl`: `getMyClaims()` reconstruye desde `EncryptedClaimIndex` (tope 50 por cuenta) vía `GET /api/v1/offers/claims/{claimId}` en paralelo acotado (máx. 4 en `Dispatchers.IO`), poda 404 y falla cerrado sin sesión o ante 401 — verif: `MyClaimsRepositoryTest`.
+- [x] T13.L4 Recuperación del QR por `EncryptedClaimIndex` (`findClaimId` + `getClaim`): sin listado remoto, sin repetir POST y sin descontar bolsa — verif: `ClaimsRepositoryTest`.
+- [x] T13.L5 UI MVI `MyClaimsScreen` ("Mis reservas" en Perfil): estados de carga, error con reintento, vacío, QR de reservas activas y estados vencido/canjeado, sin botón ni diálogo de cancelación — verif: `MyClaimsScreenTest`.
+- [x] T13.L6 Pruebas: `MyClaimsRepositoryTest` (`MockWebServer` + índice cifrado), `MyClaimsViewModelTest` (Turbine) y `MyClaimsScreenTest` (Compose).
+- [x] T13.L7 Reconciliado con decisión 2026-11-26: listado remoto y cancelación fuera de alcance; `MyClaimsScreen` reconstruye desde `GET /api/v1/offers/claims/{claimId}` (`EncryptedClaimIndex`). La prueba E2E en dispositivo pasa a 5.Z-2.

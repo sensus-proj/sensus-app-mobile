@@ -32,9 +32,4 @@
     <string name="my_claims_status_expired">Vencida</string>
     <string name="my_claims_status_cancelled">Cancelada</string>
     <string name="my_claims_status_unknown">Estado no disponible</string>
-    <string name="my_claims_cancel_action">Cancelar reserva</string>
-    <string name="my_claims_cancel_title">¿Cancelar esta reserva?</string>
-    <string name="my_claims_cancel_message">La unidad vuelve a quedar disponible para otras personas y el código QR deja de ser válido.</string>
-    <string name="my_claims_cancel_confirm">Sí, cancelar</string>
-    <string name="my_claims_cancel_keep">Conservar</string>
 </resources>

@@ -32,11 +32,11 @@ specs/FT-XX-<slug>/
 | `FT-10-deuda-y-contratos` | Saneamiento / Contratos | Constitución §4, §9, §11 | FT-09 | En revision | `spec.md`, `LogoutUseCase.kt`, `NavigationKeys.kt`, `detekt`/`ktlintCheck`/`lint` PASS, `100` unit tests / `Kover 93.23%`, 5 `check_*.py` PASS (pendiente PR a `main` y tag `v1.13.0-ft10`) |
 | `FT-11-ofertas-cercanas-mapa` | Negocio (Ola 1) | SE-010..SE-014; P-07..P-11 | FT-10 | En implementacion | Inicio enlaza el comercio por ID para mostrar el estado según el horario publicado. La insignia requiere una verificación explícita del servicio. |
 | `FT-12-detalle-filtros-ruteo` | Negocio (Ola 1) | SE-015..SE-018; P-14, P-17, P-19 | FT-11 | En implementacion | Filtro «Abierto ahora» y horario por comercio. El detalle admite métodos de pago cuando el servicio los publica. |
-| `FT-13-reserva-qr-cliente` | Negocio (Ola 1) | P-16, P-18, P-20, P-21 | FT-12 | En implementacion | Pantalla "Mis reservas" con listado y cancelación, y recuperación del QR por listado cuando la instalación desconoce el ID. Rutas de listado y cancelación pendientes de publicación backend. |
+| `FT-13-reserva-qr-cliente` | Negocio (Ola 1) | P-16, P-18, P-20, P-21 | FT-12 | En revision | Reconstrucción local de "Mis reservas" desde `EncryptedClaimIndex` + `GET /api/v1/offers/claims/{claimId}` sin `GET .../claims` ni cancelación (`532/532` unitarias, Kover `81.94 %`); pendiente E2E en teléfono (`§5.Z-3`). |
 | `FT-14-canje-qr-comercio` | Negocio (Ola 1) | P-33, C-48 | FT-13 | En implementacion | 8/11 tareas; `RedeemClaimUseCase` (`/offers/claims/{code}/redeem`); pendiente E2E en dispositivo (auditoría 2026-11-15) |
 | `FT-15-oferta-creacion-comercio` | Negocio (Ola 2) | SE-019..SE-022; P-32 | FT-10 | En revision | 15/15 tareas (T15.15: `StoreCategory.apiCode` y mapeo inverso completados); `CreateOfferUseCase`, `OfferPublishingE2ETest`; pendiente E2E contra backend desplegado |
 | `FT-16-inventario-ciclo-vida` | Negocio (Ola 2) | SE-023..SE-026, SE-045; P-30, P-31 | FT-15 | En implementacion | Android muestra el contador de vistas publicado por oferta, incluido cero. Edición y pausa probadas en teléfono; falta que el inventario desplegado publique `viewCount`. |
-| `FT-17-favoritos` | Negocio (Ola 3) | SE-036; P-23 | FT-12 | Especificada, sin ejecutar | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-17-favoritos` | Negocio (Ola 3) | SE-036; P-23 | FT-12 | En revision | `FavoriteEntity` v9 (`MIGRATION_8_9`), `FavoritesApiService` (`POST/GET /users/favorites`), `FavoritesScreen`/`ViewModel`, `ProductDetailScreen` & `BuyerHomeScreen` integrados, `541/541` unitarias / Kover `80.75 %`, pendiente E2E dispositivo (`§5.Z-3`) y PR/tag (`§5.Z-5`). |
 | `FT-18-feed-comunidad` | Negocio (Ola 3) | SE-027..SE-029; P-24 | FT-11, FT-15 | En implementacion | 15/16 tareas; cliente de `/feed/posts` y `/feed/nearby` listo; bloqueada por specs backend 024/026 (auditoría 2026-11-15) |
 | `FT-19-interacciones-reportes` | Negocio (Ola 3) | SE-030..SE-033; P-22 | FT-18 | En revision | `PostCommentsSheet.kt`, `ReportContentDialog.kt`, `ReportsRepositoryImpl.kt`, `FeedApiService.kt`, tests unitarios/`MockWebServer`/Compose; pendiente PR/tag |
 | `FT-20-busqueda-recomendaciones-ml` | Negocio (Ola 3) | SE-034, SE-035, SE-037, SE-038; P-12, P-13 | FT-12, FT-17 | En revision | `SearchOffersUseCase`, `GetOfferAlternativesUseCase`, `SearchOffersScreen`, `SearchHistoryEntity` v8, tests y `MockWebServer`; pendiente PR/tag |
@@ -46,13 +46,13 @@ specs/FT-XX-<slug>/
 | `FT-24-sensi-ia` | Negocio (Ola 5) | P-25, C-39, Tesina | FT-12 | Borrador | `spec.md`, `plan.md`, `tasks.md` (bloqueada por backend) |
 | `FT-25-amigos-qr` | Negocio (Ola 5) | P-24, C-38, Tesina | FT-13 | En revision | `FriendModels.kt`, `FriendsApiService.kt`, `FriendsRepositoryImpl.kt`, `FriendsCommunityScreen.kt`, `QrScannerDialog.kt`, `FriendRequestNotifier.kt`, Spec `050` backend (pendiente despliegue AWS y landing) |
 | `FT-26-resenas-comercio` | Negocio (Ola 5) | Reseñas Play Store, likes/respuestas, rating real comerciante | FT-12, FT-14 | En revision | `StoreReviewsScreen.kt`, `StoreReviewsViewModel.kt`, `StoreReviewsApiService.kt`, Spec `056` backend |
-| `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | En ejecución (T27.1 a T27.5 hechas; T27.6 parcial) | `spec.md`, `plan.md`, `tasks.md` |
+| `FT-27-qa-release-defensa` | QA / Release (Ola 6) | Sprint 5 (Drive) | FT-10..FT-26 | En revision | `561/561` unitarias, Kover `84.11 %`, `T27.11` (Bloque G CI `main`: TruffleHog, Semgrep, `+169` líneas Sonar), `sqlcipher-android:4.20.0` `16384 B` en 4 ABI, `35/35` checks previos verdes (`c215700`), `SHA1 gradle-wrapper.jar`; pendiente dispositivo/remoto (`§5.Z-1..5`). |
 | `FT-28-map-layer-preference` | UX / Offline SQLCipher | Personalización Mapa | FT-02, FT-07 | En revision | `SensusDatabase` v2, `MapPreferencesRepositoryImpl.kt`, `108` unit tests / `Kover 93.45%`, 5 `check_*.py` PASS (pendiente commit/PR) |
 | `FT-29-merchant-location-activation` | Negocio | Activación comercio + mapa interactivo + persistencia perfil | FT-06, FT-08, FT-10 | En revision | `MerchantLocationPickerModal.kt`, `MerchantActivationUseCasesTest.kt`, `158` unit tests / `Kover 90.72%`, 5 `check_*.py` PASS (pendiente commit/PR en `movil_Beto`) |
 | `FT-30-feed-promociones-intereses` | Negocio (Ola 5) | Feed de promociones por intereses; selector de intereses | FT-12, FT-20 | En revision | `OfferFeedScreen`, `InterestsPickerScreen`, `FeedOfferEntity` v7, `OfferFeedRepositoryImpl`, `InterestsRepositoryImpl`, tests y `MockWebServer`; pendiente PR/tag |
-| `FT-31-me-gusta-ofertas` | Negocio (Social) | Me gusta en productos y conteo público (`OfferLike`) | FT-12, FT-15 | En revision | `ToggleOfferLikeUseCase.kt`, `ProductDetailViewModel.kt`, `ProductDetailComponents.kt`, Spec `057` backend |
-| `FT-32-actividad-amigos-comunidad` | Negocio (Social) | Comentarios y likes de amigos en Comunidad (`FriendsActivity`) | FT-25, FT-26, FT-31 | En revision | `FriendsActivityViewModel.kt`, `FriendsActivityRepositoryImpl.kt`, `FriendsActivityContent.kt`, Spec `058` backend |
-| `FT-33-moderacion-groserias-ux-perfil` | Seguridad / UX | Filtro local de groserías + Splash silencioso + insets perfil | FT-04, FT-06, FT-15, FT-26 | En revision | `ProfanityFilter.kt`, `SplashScreen.kt`, `BuyerProfileScreen.kt`, `MerchantProfileScreen.kt`, Spec `059` backend |
+| `FT-40-me-gusta-ofertas` | Negocio (Social) | Me gusta en productos y conteo público (`OfferLike`) | FT-12, FT-15 | En revision | `ToggleOfferLikeUseCase.kt`, `ProductDetailViewModel.kt`, `ProductDetailComponents.kt`, Spec `057` backend |
+| `FT-41-actividad-amigos-comunidad` | Negocio (Social) | Comentarios y likes de amigos en Comunidad (`FriendsActivity`) | FT-25, FT-26, FT-40 | En revision | `FriendsActivityViewModel.kt`, `FriendsActivityRepositoryImpl.kt`, `FriendsActivityContent.kt`, Spec `058` backend |
+| `FT-42-moderacion-groserias-ux-perfil` | Seguridad / UX | Filtro local de groserías + Splash silencioso + insets perfil | FT-04, FT-06, FT-15, FT-26 | En revision | `ProfanityFilter.kt`, `SplashScreen.kt`, `BuyerProfileScreen.kt`, `MerchantProfileScreen.kt`, Spec `059` backend |
 | `FT-31-sistema-visual-login` | Presentacion | — | FT-04 | En revision | `LoginScreen.kt`, `AuthFlowE2ETest.kt` |
 | `FT-32-linea-base-rendimiento` | Medición | RF-32-01 | FT-04, FT-06, FT-11 | En implementacion | [Spec](FT-32-linea-base-rendimiento/spec.md), resumidor CSV probado y captura en dispositivo pendiente |
 | `FT-33-visibilidad-cierre-comercio` | Rendimiento | RF-33-01 | FT-32, FT-06, FT-11 | En implementacion | [Spec](FT-33-visibilidad-cierre-comercio/spec.md), catálogo vacío autoritativo y lectura de perfil compartida |
@@ -62,8 +62,17 @@ specs/FT-XX-<slug>/
 | `FT-37-rendimiento-pantallas` | Rendimiento | RF-37-01 | FT-36 | En implementacion | [Spec](FT-37-rendimiento-pantallas/spec.md), inventario inicial de recorridos |
 | `FT-38-experiencia-comercial` | Presentación | Acceso, Cliente y Comercio | FT-31 | En revision | [Spec](FT-38-experiencia-comercial/spec.md) |
 | `FT-39-push-recepcion-ubicacion` | Negocio / Push | RF-39-01..RF-39-10; continúa FT-21 | FT-21, FT-10, FT-12 | En implementacion | Receptor FCM, canal, `deviceId` por instalación, logout con `deviceId`, ubicación para ofertas cercanas; 413 unit tests PASS, Kover 80.46 %; E2E en teléfono pendiente |
+| `FT-43-endurecimiento-seguridad-movil` | Seguridad / Resiliencia | Apéndice F (`G-07`, `G-09`, `G-04`) | FT-09, FT-27 | En revision | Pinning Amazon Root CA en `network_security_config.xml`, `SecureScreenEffect` + `DeviceAuthenticator`, SBOM `CycloneDX 1.6` (`199` comps) + `attest-build-provenance`; `548/548` unitarias / Kover `80.80 %`; pendiente dispositivo/CI (`§5.Z-3`/`4`). |
 
 **Orden de rendimiento:** FT-32 → FT-33 → FT-34 → FT-35 → FT-36 → FT-37. Cada etapa conserva los flujos actuales y compara sus resultados con FT-32.
+
+### Equivalencias de renumeración (2026-11-26)
+
+| ID anterior | ID vigente | Motivo |
+|---|---|---|
+| `FT-31-me-gusta-ofertas` | `FT-40-me-gusta-ofertas` | Resolver colisión con `FT-31-sistema-visual-login` |
+| `FT-32-actividad-amigos-comunidad` | `FT-41-actividad-amigos-comunidad` | Resolver colisión con `FT-32-linea-base-rendimiento` |
+| `FT-33-moderacion-groserias-ux-perfil` | `FT-42-moderacion-groserias-ux-perfil` | Resolver colisión con `FT-33-visibilidad-cierre-comercio` |
 
 Estados permitidos: `Borrador`, `Especificada, sin ejecutar`, `En implementacion`, `En revision`, `Cerrada`.
 Ninguna feature pasa a `Cerrada` sin `checklists/checklist.md` completo y evidencia en `Memoria.md` §6.

@@ -154,6 +154,7 @@ internal class MainAppState {
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
     var showSavedInterests by mutableStateOf(false)
+    var showFavorites by mutableStateOf(false)
     var showMyClaims by mutableStateOf(false)
     var showInterestsPicker by mutableStateOf(false)
     var showSearchOffers by mutableStateOf(false)
@@ -287,6 +288,10 @@ private fun dismissSocialOverlay(state: MainAppState): Boolean = when {
 private fun dismissUtilityOverlay(state: MainAppState): Boolean = when {
     state.showSavedInterests -> {
         state.showSavedInterests = false
+        true
+    }
+    state.showFavorites -> {
+        state.showFavorites = false
         true
     }
     state.showMyClaims -> {

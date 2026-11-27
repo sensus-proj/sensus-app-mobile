@@ -4,7 +4,6 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.moderation.ImageModerationService
 import com.example.sensus.data.remote.api.MediaApiService
-import com.example.sensus.data.remote.api.ProfileApiService
 import com.example.sensus.domain.media.ImageUploadPolicy
 import com.example.sensus.domain.model.ModerationResult
 import com.example.sensus.domain.model.UploadedMedia
@@ -30,9 +29,7 @@ private const val OFFER_MODERATION_CONTEXT = "Fotografía de producto de oferta 
  */
 class MediaRepositoryImpl(
     private val mediaApi: MediaApiService,
-    private val moderationService: ImageModerationRepository? = null,
-    @Suppress("UNUSED_PARAMETER") profileApi: ProfileApiService? = null,
-    @Suppress("UNUSED_PARAMETER") cloudinaryUploader: CloudinarySignedUploader = CloudinarySignedUploader()
+    private val moderationService: ImageModerationRepository? = null
 ) : MediaRepository {
 
     override suspend fun uploadAndModerate(bytes: ByteArray, mimeType: String): Result<UploadedMedia> {

@@ -56,6 +56,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.BrandOrange
 import com.example.sensus.theme.Ink
 import com.example.sensus.theme.SensusRed
@@ -101,6 +102,7 @@ private data class LoginFormHandlers(
 
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier, callbacks: LoginCallbacks = LoginCallbacks(), viewModel: LoginViewModel = hiltViewModel()) {
+    SecureScreenEffect()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var localError by remember { mutableStateOf<Int?>(null) }

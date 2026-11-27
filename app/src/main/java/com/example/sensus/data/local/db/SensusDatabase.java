@@ -3,6 +3,7 @@ package com.example.sensus.data.local.db;
 import androidx.room.Database;
 import androidx.room.RoomDatabase;
 import com.example.sensus.data.local.db.dao.AiMessageDao;
+import com.example.sensus.data.local.db.dao.FavoriteDao;
 import com.example.sensus.data.local.db.dao.FeedOfferDao;
 import com.example.sensus.data.local.db.dao.FeedPostDao;
 import com.example.sensus.data.local.db.dao.OfferDao;
@@ -11,6 +12,7 @@ import com.example.sensus.data.local.db.dao.SearchHistoryDao;
 import com.example.sensus.data.local.db.dao.UserPreferenceDao;
 import com.example.sensus.data.local.db.dao.UserSessionDao;
 import com.example.sensus.data.local.db.entity.AiMessageEntity;
+import com.example.sensus.data.local.db.entity.FavoriteEntity;
 import com.example.sensus.data.local.db.entity.FeedOfferEntity;
 import com.example.sensus.data.local.db.entity.FeedPostEntity;
 import com.example.sensus.data.local.db.entity.OfferEntity;
@@ -28,9 +30,10 @@ import com.example.sensus.data.local.db.entity.UserSessionEntity;
         FeedPostEntity.class,
         AiMessageEntity.class,
         FeedOfferEntity.class,
-        SearchHistoryEntity.class
+        SearchHistoryEntity.class,
+        FavoriteEntity.class
     },
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 public abstract class SensusDatabase extends RoomDatabase {
@@ -38,6 +41,7 @@ public abstract class SensusDatabase extends RoomDatabase {
     public abstract FeedPostDao feedPostDao();
     public abstract FeedOfferDao feedOfferDao();
     public abstract SearchHistoryDao searchHistoryDao();
+    public abstract FavoriteDao favoriteDao();
     public abstract UserSessionDao userSessionDao();
     public abstract PendingSyncDao pendingSyncDao();
     public abstract UserPreferenceDao userPreferenceDao();

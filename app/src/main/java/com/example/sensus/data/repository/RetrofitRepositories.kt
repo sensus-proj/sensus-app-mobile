@@ -255,16 +255,6 @@ class RetrofitProfileRepository(
         }
     }
 
-    override suspend fun requestPhotoSignature(): Result<Pair<String, Long>> = safeNetworkCall("Error al generar firma de foto.") {
-        val response = profileApi.generatePhotoSignature()
-        val dto = response.body()
-        if (response.isSuccessful && dto != null) {
-            Result.Success(Pair(dto.signature, dto.timestamp))
-        } else {
-            mapHttpError(response)
-        }
-    }
-
     override suspend fun uploadProfilePhoto(imageBytes: ByteArray): Result<String> = withContext(Dispatchers.IO) {
         val uploadApi = mediaUploadApi
             ?: return@withContext Result.Failure(AppError.Validation("El servicio de carga moderada no está disponible."))

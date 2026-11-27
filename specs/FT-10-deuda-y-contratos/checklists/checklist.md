@@ -51,4 +51,4 @@
 - [x] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
 - [x] `Memoria.md` §6 actualizado con decisiones y evidencia
 - [x] `CHECKLIST_PR.md` verificado y alineado para PR a `main`
-- [ ] Tag `v1.13.0-ft10` (pendiente autorización explícita del responsable para `git commit`, `push`, PR a `main` y creación de tag Git)
+- [ ] Tag `v1.13.0-ft10` (acción del usuario: crear commit/PR/tag tras revisión; ver plan cierre móvil §5.Z-5)

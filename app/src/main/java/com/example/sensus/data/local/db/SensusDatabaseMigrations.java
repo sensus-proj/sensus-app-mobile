@@ -99,4 +99,35 @@ public final class SensusDatabaseMigrations {
             db.execSQL(MIGRATION_7_8_DDL);
         }
     };
+
+    private static final String MIGRATION_8_9_DDL =
+        "CREATE TABLE IF NOT EXISTS `favorites` ("
+            + "`offerId` TEXT NOT NULL, "
+            + "`ownerKey` TEXT NOT NULL, "
+            + "`merchantId` TEXT NOT NULL, "
+            + "`merchantName` TEXT NOT NULL, "
+            + "`category` TEXT NOT NULL, "
+            + "`title` TEXT NOT NULL, "
+            + "`description` TEXT NOT NULL, "
+            + "`originalPrice` REAL NOT NULL, "
+            + "`discountPercentage` INTEGER NOT NULL, "
+            + "`discountedPrice` REAL NOT NULL, "
+            + "`stock` INTEGER NOT NULL, "
+            + "`imageUrl` TEXT, "
+            + "`startsAtUtc` TEXT NOT NULL, "
+            + "`endsAtUtc` TEXT NOT NULL, "
+            + "`expiresAtMillis` INTEGER NOT NULL, "
+            + "`latitude` REAL, "
+            + "`longitude` REAL, "
+            + "`likesCount` INTEGER NOT NULL, "
+            + "`favoritedAtUtc` TEXT NOT NULL, "
+            + "`updatedAtMillis` INTEGER NOT NULL DEFAULT 0, "
+            + "PRIMARY KEY(`offerId`))";
+
+    public static final Migration MIGRATION_8_9 = new Migration(8, 9) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(MIGRATION_8_9_DDL);
+        }
+    };
 }

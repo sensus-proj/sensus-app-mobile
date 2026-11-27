@@ -5,6 +5,7 @@ import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.db.DatabaseFactory
 import com.example.sensus.data.local.db.SensusDatabase
 import com.example.sensus.data.local.db.dao.AiMessageDao
+import com.example.sensus.data.local.db.dao.FavoriteDao
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
 import com.example.sensus.data.local.db.dao.UserPreferenceDao
@@ -18,6 +19,7 @@ import com.example.sensus.data.push.NotificationsInstallationStore
 import com.example.sensus.data.remote.NetworkClient
 import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.repository.AiChatRepositoryImpl
+import com.example.sensus.data.repository.FavoritesRepositoryImpl
 import com.example.sensus.data.repository.FriendsRepositoryImpl
 import com.example.sensus.data.repository.MapPreferencesRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
@@ -29,6 +31,7 @@ import com.example.sensus.data.repository.SessionRepositoryImpl
 import com.example.sensus.domain.media.ImageCompressor
 import com.example.sensus.domain.repository.AiChatRepository
 import com.example.sensus.domain.repository.AuthRepository
+import com.example.sensus.domain.repository.FavoritesRepository
 import com.example.sensus.domain.repository.FriendsRepository
 import com.example.sensus.domain.repository.LocationRepository
 import com.example.sensus.domain.repository.MapPreferencesRepository
@@ -89,6 +92,7 @@ class SensusContainer(
     val pendingSyncDao: PendingSyncDao by lazy { database.pendingSyncDao() }
     val userPreferenceDao: UserPreferenceDao by lazy { database.userPreferenceDao() }
     val aiMessageDao: AiMessageDao by lazy { database.aiMessageDao() }
+    val favoriteDao: FavoriteDao by lazy { database.favoriteDao() }
 
     val networkClient: NetworkClient by lazy {
         NetworkClient(
@@ -108,7 +112,16 @@ class SensusContainer(
             userSessionDao = { userSessionDao },
             pendingSyncDao = { pendingSyncDao },
             offerDao = { offerDao },
-            authApiService = networkClient.authApi
+            authApiService = networkClient.authApi,
+            favoriteDao = { favoriteDao }
+        )
+    }
+
+    val favoritesRepository: FavoritesRepository by lazy {
+        FavoritesRepositoryImpl(
+            api = networkClient.favoritesApi,
+            favoriteDao = { favoriteDao },
+            sessionRepository = sessionRepository
         )
     }
 

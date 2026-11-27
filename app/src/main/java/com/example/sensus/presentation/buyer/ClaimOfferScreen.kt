@@ -23,7 +23,10 @@ import com.example.sensus.R
 import com.example.sensus.domain.model.OfferClaim
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.ConfirmedClaimQr
+import com.example.sensus.presentation.common.SecureScreenEffect
+import com.example.sensus.presentation.common.SensitiveQrGate
 import com.example.sensus.presentation.common.claimsErrorText
+import com.example.sensus.presentation.common.currentDeviceAuthenticator
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.sensusTextButtonColors
 import java.time.Clock
@@ -36,6 +39,7 @@ private const val EXPIRY_TICK_MS = 1000L
 
 @Composable
 fun ClaimOfferScreen(offer: ProductOffer, actions: ClaimsScreenActions, modifier: Modifier = Modifier, viewModel: ClaimOfferViewModel = hiltViewModel()) {
+    SecureScreenEffect()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val confirmedCallback by rememberUpdatedState(actions.onClaimConfirmed)
     LaunchedEffect(offer.id, actions.expectExisting, viewModel) {
@@ -87,8 +91,10 @@ private fun ClaimConfirmationContent(claim: OfferClaim, onNavigateToRoute: () ->
     if (now >= claim.expiresAtEpochMs) {
         Text(stringResource(R.string.claims_expired))
     } else {
-        ConfirmedClaimQr(claim.qrPayload)
-        Text(claim.code)
+        SensitiveQrGate(unlockKey = claim.claimId, deviceAuthenticator = currentDeviceAuthenticator()) {
+            ConfirmedClaimQr(claim.qrPayload)
+            Text(claim.code)
+        }
         Button(shape = SensusButtonShape, onClick = onNavigateToRoute) { Text(stringResource(R.string.claims_route)) }
     }
     Text(stringResource(R.string.claims_expiry, Instant.ofEpochMilli(claim.expiresAtEpochMs).toString()))

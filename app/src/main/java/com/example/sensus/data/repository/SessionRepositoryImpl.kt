@@ -3,6 +3,7 @@ package com.example.sensus.data.repository
 import com.example.sensus.data.SensusAuthManager
 import com.example.sensus.data.local.SecurePreferences
 import com.example.sensus.data.local.SessionType
+import com.example.sensus.data.local.db.dao.FavoriteDao
 import com.example.sensus.data.local.db.dao.OfferDao
 import com.example.sensus.data.local.db.dao.PendingSyncDao
 import com.example.sensus.data.local.db.dao.UserSessionDao
@@ -22,7 +23,8 @@ class SessionRepositoryImpl(
     private val userSessionDao: () -> UserSessionDao? = { null },
     private val pendingSyncDao: () -> PendingSyncDao? = { null },
     private val offerDao: () -> OfferDao? = { null },
-    private val authApiService: AuthApiService? = null
+    private val authApiService: AuthApiService? = null,
+    private val favoriteDao: () -> FavoriteDao? = { null }
 ) : SessionRepository {
 
     private val _sessionState = MutableStateFlow(buildCurrentState())
@@ -110,6 +112,7 @@ class SessionRepositoryImpl(
                 userSessionDao()?.clearSession()
                 pendingSyncDao()?.clearAll()
                 offerDao()?.clearOffers()
+                favoriteDao()?.clearAll()
             }
         } catch (_: Exception) {
             // Degradación segura si la base local no se puede abrir.
