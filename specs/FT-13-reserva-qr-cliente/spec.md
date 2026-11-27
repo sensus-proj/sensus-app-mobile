@@ -4,7 +4,9 @@
 Integración real sobre backend main 01dad6e, OfferEndpoints.cs y OfferClaimDtos.cs.
 
 ## 2. Requisitos funcionales
-Solo POST /api/v1/offers/{id}/claim y POST /api/v1/offers/claims/{code}/redeem, sin body, respuesta 200.
+Solo POST /api/v1/offers/{id}/claim, GET /api/v1/offers/claims/{claimId} y POST /api/v1/offers/claims/{code}/redeem, sin rutas de listado remoto ni cancelación.
+RF-13-07 (reconstrucción local de Mis reservas): `EncryptedClaimIndex` conserva hasta 50 `claimId` recientes por cuenta autenticada (cifrado en `EncryptedSharedPreferences`, aislado por cuenta). `GetMyClaimsUseCase` reconstruye la lista llamando a `GET /api/v1/offers/claims/{claimId}` en paralelo acotado (máx. 4 en `Dispatchers.IO`), poda los 404 del índice, muestra estados activos/vencidos/canjeados y falla cerrado sin sesión o ante 401.
+Fuera de alcance por decisión del responsable (2026-11-26): listado remoto de apartados (`offers/claims`) y cancelación remota (`offers/claims/{id}/cancel`; Spec 033 del backend no incluye cancelación).
 Claim aparta exactamente una unidad por pulsación explícita; nunca al componer o reentrar.
 ClaimOfferResultDto: claimId, offerId, code, qrPayload, expiresAtUtc.
 RedeemClaimResultDto: claimId, offerId, merchantId, redeemedAtUtc.
@@ -40,7 +42,7 @@ Con expectExisting y sin código local se bloquean botón y Submit, incluso tras
 No se utilizan SecurePreferences, disco, SavedStateHandle ni nuevas rutas para recuperar códigos.
 
 ## 7. Riesgos, límites y deuda
-Listado y cancelación pendientes de publicación backend; no se declaran rutas para ellos.
+Listado remoto y cancelación fuera de alcance por decisión del responsable (2026-11-26); la pantalla Mis reservas reconstruye el estado mediante `GET /api/v1/offers/claims/{claimId}` desde `EncryptedClaimIndex`.
 Sin cámara porque esta slice no añade dependencias. ZXing core y cliente sanitizado a cargo de integración principal.
 La bolsa se actualiza en memoria al confirmar la reserva. Sin persistencia offline del código en esta slice.
 Ante timeout la operación puede haberse aplicado: no hay reenvío automático ni certeza local.

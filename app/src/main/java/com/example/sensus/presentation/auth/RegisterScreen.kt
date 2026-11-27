@@ -53,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sensus.R
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
 import com.example.sensus.theme.SensusTextMuted
@@ -138,6 +139,7 @@ fun RegisterScreen(
     onNavigateToTerms: () -> Unit,
     onContinueAsGuest: () -> Unit = {}
 ) {
+    SecureScreenEffect()
     val viewModel: RegisterViewModel = hiltViewModel()
     val guestViewModel: LoginViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsState()

@@ -1,0 +1,14 @@
+<resources>
+    <string name="favorites_title">Mis favoritos</string>
+    <string name="favorites_filter_all">Todas</string>
+    <string name="favorites_filter_available">Solo disponibles</string>
+    <string name="favorites_empty_title">Aún no tienes ofertas favoritas</string>
+    <string name="favorites_empty_subtitle">Toca el corazón en cualquier oferta que te interese para guardarla aquí.</string>
+    <string name="favorites_empty_filtered_title">Sin favoritos disponibles por ahora</string>
+    <string name="favorites_empty_filtered_subtitle">Las ofertas guardadas vencidas o agotadas se muestran en «Todas».</string>
+    <string name="favorites_explore">Explorar ofertas</string>
+    <string name="favorites_add_cd">Guardar en favoritos</string>
+    <string name="favorites_remove_cd">En favoritos • Quitar</string>
+    <string name="favorites_sync_cached_notice">No se pudieron sincronizar tus favoritos. Mostrando tu lista guardada.</string>
+    <string name="favorites_guest_notice">Regístrate para guardar y sincronizar tus ofertas favoritas.</string>
+</resources>

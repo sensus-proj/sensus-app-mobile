@@ -5,19 +5,10 @@ import com.example.sensus.data.remote.dto.ClaimOfferResultDto
 import com.example.sensus.data.remote.dto.RedeemClaimResultDto
 import retrofit2.Response
 import retrofit2.http.GET
-import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface ClaimsApiService {
-    /** FT-13: listado de reservas propias. Contrato propuesto, pendiente de publicacion en el backend. */
-    @GET("api/v1/offers/claims")
-    suspend fun getMyClaims(): Response<List<ClaimDetailDto>>
-
-    /** FT-13: cancelacion de una reserva activa propia. Contrato propuesto, pendiente de publicacion en el backend. */
-    @PATCH("api/v1/offers/claims/{claimId}/cancel")
-    suspend fun cancelClaim(@Path("claimId") claimId: String): Response<ClaimDetailDto>
-
     @GET("api/v1/offers/claims/{claimId}")
     suspend fun getClaim(@Path("claimId") claimId: String): Response<ClaimDetailDto>
 

@@ -45,5 +45,5 @@
 
 - [x] `docs/endpoints-internos.md` y `docs/rate-matrix.md` conciliados
 - [x] `Memoria.md` §6 actualizado con decisiones y evidencia
-- [ ] `CHECKLIST_PR.md` completo (pendiente al abrir PR)
-- [ ] Tag `v1.23.0-ft20` (propuesto; no creado sin autorización Git)
+- [ ] `CHECKLIST_PR.md` completo (acción del usuario: completar checklist manual de PR antes del merge; ver plan cierre móvil §5.Z-5)
+- [ ] Tag `v1.23.0-ft20` (acción del usuario: crear commit/PR/tag tras revisión; ver plan cierre móvil §5.Z-5)

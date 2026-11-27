@@ -13,7 +13,7 @@
 
 - [x] T23.5 Verificar expansión de acordeones, términos y visibilidad del banner con `SupportScreensTest` — aprobado en vivo V2341.
 - [x] T23.6 Ejecutar suite unitaria, Kover `>= 80%`, análisis estático y actualizar `Memoria.md` §6 — verificado con 80.10% de cobertura de líneas Debug y gates locales en verde.
-- [ ] T23.7 Añadir al Aviso de Privacidad (recurso embebido y landing) la finalidad de personalización del feed y el registro seudonimizado de interacciones (RF-23-04) — verif: revisión de texto en `TermsScreen`
+- [ ] T23.7 Añadir al Aviso de Privacidad (recurso embebido y landing) la finalidad de personalización del feed y el registro seudonimizado de interacciones (RF-23-04) — recurso embebido completo y conciliado con Specs `042`/`055` en `strings_support.xml` (`ft23_privacy_summary`: 180 días y seudonimización); falta (acción del usuario: publicar el texto equivalente en `https://rodnix.com.mx/sensus/privacidad.html`; ver plan cierre móvil §5.Z-2).
 
 ## Avance en movil_Rocio — 2026-11-22
 

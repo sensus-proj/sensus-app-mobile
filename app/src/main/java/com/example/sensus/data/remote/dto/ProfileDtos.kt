@@ -19,12 +19,3 @@ data class UpdateProfileRequest(
     val nombreCompleto: String,
     val fotoPerfilUrl: String? = null
 )
-
-@Serializable
-data class PhotoSignatureResponse(
-    val timestamp: Long,
-    val signature: String,
-    val apiKey: String,
-    val cloudName: String,
-    val folder: String
-)

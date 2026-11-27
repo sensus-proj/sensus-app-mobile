@@ -17,7 +17,6 @@ import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.dto.OfferDto
 import com.example.sensus.data.remote.dto.UploadMediaResponse
-import com.example.sensus.data.repository.CloudinarySignedUploader
 import com.example.sensus.data.repository.FeedRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
 import com.example.sensus.data.repository.OffersRepositoryImpl
@@ -389,8 +388,7 @@ class PublishingApiTest {
 
     @Test
     fun mediaUpload_doesNotBypassModerationViaSignedCloudinaryWhenBackendReturns500() = runTest {
-        val uploader = CloudinarySignedUploader(baseUrl = server.url("/").toString())
-        val repository = MediaRepositoryImpl(client.mediaUploadApi, null, client.profileApi, uploader)
+        val repository = MediaRepositoryImpl(client.mediaUploadApi, null)
 
         server.enqueue(MockResponse().setResponseCode(500).setBody("""{"detail":"Error interno"}"""))
 
@@ -404,8 +402,7 @@ class PublishingApiTest {
     fun mediaUpload_doesNotFallbackOn422Rejection() = runTest {
         val moderator = mockk<ImageModerationRepository>()
         coEvery { moderator.moderateImage(any(), any()) } returns ModerationResult.Approved
-        val uploader = CloudinarySignedUploader(baseUrl = server.url("/").toString())
-        val repository = MediaRepositoryImpl(client.mediaUploadApi, moderator, client.profileApi, uploader)
+        val repository = MediaRepositoryImpl(client.mediaUploadApi, moderator)
 
         server.enqueue(MockResponse().setResponseCode(422).setBody("""{"detail":"Imagen bloqueada"}"""))
         val rejected = repository.uploadAndModerate(byteArrayOf(1, 2, 3), "image/jpeg")

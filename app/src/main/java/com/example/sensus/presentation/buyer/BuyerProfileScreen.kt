@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
@@ -68,6 +69,7 @@ import com.example.sensus.R
 import com.example.sensus.domain.model.UserProfile
 import com.example.sensus.presentation.common.AppearanceSettings
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
@@ -99,6 +101,7 @@ data class BuyerProfileCallbacks(
     val onTermsClick: () -> Unit = {},
     val onHelpSupportClick: () -> Unit = {},
     val onHistoryClick: () -> Unit = {},
+    val onFavoritesClick: () -> Unit = {},
     val onMyClaimsClick: () -> Unit = {},
     val onEditInterestsClick: () -> Unit = {},
     val onGuestActionRequired: () -> Unit = {}
@@ -117,6 +120,7 @@ private data class BuyerProfileListUi(
 
 @Composable
 fun BuyerProfileScreen(viewModel: BuyerProfileViewModel = hiltViewModel(), callbacks: BuyerProfileCallbacks, modifier: Modifier = Modifier) {
+    SecureScreenEffect()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by viewModel.viewState.collectAsState()
@@ -208,6 +212,7 @@ private fun BuyerProfileListContent(
                 actions = BuyerSettingsActions(
                     onEditClick = { if (isGuest) callbacks.onGuestActionRequired() else onOpenEditSheet() },
                     onInterestsClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onEditInterestsClick() },
+                    onFavoritesClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onFavoritesClick() },
                     onHistoryClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onHistoryClick() },
                     onMyClaimsClick = { if (isGuest) callbacks.onGuestActionRequired() else callbacks.onMyClaimsClick() },
                     onHelpClick = callbacks.onHelpSupportClick,
@@ -405,6 +410,7 @@ private fun MerchantToggleLabelContent(
 private data class BuyerSettingsActions(
     val onEditClick: () -> Unit,
     val onInterestsClick: () -> Unit,
+    val onFavoritesClick: () -> Unit,
     val onHistoryClick: () -> Unit,
     val onMyClaimsClick: () -> Unit,
     val onHelpClick: () -> Unit,
@@ -417,6 +423,12 @@ private fun BuyerSettingsOptionsCard(isGuest: Boolean, actions: BuyerSettingsAct
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             ProfileMenuOption(icon = Icons.Default.Edit, title = "Editar información personal", isLocked = isGuest, onClick = actions.onEditClick)
             ProfileMenuOption(icon = Icons.Default.Tune, title = "Mis intereses de promociones", isLocked = isGuest, onClick = actions.onInterestsClick)
+            ProfileMenuOption(
+                icon = Icons.Default.FavoriteBorder,
+                title = stringResource(R.string.favorites_title),
+                isLocked = isGuest,
+                onClick = actions.onFavoritesClick
+            )
             ProfileMenuOption(icon = Icons.Default.History, title = "Mis apartados y pedidos", isLocked = isGuest, onClick = actions.onHistoryClick)
             ProfileMenuOption(
                 icon = Icons.Default.ConfirmationNumber,

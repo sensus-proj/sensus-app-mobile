@@ -1,113 +1,201 @@
 package com.example.sensus.data
 
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.data.local.EncryptedClaimIndex
 import com.example.sensus.data.remote.api.ClaimsApiService
-import com.example.sensus.data.remote.dto.ClaimDetailDto
 import com.example.sensus.data.repository.ClaimsRepositoryImpl
 import com.example.sensus.domain.model.ClaimStatus
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
-import java.io.IOException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import okhttp3.ResponseBody.Companion.toResponseBody
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
-import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MyClaimsRepositoryTest {
-    private val api = mockk<ClaimsApiService>()
+    private val server = MockWebServer()
     private val sessions = mockk<SessionRepository>()
-    private val index = mockk<EncryptedClaimIndex>(relaxed = true)
-    private val state = MutableStateFlow(SessionState(isSessionActive = true, activeToken = "token", activeEmail = "owner@example.invalid"))
-    private val active = ClaimDetailDto("c1", "offer", "Active", "2099-01-01T00:00:00Z", "signed-1", " Pan dulce ")
+    private val state = MutableStateFlow(
+        SessionState(isSessionActive = true, activeToken = "jwt-a", activeEmail = "owner@example.invalid")
+    )
+    private lateinit var api: ClaimsApiService
 
-    private fun repository(): ClaimsRepositoryImpl {
+    @Before
+    fun setup() {
+        server.start()
         every { sessions.sessionState } returns state
-        every { index.findClaimId(any(), any()) } returns null
-        return ClaimsRepositoryImpl(api, sessions, index)
+        api = Retrofit.Builder()
+            .baseUrl(server.url("/"))
+            .addConverterFactory(Json { ignoreUnknownKeys = true }.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ClaimsApiService::class.java)
+    }
+
+    @After
+    fun teardown() = server.shutdown()
+
+    private fun fakeEncryptedIndex(): EncryptedClaimIndex {
+        val data = mutableMapOf<String, Any?>()
+        val prefs = mockk<EncryptedSharedPreferences>()
+        every { prefs.all } answers { data.toMutableMap() }
+        every { prefs.getString(any(), any()) } answers {
+            data[firstArg()] as? String ?: secondArg()
+        }
+        every { prefs.edit() } answers {
+            val pending = mutableMapOf<String, Any?>()
+            var clearFirst = false
+            val editor = mockk<SharedPreferences.Editor>()
+            every { editor.putString(any(), any()) } answers {
+                pending[firstArg()] = secondArg()
+                editor
+            }
+            every { editor.remove(any()) } answers {
+                pending[firstArg()] = null
+                editor
+            }
+            every { editor.clear() } answers {
+                clearFirst = true
+                editor
+            }
+            every { editor.apply() } answers {
+                if (clearFirst) data.clear()
+                pending.forEach { (k, v) -> if (v == null) data.remove(k) else data[k] = v }
+            }
+            every { editor.commit() } answers {
+                if (clearFirst) data.clear()
+                pending.forEach { (k, v) -> if (v == null) data.remove(k) else data[k] = v }
+                true
+            }
+            editor
+        }
+        return EncryptedClaimIndex { prefs }
     }
 
     @Test
-    fun listMapsStatusesTitlesAndDropsMalformedRows() = runTest {
-        val rows = listOf(
-            active,
-            active.copy(claimId = "c2", status = "Redeemed", qrPayload = null, offerTitle = " "),
-            active.copy(claimId = "c3", status = "Canceled"),
-            active.copy(claimId = "c4", expiresAtUtc = "not-a-date"),
-            active.copy(claimId = "", status = "Active")
-        )
-        coEvery { api.getMyClaims() } returns Response.success(rows)
-        val claims = (repository().getMyClaims() as Result.Success).data
-        assertEquals(listOf("c1", "c2", "c3"), claims.map { it.claimId })
-        assertEquals("Pan dulce", claims[0].offerTitle)
-        assertNull(claims[1].offerTitle)
-        assertEquals(listOf(ClaimStatus.ACTIVE, ClaimStatus.REDEEMED, ClaimStatus.CANCELLED), claims.map { it.status })
+    fun threeSavedIdsBuildListIncludingExpiredAndRedeemed() = runTest {
+        val index = fakeEncryptedIndex()
+        index.rememberClaimId("owner@example.invalid", "o1", "c1")
+        index.rememberClaimId("owner@example.invalid", "o2", "c2")
+        index.rememberClaimId("owner@example.invalid", "o3", "c3")
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/api/v1/offers/claims/c1" -> jsonResponse(
+                    """{"claimId":"c1","offerId":"o1","status":"Active","expiresAtUtc":"2099-01-01T00:00:00Z","qrPayload":"qr-1","offerTitle":"Pan"}"""
+                )
+                "/api/v1/offers/claims/c2" -> jsonResponse(
+                    """{"claimId":"c2","offerId":"o2","status":"Redeemed","expiresAtUtc":"2026-11-10T00:00:00Z","offerTitle":"Leche"}"""
+                )
+                "/api/v1/offers/claims/c3" -> jsonResponse(
+                    """{"claimId":"c3","offerId":"o3","status":"Expired","expiresAtUtc":"2026-11-09T00:00:00Z","offerTitle":"Cafe"}"""
+                )
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+
+        val repo = ClaimsRepositoryImpl(api, sessions, index, UnconfinedTestDispatcher(testScheduler))
+        val claims = (repo.getMyClaims() as Result.Success).data
+
+        assertEquals(3, server.requestCount)
+        assertEquals(setOf("c1", "c2", "c3"), claims.map { it.claimId }.toSet())
+        assertEquals(ClaimStatus.ACTIVE, claims.first { it.claimId == "c1" }.status)
+        assertEquals(ClaimStatus.REDEEMED, claims.first { it.claimId == "c2" }.status)
+        assertEquals(ClaimStatus.EXPIRED, claims.first { it.claimId == "c3" }.status)
     }
 
     @Test
-    fun listWithoutSessionDoesNotCallServer() = runTest {
-        state.value = SessionState(isSessionActive = true, isGuest = true)
-        val result = repository().getMyClaims() as Result.Failure
+    fun notFoundPrunesStaleIdFromIndex() = runTest {
+        val index = fakeEncryptedIndex()
+        index.rememberClaimId("owner@example.invalid", "o1", "c1")
+        index.rememberClaimId("owner@example.invalid", "o2", "c2")
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/api/v1/offers/claims/c1" -> jsonResponse(
+                    """{"claimId":"c1","offerId":"o1","status":"Active","expiresAtUtc":"2099-01-01T00:00:00Z","qrPayload":"qr-1"}"""
+                )
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+
+        val repo = ClaimsRepositoryImpl(api, sessions, index, UnconfinedTestDispatcher(testScheduler))
+        val claims = (repo.getMyClaims() as Result.Success).data
+
+        assertEquals(listOf("c1"), claims.map { it.claimId })
+        assertEquals(listOf("c1"), index.getClaimIds("owner@example.invalid"))
+        assertNull(index.findClaimId("owner@example.invalid", "o2"))
+    }
+
+    @Test
+    fun unauthorizedResponseFailsClosed() = runTest {
+        val index = fakeEncryptedIndex()
+        index.rememberClaimId("owner@example.invalid", "o1", "c1")
+        index.rememberClaimId("owner@example.invalid", "o2", "c2")
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/api/v1/offers/claims/c1" -> jsonResponse(
+                    """{"claimId":"c1","offerId":"o1","status":"Active","expiresAtUtc":"2099-01-01T00:00:00Z","qrPayload":"qr-1"}"""
+                )
+                else -> MockResponse().setResponseCode(401)
+            }
+        }
+
+        val repo = ClaimsRepositoryImpl(api, sessions, index, UnconfinedTestDispatcher(testScheduler))
+        val result = repo.getMyClaims() as Result.Failure
+
         assertTrue(result.error is AppError.Unauthorized)
-        coVerify(exactly = 0) { api.getMyClaims() }
     }
 
     @Test
-    fun unpublishedListRouteMapsToNotFound() = runTest {
-        coEvery { api.getMyClaims() } returns Response.error(404, "".toResponseBody())
-        assertTrue((repository().getMyClaims() as Result.Failure).error is AppError.NotFound)
+    fun guestSessionFailsClosedWithoutServerCalls() = runTest {
+        val index = fakeEncryptedIndex()
+        index.rememberClaimId("owner@example.invalid", "o1", "c1")
+        state.value = SessionState(isSessionActive = true, isGuest = true)
+
+        val repo = ClaimsRepositoryImpl(api, sessions, index, UnconfinedTestDispatcher(testScheduler))
+        val result = repo.getMyClaims() as Result.Failure
+
+        assertTrue(result.error is AppError.Unauthorized)
+        assertEquals(0, server.requestCount)
     }
 
     @Test
-    fun cancelRequiresMatchingCancelledClaim() = runTest {
-        coEvery { api.cancelClaim("c1") } returns Response.success(active.copy(status = "Cancelled"))
-        val cancelled = (repository().cancelClaim("c1") as Result.Success).data
-        assertEquals(ClaimStatus.CANCELLED, cancelled.status)
-        coEvery { api.cancelClaim("c1") } returns Response.success(active)
-        assertTrue((repository().cancelClaim("c1") as Result.Failure).error is AppError.Unprocessable)
-        coEvery { api.cancelClaim("c1") } returns Response.success(active.copy(claimId = "other", status = "Cancelled"))
-        assertTrue(repository().cancelClaim("c1") is Result.Failure)
-        coEvery { api.cancelClaim("c1") } returns Response.error(409, "".toResponseBody())
-        assertTrue((repository().cancelClaim("c1") as Result.Failure).error is AppError.Unprocessable)
-        coEvery { api.cancelClaim("c1") } throws IOException("offline")
-        assertTrue((repository().cancelClaim("c1") as Result.Failure).error is AppError.Network)
+    fun indexIsolatesAccountsAndCapsAtFiftyMostRecent() {
+        val index = fakeEncryptedIndex()
+        repeat(55) { i ->
+            index.rememberClaimId("owner@example.invalid", "offer-$i", "claim-$i")
+        }
+        index.rememberClaimId("other@example.invalid", "offer-x", "claim-other")
+
+        val ownerIds = index.getClaimIds("owner@example.invalid")
+        val otherIds = index.getClaimIds("other@example.invalid")
+
+        assertEquals(50, ownerIds.size)
+        assertEquals("claim-54", ownerIds.first())
+        assertFalse(ownerIds.contains("claim-0"))
+        assertFalse(ownerIds.contains("claim-other"))
+        assertNull(index.findClaimId("owner@example.invalid", "offer-0"))
+        assertEquals(listOf("claim-other"), otherIds)
     }
 
-    @Test
-    fun unknownClaimIdIsRecoveredFromListAndRemembered() = runTest {
-        val rows = listOf(active.copy(offerId = "other"), active.copy(status = "Redeemed", claimId = "old"), active)
-        coEvery { api.getMyClaims() } returns Response.success(rows)
-        val restored = (repository().restoreClaim("offer") as Result.Success).data
-        assertEquals("c1", restored.claimId)
-        assertEquals("signed-1", restored.qrPayload)
-        verify { index.rememberClaimId("owner@example.invalid", "offer", "c1") }
-        coVerify(exactly = 0) { api.getClaim(any()) }
-        coVerify(exactly = 0) { api.createClaim(any()) }
-    }
-
-    @Test
-    fun listedClaimWithoutPayloadFetchesDetail() = runTest {
-        coEvery { api.getMyClaims() } returns Response.success(listOf(active.copy(qrPayload = null)))
-        coEvery { api.getClaim("c1") } returns Response.success(active.copy(qrPayload = "detail-payload"))
-        assertEquals("detail-payload", repository().restoreClaim("offer").getOrNull()?.qrPayload)
-    }
-
-    @Test
-    fun listWithoutActiveClaimForOfferIsNotFound() = runTest {
-        coEvery { api.getMyClaims() } returns Response.success(listOf(active.copy(status = "Expired")))
-        assertTrue((repository().restoreClaim("offer") as Result.Failure).error is AppError.NotFound)
-        coEvery { api.getMyClaims() } returns Response.success(listOf(active.copy(expiresAtUtc = "2000-01-01T00:00:00Z")))
-        assertTrue(repository().restoreClaim("offer") is Result.Failure)
-        verify(exactly = 0) { index.rememberClaimId(any(), any(), any()) }
-    }
+    private fun jsonResponse(body: String): MockResponse = MockResponse().setHeader("Content-Type", "application/json").setBody(body)
 }

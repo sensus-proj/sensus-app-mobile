@@ -63,6 +63,7 @@ import com.example.sensus.domain.model.ApartadoOrder
 import com.example.sensus.domain.model.CartItem
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.presentation.common.NavigationIntentUtils
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
@@ -122,6 +123,7 @@ fun ActiveApartadoScreen(
     onCancelApartado: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    SecureScreenEffect()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     var secondsLeft by remember { mutableIntStateOf(INITIAL_TOTAL_SECONDS) }

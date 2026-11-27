@@ -6,6 +6,7 @@ import com.example.sensus.data.remote.api.AiChatApiService
 import com.example.sensus.data.remote.api.AuthApiService
 import com.example.sensus.data.remote.api.ClaimsApiService
 import com.example.sensus.data.remote.api.DiscoveryApiService
+import com.example.sensus.data.remote.api.FavoritesApiService
 import com.example.sensus.data.remote.api.FeedApiService
 import com.example.sensus.data.remote.api.FriendsApiService
 import com.example.sensus.data.remote.api.InterestsApiService
@@ -101,6 +102,7 @@ class NetworkClient(
     val offerFeedApi: OfferFeedApiService by lazy { publishingService<OfferFeedApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
     val interestsApi: InterestsApiService by lazy { publishingService<InterestsApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
     val discoveryApi: DiscoveryApiService by lazy { publishingService<DiscoveryApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
+    val favoritesApi: FavoritesApiService by lazy { publishingService<FavoritesApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }
     val friendsApi: FriendsApiService by lazy { retrofit.create(FriendsApiService::class.java) }
     val claimsApi: ClaimsApiService by lazy { publishingService<ClaimsApiService>(offersHttpClient) }
     val notificationsApi: NotificationsApiService by lazy { publishingService<NotificationsApiService>(publishingHttpClient(TIMEOUT_SECONDS)) }

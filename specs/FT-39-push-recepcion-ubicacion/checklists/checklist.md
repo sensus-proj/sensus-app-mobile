@@ -28,8 +28,8 @@
 
 ## Dispositivo
 
-- [ ] Permiso y registro 200 en teléfono físico
-- [ ] Apertura en primer plano, en segundo plano y con la app cerrada
-- [ ] Oferta cercana, apartado (comprador y comercio) y logout verificados con el backend desplegado
+- [ ] Permiso y registro 200 en teléfono físico (acción del usuario: validar permiso y `PUT /users/device-token` en dispositivo físico; ver plan cierre móvil §5.Z-3)
+- [ ] Apertura en primer plano, en segundo plano y con la app cerrada (acción del usuario: validar recepción FCM en teléfono físico; ver plan cierre móvil §5.Z-3)
+- [ ] Oferta cercana, apartado (comprador y comercio) y logout verificados con el backend desplegado (acción del usuario: validar E2E con backend AWS y teléfono físico; ver plan cierre móvil §5.Z-3)
 
-- [ ] Comprobar en el dispositivo que cerrar sesión y volver a entrar no repite el aviso de ubicación.
+- [ ] Comprobar en el dispositivo que cerrar sesión y volver a entrar no repite el aviso de ubicación (acción del usuario: comprobar en dispositivo físico; ver plan cierre móvil §5.Z-3).

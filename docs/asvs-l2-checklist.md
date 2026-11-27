@@ -63,16 +63,16 @@
 
 ## V9 — Comunicaciones
 
-- [ ] TLS 1.3 obligatorio; `usesCleartextTraffic=false` (FT-01).
-- [ ] Certificate pinning en endpoints criticos (cuando exista red real).
+- [x] TLS 1.3 obligatorio; `usesCleartextTraffic=false` (`network_security_config.xml`, FT-01/FT-43).
+- [x] Certificate pinning en `execute-api.us-east-2.amazonaws.com` (`includeSubdomains="true"`, `pin-set expiration="2027-11-26"`, Amazon Root CA 1..4 + `SFSRootCAG2`; `NetworkPinningTest` + `NetworkSecurityConfigTest`, `FT-43` / `G-07`).
 - [ ] Timeouts y reintentos segun `docs/rate-matrix.md` (FT-01).
 
 ## V10 — Configuracion maliciosa
 
 - [x] `debuggable=false` en release (valor por defecto de AGP).
-- [ ] `allowBackup=false` (hoy `true`; se corrige en FT-02).
+- [x] `allowBackup=false` (`AndroidManifest.xml`, FT-27).
 - [x] `minifyEnabled` + `shrinkResources` en release.
-- [ ] `network_security_config` explicito y `usesCleartextTraffic=false` declarado.
+- [x] `network_security_config` explicito, `usesCleartextTraffic=false` y `FLAG_SECURE` transversal con ref-counting (`SecureScreenEffect` + `DeviceAuthenticator`, `FT-43` / `G-09`).
 - [ ] Permisos runtime de ubicacion (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`) solo cuando se necesiten (FT-08).
 - [ ] Sin ubicacion en segundo plano (FT-08).
 - [ ] Permiso runtime `CAMERA` (con `required="false"`) solicitado solo al abrir escaner QR y sin subir video/frames (FT-14).
@@ -109,3 +109,10 @@
 - Nuevos clientes de publicación sin registro de cuerpos HTTP; autenticación compartida conservada.
 - Caché de lectura del feed dentro de la base SQLCipher existente; migración 2 a 3 sin DROP/DELETE de datos existentes.
 - Pendiente: validación de moderación y cuotas en backend real, y ejecución instrumentada en dispositivo.
+
+### Evidencia Bloque C — 2026-11-26 (`FT-43`: `G-07`, `G-09`, `G-04`)
+
+- **G-07 (Pinning):** `network_security_config.xml` fija las 4 raíces Amazon Root CA y `SFSRootCAG2` (`expiration="2027-11-26"`) para `execute-api.us-east-2.amazonaws.com`, validado contra TLSv1.3 de `zqqdwovx81.execute-api.us-east-2.amazonaws.com:443` y pruebas `NetworkPinningTest` + `NetworkSecurityConfigTest`.
+- **G-09 (`FLAG_SECURE` + Biometría/Credencial):** `SecureScreenEffect` + `WindowSecureFlagRegistry` ref-counted aplicado en pantallas sensibles; `MainActivity : FragmentActivity` y `DeviceAuthenticator` (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`) exigidos antes de revelar QR activo y confirmar eliminación de cuenta (`SecureScreenEffectTest`, `DeviceAuthenticatorTest`, `DeviceAuthUiTest`).
+- **G-04 (SBOM + Provenance):** `org.cyclonedx.bom:3.6.1` genera `app/build/reports/bom.json` (`CycloneDX 1.6`, `199` componentes) y `ci.yml` / `release-playstore.yml` ejecutan carga de SBOM y `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8`.
+- **Pendientes en Apéndice F:** `G-08` (Play Integrity API) queda abierta hasta aprovisionamiento en Google Cloud / Play Console / SSM (`plan §3`).
