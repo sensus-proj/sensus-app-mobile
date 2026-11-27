@@ -37,8 +37,8 @@ import com.example.sensus.domain.model.CreateOfferInput
 import com.example.sensus.domain.model.OfferField
 import com.example.sensus.domain.model.OfferValidationError
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusRed
+import com.example.sensus.theme.SensusVioletBg
 import kotlinx.coroutines.launch
 
 @ComposeUiModel
@@ -95,7 +95,7 @@ fun MerchantNewOfferScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(SensusBackground)) {
+    Box(modifier = modifier.fillMaxSize().background(SensusVioletBg)) {
         NewOfferScrollContent(
             uiState = uiState,
             vmState = vmState,
@@ -135,7 +135,7 @@ private fun NewOfferScrollContent(uiState: NewOfferScreenState, vmState: Merchan
             .navigationBarsPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(MerchantScreenPadding)
     ) {
         NewOfferHeader(onNavigateBack = actions.onNavigateBack)
         Spacer(modifier = Modifier.height(16.dp))

@@ -12,3 +12,8 @@
 Reproducir directamente el video original y retirar la capa amarilla añadida al arranque.
 
 Rellenar los márgenes del reproductor con el amarillo del fotograma y conservar su relación de aspecto.
+
+## Comercio — fidelidad Figma
+7. Capturar los frames 13 a 17 del lienzo SENSUS en modo presentación y registrar sus IDs de nodo.
+8. Rediseñar cada pantalla en su archivo, reutilizando tokens de `theme/` y componentes compartidos del paquete `merchant`. No tocar ViewModels ni contratos.
+9. Compilar app e instrumentadas, ejecutar Detekt, ktlint y pruebas unitarias. Revisar visualmente en dispositivo.

@@ -9,7 +9,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,24 +22,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -49,24 +44,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.sensus.R
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.presentation.common.ComposeUiModel
-import com.example.sensus.theme.SensusBackground
+import com.example.sensus.theme.BrandOrangeDark
+import com.example.sensus.theme.BrandOrangeSoft
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
 import com.example.sensus.theme.SensusRed
-import com.example.sensus.theme.SensusSuccess
 import com.example.sensus.theme.SensusSurface
-import com.example.sensus.theme.SensusTextMuted
 import com.example.sensus.theme.SensusTextPrimary
 import com.example.sensus.theme.SensusTextSecondary
 import com.example.sensus.theme.SensusVioletBg
@@ -79,8 +79,10 @@ private const val MAX_STOCK_UNITS = 999
 private const val DESC_MAX_LINES = 3
 private const val PERCENT_SCALE = 100
 private const val EDIT_BTN_ALPHA = 0.9f
-private const val ICON_BG_ALPHA = 0.1f
-private const val SUCCESS_CHIP_ALPHA = 0.12f
+private const val DASH_LENGTH = 10f
+private const val DASH_GAP = 8f
+
+internal val MerchantFieldShape = RoundedCornerShape(12.dp)
 
 @ComposeUiModel
 internal data class NewOfferFormState(
@@ -107,190 +109,167 @@ internal data class NewOfferErrors(
         get() = productNameError != null || priceError != null || descriptionError != null || categoryError != null || photoError != null
 }
 
-@ComposeUiModel
-private data class OfferTextFieldSpec(
-    val label: String,
-    val value: String,
-    val placeholder: String,
-    val error: String? = null,
-    val maxLines: Int = 1
-)
-
 @Composable
 internal fun NewOfferHeader(onNavigateBack: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(
-            onClick = onNavigateBack,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(SensusSurface)
-        ) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = SensusVioletInk)
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = "Publicar Nueva Oferta", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-    }
+    MerchantScreenHeader(
+        title = stringResource(R.string.merchant_new_offer_title),
+        subtitle = stringResource(R.string.merchant_new_offer_subtitle),
+        onNavigateBack = onNavigateBack
+    )
+}
+
+/** Borde punteado violeta de la maqueta para las zonas de carga de foto. */
+internal fun Modifier.merchantDashedBorder(color: Color = SensusPurple): Modifier = drawBehind {
+    drawRoundRect(
+        color = color,
+        style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(DASH_LENGTH, DASH_GAP))),
+        cornerRadius = CornerRadius(16.dp.toPx())
+    )
 }
 
 @Composable
 internal fun OfferPhotoCard(selectedBitmap: Bitmap?, selectedImageUri: Uri?, error: String? = null, onClick: () -> Unit) {
     Column {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = SensusSurface),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-        ) {
-            if (selectedBitmap != null || selectedImageUri != null) {
-                SelectedOfferImageBox(selectedBitmap = selectedBitmap, selectedImageUri = selectedImageUri)
-            } else {
-                EmptyOfferPhotoPlaceholder()
-            }
+        if (selectedBitmap != null || selectedImageUri != null) {
+            SelectedOfferImageBox(selectedBitmap, selectedImageUri, onClick)
+        } else {
+            MerchantPhotoUploadRow(
+                title = stringResource(R.string.merchant_new_offer_photo_title),
+                subtitle = stringResource(R.string.merchant_new_offer_photo_hint),
+                onClick = onClick
+            )
         }
-        error?.let { msg ->
-            Text(text = msg, color = SensusRed, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp, top = 4.dp))
-        }
+        error?.let { MerchantErrorText(it) }
     }
 }
 
 @Composable
-private fun SelectedOfferImageBox(selectedBitmap: Bitmap?, selectedImageUri: Uri?) {
+internal fun MerchantPhotoUploadRow(title: String, subtitle: String, onClick: () -> Unit, icon: ImageVector = Icons.Default.PhotoCamera) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(SensusSurface)
+            .merchantDashedBorder()
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        MerchantIconBadge(icon, size = 44)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SensusVioletInk)
+            Text(subtitle, fontSize = 11.sp, color = SensusTextSecondary)
+        }
+        Icon(Icons.Default.Add, contentDescription = null, tint = SensusVioletInk)
+    }
+}
+
+@Composable
+private fun SelectedOfferImageBox(selectedBitmap: Bitmap?, selectedImageUri: Uri?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(180.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
     ) {
+        val description = stringResource(R.string.merchant_new_offer_photo_preview)
         if (selectedBitmap != null) {
-            Image(
-                bitmap = selectedBitmap.asImageBitmap(),
-                contentDescription = "Foto producto",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+            Image(selectedBitmap.asImageBitmap(), description, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else if (selectedImageUri != null) {
-            AsyncImage(
-                model = selectedImageUri,
-                contentDescription = "Foto producto",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+            AsyncImage(selectedImageUri, description, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
         Surface(
-            shape = CircleShape,
+            shape = RoundedCornerShape(20.dp),
             color = Color.White.copy(alpha = EDIT_BTN_ALPHA),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(12.dp)
-                .size(36.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Cambiar foto", tint = SensusVioletInk, modifier = Modifier.size(18.dp))
+            Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Edit, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.merchant_new_offer_change_photo), fontSize = 12.sp, color = SensusVioletInk)
             }
         }
-    }
-}
-
-@Composable
-private fun EmptyOfferPhotoPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(SensusPurple.copy(alpha = ICON_BG_ALPHA)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(imageVector = Icons.Default.AddAPhoto, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(28.dp))
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(text = "Agregar foto del excedente", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SensusTextPrimary)
-        Text(text = "Captura con la cámara o selecciona desde tu galería", fontSize = 11.sp, color = SensusTextMuted)
     }
 }
 
 @Composable
 internal fun OfferFormCard(form: NewOfferFormState, errors: NewOfferErrors, onFormChange: (NewOfferFormState) -> Unit) {
     val discountPercent = calculateOfferDiscountPercent(form.originalPrice, form.discountPrice)
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SensusSurface),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            OfferTextField(
-                spec = OfferTextFieldSpec("Título del producto", form.productName, "Ej. Leche Entera 1 L, Pan artesanal...", errors.productNameError),
-                onValueChange = { onFormChange(form.copy(productName = it)) }
-            )
-            OfferTextField(
-                spec = OfferTextFieldSpec(
-                    "Descripción del producto",
-                    form.description,
-                    "Detalla el estado, empaque o motivo...",
-                    error = errors.descriptionError,
-                    maxLines = DESC_MAX_LINES
-                ),
-                onValueChange = { onFormChange(form.copy(description = it)) }
-            )
-            OfferCategoryPicker(selected = form.selectedCategory, onSelect = { onFormChange(form.copy(selectedCategory = it)) })
-            errors.categoryError?.let { Text(text = it, color = SensusRed, fontSize = 11.sp) }
-            OfferPriceRow(form = form, errors = errors, onFormChange = onFormChange)
-            if (discountPercent > 0) {
-                DiscountPreviewChip(
-                    discountPercent = discountPercent,
-                    savings = com.example.sensus.domain.model.OfferPublishingPolicy.savedAmount(
-                        form.originalPrice.toDoubleOrNull() ?: 0.0,
-                        form.discountPrice.toDoubleOrNull() ?: 0.0
-                    )
-                )
-            }
-            OfferStockStepperRow(
-                unitsCount = form.unitsCount,
-                onDecrement = { if (form.unitsCount > 1) onFormChange(form.copy(unitsCount = form.unitsCount - 1)) },
-                onIncrement = { if (form.unitsCount < MAX_STOCK_UNITS) onFormChange(form.copy(unitsCount = form.unitsCount + 1)) }
-            )
-            OfferExpirationField(form.expiresAtMillis, errors.expirationError) {
-                onFormChange(form.copy(expiresAtMillis = it))
-            }
-            errors.stockError?.let { Text(it, color = SensusRed) }
-            errors.descriptionError?.let { Text(it, color = SensusRed) }
-        }
-    }
-}
-
-@Composable
-private fun OfferTextField(spec: OfferTextFieldSpec, onValueChange: (String) -> Unit) {
-    Column {
-        Text(text = spec.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
-        Spacer(modifier = Modifier.height(4.dp))
-        OutlinedTextField(
-            value = spec.value,
-            onValueChange = onValueChange,
-            placeholder = { Text(spec.placeholder) },
-            isError = spec.error != null,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = sensusOutlinedTextFieldColors(),
-            singleLine = spec.maxLines == 1,
-            maxLines = spec.maxLines
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        MerchantTextField(
+            label = stringResource(R.string.merchant_new_offer_name),
+            value = form.productName,
+            options = MerchantFieldOptions(placeholder = stringResource(R.string.merchant_new_offer_name_hint), error = errors.productNameError),
+            onValueChange = { onFormChange(form.copy(productName = it)) }
         )
-        spec.error?.let { err ->
-            Text(text = err, color = SensusRed, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp, top = 2.dp))
-        }
+        MerchantCategoryPicker(selected = form.selectedCategory, onSelect = { onFormChange(form.copy(selectedCategory = it)) })
+        errors.categoryError?.let { MerchantErrorText(it) }
+        MerchantTextField(
+            label = stringResource(R.string.merchant_new_offer_description),
+            value = form.description,
+            options = MerchantFieldOptions(
+                placeholder = stringResource(R.string.merchant_new_offer_description_hint),
+                error = errors.descriptionError,
+                maxLines = DESC_MAX_LINES
+            ),
+            onValueChange = { onFormChange(form.copy(description = it)) }
+        )
+        OfferPriceRow(form = form, discountPercent = discountPercent, error = errors.priceError, onFormChange = onFormChange)
+        OfferStockStepperRow(
+            unitsCount = form.unitsCount,
+            onDecrement = { if (form.unitsCount > 1) onFormChange(form.copy(unitsCount = form.unitsCount - 1)) },
+            onIncrement = { if (form.unitsCount < MAX_STOCK_UNITS) onFormChange(form.copy(unitsCount = form.unitsCount + 1)) }
+        )
+        errors.stockError?.let { MerchantErrorText(it) }
+        OfferExpirationPicker(form.expiresAtMillis, errors.expirationError) { onFormChange(form.copy(expiresAtMillis = it)) }
+        MerchantNoticeCard(text = stringResource(R.string.merchant_new_offer_notice), icon = Icons.Default.Timer)
+    }
+}
+
+@ComposeUiModel
+internal data class MerchantFieldOptions(
+    val placeholder: String = "",
+    val error: String? = null,
+    val maxLines: Int = 1,
+    val keyboardType: KeyboardType = KeyboardType.Text,
+    val leadingIcon: ImageVector? = null
+)
+
+@Composable
+internal fun MerchantTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    options: MerchantFieldOptions = MerchantFieldOptions()
+) {
+    Column(modifier) {
+        MerchantFieldLabel(label)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(options.placeholder) },
+            isError = options.error != null,
+            leadingIcon = options.leadingIcon?.let { icon -> { Icon(icon, contentDescription = null) } },
+            keyboardOptions = KeyboardOptions(keyboardType = options.keyboardType),
+            modifier = Modifier.fillMaxWidth(),
+            shape = MerchantFieldShape,
+            colors = sensusOutlinedTextFieldColors(),
+            singleLine = options.maxLines == 1,
+            maxLines = options.maxLines
+        )
+        options.error?.let { MerchantErrorText(it) }
     }
 }
 
 @Composable
-private fun OfferCategoryPicker(selected: StoreCategory, onSelect: (StoreCategory) -> Unit) {
+private fun MerchantCategoryPicker(selected: StoreCategory, onSelect: (StoreCategory) -> Unit) {
     Column {
-        Text(text = "Categoría", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
-        Spacer(modifier = Modifier.height(6.dp))
+        MerchantFieldLabel(stringResource(R.string.merchant_new_offer_category))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -318,104 +297,73 @@ private fun OfferCategoryPicker(selected: StoreCategory, onSelect: (StoreCategor
 }
 
 @Composable
-private fun OfferPriceRow(form: NewOfferFormState, errors: NewOfferErrors, onFormChange: (NewOfferFormState) -> Unit) {
+private fun OfferPriceRow(form: NewOfferFormState, discountPercent: Int, error: String?, onFormChange: (NewOfferFormState) -> Unit) {
     Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PriceInputColumn(
-                label = "Precio Original ($)",
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MerchantTextField(
+                label = stringResource(R.string.merchant_new_offer_original_price),
                 value = form.originalPrice,
-                placeholder = "180.00",
+                options = MerchantFieldOptions(stringResource(R.string.merchant_new_offer_original_price_hint), keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
                 onValueChange = { onFormChange(form.copy(originalPrice = it)) }
             )
-            PriceInputColumn(
-                label = "Precio Oferta ($)",
+            MerchantTextField(
+                label = stringResource(R.string.merchant_new_offer_sensus_price),
                 value = form.discountPrice,
-                placeholder = "90.00",
+                options = MerchantFieldOptions(stringResource(R.string.merchant_new_offer_sensus_price_hint), keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
                 onValueChange = { onFormChange(form.copy(discountPrice = it)) }
             )
         }
-        errors.priceError?.let { err ->
-            Text(text = err, color = SensusRed, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp, top = 4.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.merchant_new_offer_currency_hint), fontSize = 11.sp, color = SensusTextSecondary, modifier = Modifier.weight(1f))
+            if (discountPercent > 0) {
+                MerchantStatusChip(stringResource(R.string.merchant_new_offer_discount, discountPercent), BrandOrangeDark, BrandOrangeSoft)
+            }
         }
-    }
-}
-
-@Composable
-private fun PriceInputColumn(label: String, value: String, placeholder: String, modifier: Modifier = Modifier, onValueChange: (String) -> Unit) {
-    Column(modifier = modifier) {
-        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
-        Spacer(modifier = Modifier.height(4.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholder) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = sensusOutlinedTextFieldColors(),
-            singleLine = true
-        )
-    }
-}
-
-@Composable
-private fun DiscountPreviewChip(discountPercent: Int, savings: Double) {
-    Surface(color = SensusSuccess.copy(alpha = SUCCESS_CHIP_ALPHA), shape = RoundedCornerShape(8.dp)) {
-        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = SensusSuccess, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "Descuento del $discountPercent% · Ahorro: $" + java.lang.String.format(java.util.Locale.getDefault(), "%.2f", savings),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = SensusSuccess
-            )
-        }
+        error?.let { MerchantErrorText(it) }
     }
 }
 
 @Composable
 private fun OfferStockStepperRow(unitsCount: Int, onDecrement: () -> Unit, onIncrement: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Column {
-            Text(text = "Unidades disponibles", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
-            Text(text = "Stock total de este lote", fontSize = 11.sp, color = SensusTextMuted)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StepperCircleButton(Icons.Default.Remove, "Menos", onDecrement)
-            Text(text = "$unitsCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
-            StepperCircleButton(Icons.Default.Add, "Más", onIncrement)
+    MerchantCard {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.merchant_new_offer_units), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = SensusTextPrimary)
+                Text(stringResource(R.string.merchant_new_offer_units_hint), fontSize = 11.sp, color = SensusTextSecondary)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StepperCircleButton(Icons.Default.Remove, stringResource(R.string.merchant_new_offer_less), onDecrement)
+                Text("$unitsCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SensusVioletInk)
+                StepperCircleButton(Icons.Default.Add, stringResource(R.string.merchant_new_offer_more), onIncrement)
+            }
         }
     }
 }
 
 @Composable
 private fun StepperCircleButton(icon: ImageVector, description: String, onClick: () -> Unit) {
-    Surface(shape = CircleShape, color = SensusBackground, modifier = Modifier.size(32.dp).clickable(onClick = onClick)) {
+    Surface(shape = CircleShape, color = SensusVioletBg, modifier = Modifier.size(36.dp).clickable(onClick = onClick)) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = description, tint = SensusVioletInk, modifier = Modifier.size(16.dp))
+            Icon(icon, contentDescription = description, tint = SensusVioletInk, modifier = Modifier.size(18.dp))
         }
     }
 }
 
 @Composable
 internal fun PublishOfferButton(isLoading: Boolean, isEnabled: Boolean = true, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = !isLoading && isEnabled,
-        shape = SensusButtonShape,
-        colors = ButtonDefaults.buttonColors(containerColor = SensusPurple),
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 14.dp)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(10.dp))
-            Text("Verificando seguridad...", fontSize = 15.sp, color = Color.White)
-        } else {
-            Text(text = "Publicar Oferta Ahora", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MerchantPrimaryButton(
+            text = stringResource(if (isLoading) R.string.merchant_new_offer_publishing else R.string.merchant_new_offer_publish),
+            onClick = onClick,
+            enabled = isEnabled,
+            loading = isLoading
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = SensusTextSecondary, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.merchant_new_offer_map_hint), fontSize = 11.sp, color = SensusTextSecondary)
         }
     }
 }
@@ -448,7 +396,7 @@ private fun PickerOptionRow(icon: ImageVector, label: String, onClick: () -> Uni
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = SensusVioletInk, modifier = Modifier.size(24.dp))
+        MerchantIconBadge(icon)
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = SensusTextPrimary)
     }
@@ -477,9 +425,4 @@ internal fun calculateOfferDiscountPercent(originalPrice: String, discountPrice:
     } else {
         0
     }
-}
-
-@Composable
-private fun OfferExpirationField(value: Long, error: String?, onChange: (Long) -> Unit) {
-    OfferExpirationPicker(value, error, onChange)
 }
