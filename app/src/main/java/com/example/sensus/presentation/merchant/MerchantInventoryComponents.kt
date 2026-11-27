@@ -110,7 +110,8 @@ private fun MerchantOfferFilterRow(selectedFilter: MerchantOfferFilter, allOffer
 @ComposeUiModel
 internal data class MerchantInventoryActions(
     val onEditClick: (ProductOffer) -> Unit,
-    val onAdjustClick: (ProductOffer) -> Unit
+    val onAdjustClick: (ProductOffer) -> Unit,
+    val filterKey: String = ""
 )
 
 @Composable
@@ -121,7 +122,7 @@ internal fun MerchantCategoryGroup(
     actions: MerchantInventoryActions,
     modifier: Modifier = Modifier
 ) {
-    var expanded by rememberSaveable(category) { mutableStateOf(initiallyExpanded) }
+    var expanded by rememberSaveable(actions.filterKey, category) { mutableStateOf(initiallyExpanded) }
     MerchantCard(modifier) {
         Row(
             modifier = Modifier

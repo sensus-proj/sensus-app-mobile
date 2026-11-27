@@ -37,8 +37,7 @@ specs/FT-XX-<slug>/
 | `FT-15-oferta-creacion-comercio` | Negocio (Ola 2) | SE-019..SE-022; P-32 | FT-10 | En revision | 15/15 tareas (T15.15: `StoreCategory.apiCode` y mapeo inverso completados); `CreateOfferUseCase`, `OfferPublishingE2ETest`; pendiente E2E contra backend desplegado |
 | `FT-16-inventario-ciclo-vida` | Negocio (Ola 2) | SE-023..SE-026, SE-045; P-30, P-31 | FT-15 | En implementacion | Android muestra el contador de vistas publicado por oferta, incluido cero. Edición y pausa probadas en teléfono; falta que el inventario desplegado publique `viewCount`. |
 | `FT-17-favoritos` | Negocio (Ola 3) | SE-036; P-23 | FT-12 | En revision | `FavoriteEntity` v9 (`MIGRATION_8_9`), `FavoritesApiService` (`POST/GET /users/favorites`), `FavoritesScreen`/`ViewModel`, `ProductDetailScreen` & `BuyerHomeScreen` integrados, `541/541` unitarias / Kover `80.75 %`, pendiente E2E dispositivo (`§5.Z-3`) y PR/tag (`§5.Z-5`). |
-| `FT-18-feed-comunidad` | Negocio (Ola 3) | SE-027..SE-029; P-24 | FT-11, FT-15 | En implementacion | 15/16 tareas; cliente de `/feed/posts` y `/feed/nearby` listo; bloqueada por specs backend 024/026 (auditoría 2026-11-15) |
-| `FT-19-interacciones-reportes` | Negocio (Ola 3) | SE-030..SE-033; P-22 | FT-18 | En revision | `PostCommentsSheet.kt`, `ReportContentDialog.kt`, `ReportsRepositoryImpl.kt`, `FeedApiService.kt`, tests unitarios/`MockWebServer`/Compose; pendiente PR/tag |
+| `FT-19-interacciones-reportes` | Negocio (Ola 3) | SE-033; P-22 | FT-12 | En revision | `ReportContentDialog.kt`, `ReportsRepositoryImpl.kt`, `SubmitContentReportUseCase.kt` en `ProductDetailScreen`; Muro comunitario retirado |
 | `FT-20-busqueda-recomendaciones-ml` | Negocio (Ola 3) | SE-034, SE-035, SE-037, SE-038; P-12, P-13 | FT-12, FT-17 | En revision | `SearchOffersUseCase`, `GetOfferAlternativesUseCase`, `SearchOffersScreen`, `SearchHistoryEntity` v8, tests y `MockWebServer`; pendiente PR/tag |
 | `FT-21-push-fcm-ajustes` | Negocio / Push (Ola 3) | SE-039..SE-041; P-04, P-26 | FT-10 | En implementacion | 8/12 tareas; `GET/PUT /users/settings`, `PUT /users/device-token`; falta `google-services.json` oficial y receptor FCM (auditoría 2026-11-15) |
 | `FT-22-ux-transversal-offline` | UX / Offline (Ola 4) | SE-042..SE-044; P-05, P-06 | FT-11 | En implementacion | `spec.md`, `plan.md`, `tasks.md`, `checklists/checklist.md` |
@@ -84,7 +83,7 @@ FT-00 -> FT-01 -> FT-02 -> FT-03 -> FT-04 -> FT-05 -> FT-06 -> FT-07 -> FT-08 ->
   -> FT-10 (Saneamiento)
   -> Ola 1 (FT-11 -> FT-12 -> FT-13 -> FT-14)
   -> Ola 2 (FT-15 -> FT-16)
-  -> Ola 3 (FT-17, FT-18 -> FT-19, FT-20, FT-21)
+  -> Ola 3 (FT-17, FT-19, FT-20, FT-21)
   -> Ola 4 (FT-22, FT-23)
   -> Ola 5 (FT-24, FT-25, FT-26, sujetas a backend)
   -> Ola 6 (FT-27 QA y Release)

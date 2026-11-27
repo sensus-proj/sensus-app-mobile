@@ -2,11 +2,9 @@ package com.example.sensus.presentation
 
 import app.cash.turbine.test
 import com.example.sensus.data.repository.SavedOffersRepositoryImpl
-import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
-import com.example.sensus.presentation.buyer.SavedInterestFilterTab
 import com.example.sensus.presentation.buyer.SavedInterestsViewEffect
 import com.example.sensus.presentation.buyer.SavedInterestsViewIntent
 import com.example.sensus.presentation.buyer.SavedInterestsViewModel
@@ -49,14 +47,6 @@ class SavedInterestsViewModelTest {
         distanceMeters = 120
     )
 
-    private val post = FeedPost(
-        id = "post-1",
-        authorName = "Luis",
-        text = "Pan recién hecho al 37%",
-        createdAt = "Hoy",
-        distanceMeters = 150
-    )
-
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -68,7 +58,7 @@ class SavedInterestsViewModelTest {
     }
 
     @Test
-    fun authenticatedUserCanPinAndUnpinOffersAndPostsAndFilterTabs() = runTest(dispatcher) {
+    fun authenticatedUserCanPinAndUnpinOffers() = runTest(dispatcher) {
         val repo = SavedOffersRepositoryImpl(
             userPreferenceDao = null,
             sessionRepository = sessionRepo,
@@ -82,25 +72,18 @@ class SavedInterestsViewModelTest {
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(SavedInterestsViewEffect.SavedStateChanged(isSaved = true), awaitItem())
             assertTrue(offer.id in vm.viewState.value.savedOfferIds)
-
-            vm.dispatchIntent(SavedInterestsViewIntent.TogglePost(post))
-            dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(SavedInterestsViewEffect.SavedStateChanged(isSaved = true), awaitItem())
-            assertEquals(2, vm.viewState.value.totalCount)
-
-            vm.dispatchIntent(SavedInterestsViewIntent.SelectTab(SavedInterestFilterTab.OFFERS))
-            assertEquals(SavedInterestFilterTab.OFFERS, vm.viewState.value.selectedTab)
+            assertEquals(1, vm.viewState.value.totalCount)
 
             vm.dispatchIntent(SavedInterestsViewIntent.RemoveOffer(offer.id))
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(SavedInterestsViewEffect.SavedStateChanged(isSaved = false), awaitItem())
-            assertEquals(1, vm.viewState.value.totalCount)
+            assertEquals(0, vm.viewState.value.totalCount)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun guestUserEmitsRequireAuthWithoutSavingOfferOrPost() = runTest(dispatcher) {
+    fun guestUserEmitsRequireAuthWithoutSavingOffer() = runTest(dispatcher) {
         sessionFlow.value = SessionState(isSessionActive = true, isGuest = true)
         val repo = SavedOffersRepositoryImpl(
             userPreferenceDao = null,
@@ -112,10 +95,6 @@ class SavedInterestsViewModelTest {
 
         vm.viewEffect.test {
             vm.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(offer))
-            dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(SavedInterestsViewEffect.RequireAuth, awaitItem())
-
-            vm.dispatchIntent(SavedInterestsViewIntent.TogglePost(post))
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(SavedInterestsViewEffect.RequireAuth, awaitItem())
             assertEquals(0, vm.viewState.value.totalCount)

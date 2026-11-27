@@ -2,8 +2,8 @@ package com.example.sensus.data.repository
 
 import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
-import com.example.sensus.data.mapper.FeedMapper.toDomain
 import com.example.sensus.data.remote.api.ReportsApiService
+import com.example.sensus.data.remote.dto.ContentReportResponseDto
 import com.example.sensus.data.remote.dto.CreateContentReportRequest
 import com.example.sensus.domain.model.ContentReportInput
 import com.example.sensus.domain.model.SubmittedReport
@@ -25,7 +25,7 @@ class ReportsRepositoryImpl(
         val response = api.submitReport(request)
         val body = response.body()
         if ((response.code() == HTTP_CREATED || response.isSuccessful) && body != null) {
-            Result.Success(body.toDomain())
+            Result.Success(body.toSubmittedReport())
         } else {
             val message = parseBackendErrorMessage(response.errorBody()?.string())
             val error = if (response.code() == HTTP_CONFLICT) {
@@ -42,3 +42,13 @@ class ReportsRepositoryImpl(
         }
     }
 }
+
+private fun ContentReportResponseDto.toSubmittedReport(): SubmittedReport = SubmittedReport(
+    id = id,
+    targetType = targetType,
+    targetId = targetId,
+    reason = reason,
+    targetMarkedForReview = targetMarkedForReview,
+    createdAtUtc = createdAtUtc,
+    message = message.ifBlank { "Reporte enviado." }
+)

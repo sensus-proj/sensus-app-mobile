@@ -11,6 +11,8 @@ import com.example.sensus.data.mapper.RemoteOfferMapper.toRequest
 import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.api.RepublishOfferRequestDto
 import com.example.sensus.data.remote.dto.ChangeOfferStatusRequestDto
+import com.example.sensus.data.remote.dto.OfferDto
+import com.example.sensus.data.remote.dto.PagedOffersResponseDto
 import com.example.sensus.domain.model.CreateOfferInput
 import com.example.sensus.domain.model.NearbyOffersQuery
 import com.example.sensus.domain.model.OfferLifecycleStatus
@@ -22,6 +24,10 @@ import com.example.sensus.domain.model.UploadedMedia
 import com.example.sensus.domain.repository.OffersRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.decodeFromJsonElement
 import retrofit2.Response
 
 private const val HTTP_OK = 200
@@ -30,6 +36,11 @@ private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_FORBIDDEN = 403
 private const val MERCHANT_INVENTORY_PAGE_SIZE = 100
 private const val MAX_MERCHANT_PAGES = 20
+private val merchantJson = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+    isLenient = true
+}
 private const val HTTP_UNPROCESSABLE = 422
 private const val DEFAULT_UPDATE_DURATION_MS = 86_400_000L
 private const val MIN_BACKEND_DESC_LEN = 5
@@ -115,21 +126,22 @@ class OffersRepositoryImpl(
 
     override suspend fun fetchMerchantOffers(status: String?): Result<List<ProductOffer>> {
         val api = offersApi ?: return Result.Failure(AppError.Network("No se pudo consultar el inventario del comercio."))
-        return safeNetworkCall("Error al cargar tus ofertas.") {
-            val collected = mutableListOf<ProductOffer>()
-            var page = 1
-            while (page <= MAX_MERCHANT_PAGES) {
-                val response = api.getMyMerchantOffers(status = status, page = page, pageSize = MERCHANT_INVENTORY_PAGE_SIZE)
-                val body = response.body()
-                if (!response.isSuccessful || body == null) {
-                    return@safeNetworkCall mapCreateOfferError(response)
-                }
-                collected.addAll(body.items.map { it.toDomain() })
-                if (body.items.isEmpty() || collected.size >= body.totalCount) break
-                page++
-            }
-            Result.Success(collected)
+        return safeNetworkCall("Error al cargar tus ofertas.") { collectMerchantOffers(api, status) }
+    }
+
+    private suspend fun collectMerchantOffers(api: OffersApiService, status: String?): Result<List<ProductOffer>> {
+        val collected = mutableListOf<ProductOffer>()
+        var page = 1
+        while (page <= MAX_MERCHANT_PAGES) {
+            val response = api.getMyMerchantOffers(status = status, page = page, pageSize = MERCHANT_INVENTORY_PAGE_SIZE)
+            val body = response.body()
+            if (!response.isSuccessful || body == null) return mapCreateOfferError(response)
+            val parsedPage = decodeMerchantOffersPage(body, page)
+            collected.addAll(parsedPage.items.map { it.toDomain() })
+            if (shouldStopMerchantPaging(parsedPage, collected.size, page)) break
+            page++
         }
+        return Result.Success(collected)
     }
 
     override suspend fun updateOfferStock(offer: ProductOffer, newStock: Int): Result<ProductOffer> {
@@ -234,4 +246,22 @@ class OffersRepositoryImpl(
         }
         return Result.Failure(error)
     }
+}
+
+private data class ParsedMerchantPage(
+    val items: List<OfferDto>,
+    val totalCount: Int,
+    val resolvedPage: Int,
+    val isPaged: Boolean
+)
+
+private fun shouldStopMerchantPaging(parsedPage: ParsedMerchantPage, collectedSize: Int, page: Int): Boolean =
+    !parsedPage.isPaged || parsedPage.items.isEmpty() || collectedSize >= parsedPage.totalCount || parsedPage.resolvedPage < page
+
+private fun decodeMerchantOffersPage(body: JsonElement, requestedPage: Int): ParsedMerchantPage = if (body is JsonArray) {
+    val list = merchantJson.decodeFromJsonElement<List<OfferDto>>(body)
+    ParsedMerchantPage(items = list, totalCount = list.size, resolvedPage = requestedPage, isPaged = false)
+} else {
+    val paged = merchantJson.decodeFromJsonElement<PagedOffersResponseDto>(body)
+    ParsedMerchantPage(items = paged.items, totalCount = paged.totalCount, resolvedPage = paged.resolvedPage(), isPaged = true)
 }

@@ -3,7 +3,6 @@ package com.example.sensus.data
 import com.example.sensus.data.local.db.dao.UserPreferenceDao
 import com.example.sensus.data.local.db.entity.UserPreferenceEntity
 import com.example.sensus.data.repository.SavedOffersRepositoryImpl
-import com.example.sensus.domain.model.FeedPost
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.repository.SessionRepository
 import com.example.sensus.domain.repository.SessionState
@@ -57,16 +56,6 @@ class SavedOffersRepositoryImplTest {
         distanceMeters = 180
     )
 
-    private val samplePost = FeedPost(
-        id = "post-7",
-        authorName = "Ana",
-        text = "Excelente descuento en lácteos hoy",
-        createdAt = "Hace 10 min",
-        distanceMeters = 250,
-        merchantId = "m-1",
-        merchantName = "Tienda La Palma"
-    )
-
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -89,11 +78,9 @@ class SavedOffersRepositoryImplTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(repo1.toggleSavedOffer(sampleOffer))
-        assertTrue(repo1.toggleSavedPost(samplePost))
         dispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(repo1.isOfferSaved(sampleOffer.id))
-        assertTrue(repo1.isPostSaved(samplePost.id))
 
         val repo2 = SavedOffersRepositoryImpl(
             userPreferenceDao = fakeDao,
@@ -104,14 +91,11 @@ class SavedOffersRepositoryImplTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(listOf(sampleOffer), repo2.savedOffers.value)
-        assertEquals(listOf(samplePost), repo2.savedPosts.value)
 
         assertFalse(repo2.toggleSavedOffer(sampleOffer))
-        repo2.removeSavedPost(samplePost.id)
         dispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(repo2.savedOffers.value.isEmpty())
-        assertTrue(repo2.savedPosts.value.isEmpty())
     }
 
     @Test

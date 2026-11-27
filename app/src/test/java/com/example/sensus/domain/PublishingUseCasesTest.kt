@@ -4,29 +4,18 @@ import com.example.sensus.common.AppError
 import com.example.sensus.common.Result
 import com.example.sensus.domain.media.ImageCompressor
 import com.example.sensus.domain.model.CreateOfferInput
-import com.example.sensus.domain.model.CreatePostInput
-import com.example.sensus.domain.model.FeedPost
-import com.example.sensus.domain.model.FeedQuery
 import com.example.sensus.domain.model.OfferField
 import com.example.sensus.domain.model.OfferPublishingPolicy
-import com.example.sensus.domain.model.PagedFeed
 import com.example.sensus.domain.model.ProductOffer
 import com.example.sensus.domain.model.StoreCategory
 import com.example.sensus.domain.model.UploadedMedia
-import com.example.sensus.domain.repository.FeedRepository
 import com.example.sensus.domain.repository.MediaRepository
 import com.example.sensus.domain.repository.OffersRepository
-import com.example.sensus.domain.repository.SessionRepository
-import com.example.sensus.domain.repository.SessionState
-import com.example.sensus.domain.usecase.CreateFeedPostUseCase
 import com.example.sensus.domain.usecase.CreateOfferUseCase
-import com.example.sensus.domain.usecase.GetNearbyFeedUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
-import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -37,12 +26,9 @@ class PublishingUseCasesTest {
     private val offers = mockk<OffersRepository>()
     private val media = mockk<MediaRepository>()
     private val compressor = mockk<ImageCompressor>()
-    private val feed = mockk<FeedRepository>()
-    private val session = mockk<SessionRepository>()
     private val input = CreateOfferInput("Pan artesanal", "Sellado", StoreCategory.BAKERY, 100.0, 60.0, 7, 2000L)
     private val offer = ProductOffer("1", "Pan artesanal", "Panadería", "Panadería", 100.0, 60.0, 40, 7, 0)
     private val uploaded = UploadedMedia("media-1", "https://example.com/photo.jpg")
-    private val post = FeedPost("post-1", "Vecino", "Oferta", "2026-11-12T12:00:00Z")
 
     @Test
     fun offerPolicy_rejectsEachInvalidFieldIncludingNonFinitePrices() {
@@ -129,56 +115,6 @@ class PublishingUseCasesTest {
 
         assertTrue((result as Result.Failure).error is AppError.Validation)
         coVerify(exactly = 0) { offers.createOffer(any(), any()) }
-    }
-
-    @Test
-    fun guestAndInactiveUser_cannotCreatePost() = runTest {
-        val state = MutableStateFlow(SessionState(isSessionActive = true, isGuest = true))
-        every { session.sessionState } returns state
-        val useCase = CreateFeedPostUseCase(feed, session, media, compressor)
-        assertTrue(useCase(CreatePostInput("Hola", 20.0, -99.0)) is Result.Failure)
-        state.value = SessionState()
-        assertTrue(useCase(CreatePostInput("Hola", 20.0, -99.0)) is Result.Failure)
-        coVerify(exactly = 0) { feed.createPost(any(), any()) }
-    }
-
-    @Test
-    fun invalidTextOrLocation_doesNotCreatePost() = runTest {
-        every { session.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true))
-        val useCase = CreateFeedPostUseCase(feed, session, media, compressor)
-        listOf(
-            CreatePostInput(" ", 20.0, -99.0),
-            CreatePostInput("x".repeat(1001), 20.0, -99.0),
-            CreatePostInput("Hola", Double.NaN, -99.0)
-        ).forEach { assertTrue(useCase(it) is Result.Failure) }
-        coVerify(exactly = 0) { feed.createPost(any(), any()) }
-    }
-
-    @Test
-    fun post_trimsTextAndPreservesMerchantAndCoordinates() = runTest {
-        every { session.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true))
-        val input = CreatePostInput(" Oferta ", 20.0, -99.0, "store-1")
-        coEvery { feed.createPost(input.copy(text = "Oferta"), null) } returns Result.Success(post)
-        assertEquals(Result.Success(post), CreateFeedPostUseCase(feed, session, media, compressor)(input))
-    }
-
-    @Test
-    fun postPhotoRejected_blocksPostCreation() = runTest {
-        every { session.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true))
-        coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
-        coEvery { media.uploadAndModerate(any(), any(), any()) } returns Result.Failure(AppError.ContentRejected())
-        assertTrue(CreateFeedPostUseCase(feed, session, media, compressor)(CreatePostInput("Hola", 20.0, -99.0), byteArrayOf(1)) is Result.Failure)
-        coVerify(exactly = 0) { feed.createPost(any(), any()) }
-    }
-
-    @Test
-    fun nearbyFeed_clampsGuestRadiusAndPageSize() = runTest {
-        every { session.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true, isGuest = true))
-        coEvery { feed.nearby(any()) } returns Result.Success(PagedFeed(emptyList(), 1, false))
-        GetNearbyFeedUseCase(feed, session)(FeedQuery(20.0, -99.0, radiusMeters = 5000, pageSize = 200))
-        coVerify { feed.nearby(FeedQuery(20.0, -99.0, radiusMeters = 2000, pageSize = 100)) }
-        assertTrue(GetNearbyFeedUseCase(feed, session)(FeedQuery(91.0, -99.0)) is Result.Failure)
-        assertTrue(GetNearbyFeedUseCase(feed, session)(FeedQuery(20.0, -99.0, page = 0)) is Result.Failure)
     }
 
     @Test

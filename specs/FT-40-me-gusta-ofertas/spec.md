@@ -12,7 +12,7 @@
 
 Permitir que los usuarios registrados reaccionen con «Me gusta» desde el detalle de cualquier oferta/producto (`ProductDetailScreen`) y desde tarjetas de catálogo, mostrando de forma pública cuántas personas han dado «Me gusta» (`likesCount`) y si el usuario actual ya reaccionó (`isLikedByMe`), sincronizado con el servidor y con actualización optimista reversible ante errores.
 
-> Distinta de `FT-19-interacciones-reportes` (`POST /api/v1/feed/posts/{id}/like` sobre posts de feed): esta feature opera sobre productos/ofertas comerciales (`/api/v1/offers/{id}/like`).
+> Esta feature opera sobre productos/ofertas comerciales (`POST /api/v1/offers/{id}/like`).
 
 ## 2. Usuarios y flujo principal
 

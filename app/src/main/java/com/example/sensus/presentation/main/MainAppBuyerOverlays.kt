@@ -40,11 +40,6 @@ private fun RenderSavedInterestsOverlay(state: MainAppState) {
         callbacks = SavedInterestsCallbacks(
             onNavigateBack = { state.showSavedInterests = false },
             onOfferClick = { offer -> state.selectedProductForDetail = offer },
-            onMerchantClick = { merchantId ->
-                state.showSavedInterests = false
-                state.communityMerchantId = merchantId
-                state.buyerTabIndex = 1
-            },
             onExploreOffers = {
                 state.showSavedInterests = false
                 state.buyerTabIndex = 1

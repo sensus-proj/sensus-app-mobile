@@ -48,7 +48,7 @@ class CreateOfferUseCase(
 internal fun offerModerationContext(title: String, description: String): String =
     listOf(title.trim(), description.trim()).filter { it.isNotBlank() }.joinToString("\n")
 
-/** Compresion + subida moderada compartida por ofertas (FT-15) y publicaciones del feed (FT-18). */
+/** Compresion + subida moderada para imagenes de ofertas (FT-15). */
 internal suspend fun uploadMediaIfPresent(
     mediaRepository: MediaRepository,
     imageCompressor: ImageCompressor,
