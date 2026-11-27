@@ -71,19 +71,19 @@ class PublishingUseCasesTest {
     fun invalidOffer_neverUploadsOrCreates() = runTest {
         val result = CreateOfferUseCase(offers, media, compressor) { 1000L }(input.copy(stock = 0), byteArrayOf(1))
         assertTrue(result is Result.Failure)
-        coVerify(exactly = 0) { media.uploadAndModerate(any(), any()) }
+        coVerify(exactly = 0) { media.uploadAndModerate(any(), any(), any()) }
         coVerify(exactly = 0) { offers.createOffer(any(), any()) }
     }
 
     @Test
     fun validOffer_compressesUploadsAndCreatesWithApprovedMedia() = runTest {
         coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
-        coEvery { media.uploadAndModerate(any(), "image/jpeg") } returns Result.Success(uploaded)
+        coEvery { media.uploadAndModerate(any(), "image/jpeg", any()) } returns Result.Success(uploaded)
         coEvery { offers.createOffer(input, uploaded) } returns Result.Success(offer)
         assertEquals(Result.Success(offer), CreateOfferUseCase(offers, media, compressor) { 1000L }(input, byteArrayOf(1)))
         coVerifyOrder {
             compressor.compressForUpload(any())
-            media.uploadAndModerate(any(), "image/jpeg")
+            media.uploadAndModerate(any(), "image/jpeg", any())
             offers.createOffer(input, uploaded)
         }
     }
@@ -91,7 +91,7 @@ class PublishingUseCasesTest {
     @Test
     fun rejectedPhoto_neverCreatesOffer() = runTest {
         coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
-        coEvery { media.uploadAndModerate(any(), any()) } returns Result.Failure(AppError.ContentRejected())
+        coEvery { media.uploadAndModerate(any(), any(), any()) } returns Result.Failure(AppError.ContentRejected())
         assertTrue(CreateOfferUseCase(offers, media, compressor) { 1000L }(input, byteArrayOf(1)) is Result.Failure)
         coVerify(exactly = 0) { offers.createOffer(any(), any()) }
     }
@@ -102,7 +102,7 @@ class PublishingUseCasesTest {
         val useCase = CreateOfferUseCase(offers, media, compressor) { 1000L }
         assertTrue(useCase(input, byteArrayOf(1)) is Result.Failure)
         assertTrue(useCase(input, byteArrayOf()) is Result.Failure)
-        coVerify(exactly = 0) { media.uploadAndModerate(any(), any()) }
+        coVerify(exactly = 0) { media.uploadAndModerate(any(), any(), any()) }
     }
 
     @Test
@@ -112,7 +112,7 @@ class PublishingUseCasesTest {
         assertTrue((useCase(input) as Result.Failure).error is AppError.Validation)
         assertTrue((useCase(input.copy(category = StoreCategory.ALL), byteArrayOf(1)) as Result.Failure).error is AppError.Validation)
         coVerify(exactly = 0) { compressor.compressForUpload(any()) }
-        coVerify(exactly = 0) { media.uploadAndModerate(any(), any()) }
+        coVerify(exactly = 0) { media.uploadAndModerate(any(), any(), any()) }
         coVerify(exactly = 0) { offers.createOffer(any(), any()) }
     }
 
@@ -120,7 +120,7 @@ class PublishingUseCasesTest {
     fun offerThatExpiresDuringImageUpload_neverCreates() = runTest {
         var now = 1000L
         coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
-        coEvery { media.uploadAndModerate(any(), any()) } coAnswers {
+        coEvery { media.uploadAndModerate(any(), any(), any()) } coAnswers {
             now = input.expiresAtMillis
             Result.Success(uploaded)
         }
@@ -166,7 +166,7 @@ class PublishingUseCasesTest {
     fun postPhotoRejected_blocksPostCreation() = runTest {
         every { session.sessionState } returns MutableStateFlow(SessionState(isSessionActive = true))
         coEvery { compressor.compressForUpload(any()) } returns byteArrayOf(2)
-        coEvery { media.uploadAndModerate(any(), any()) } returns Result.Failure(AppError.ContentRejected())
+        coEvery { media.uploadAndModerate(any(), any(), any()) } returns Result.Failure(AppError.ContentRejected())
         assertTrue(CreateFeedPostUseCase(feed, session, media, compressor)(CreatePostInput("Hola", 20.0, -99.0), byteArrayOf(1)) is Result.Failure)
         coVerify(exactly = 0) { feed.createPost(any(), any()) }
     }

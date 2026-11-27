@@ -22,8 +22,8 @@ Las tareas históricas de rutas no publicadas se sustituyen por este alcance rat
 
 - [x] Aprovisionar recursos Android oficiales de Firebase por equipo de despliegue; `app/google-services.json` presente en local (ignorado por git, 2026-11-22). CI compila sin él (el plugin solo se aplica si el archivo existe); el release a Play necesita aportarlo.
 - [x] Servicio receptor, canales, renovación y ciclo login/logout con contratos publicados (implementado en FT-39; E2E en teléfono se sigue en FT-39). Se atiende en `FT-39-push-recepcion-ubicacion` (2026-11-19); RF-21-06 cambia: el `deviceId` ahora es un UUID por instalación, no el ID de Firebase Installations.
-- [ ] Bandeja local cifrada cuando exista alcance/contrato acordado; no inventar API inbox ni marcado remoto.
-- [ ] Main concilia memoria y documentación compartida; ejecuta CHECKLIST_PR, seguridad y cobertura antes de merge.
+- [ ] Bandeja local cifrada — fuera de alcance (sin contrato backend; decisión del responsable 2026-11-26).
+- [ ] Main concilia memoria y documentación compartida; ejecuta CHECKLIST_PR, seguridad y cobertura antes de merge (acción del usuario: completar `CHECKLIST_PR.md` antes del merge; ver plan cierre móvil §5.Z-5).
 ## Corrección posterior al gate inicial
 
 - [x] T21.S7 Corregir ReturnCount del mapper y previews sin suppressions; serializar intenciones MVI y revisar errores Firebase.

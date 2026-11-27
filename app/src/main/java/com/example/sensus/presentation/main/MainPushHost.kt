@@ -156,6 +156,7 @@ private fun MainAppState.closePushOverlays() {
     selectedStoreCatalog = null
     selectedFriendForOffers = null
     showSavedInterests = false
+    showFavorites = false
     showMyClaims = false
     selectedOfferForEdit = null
     showMerchantRegister = false

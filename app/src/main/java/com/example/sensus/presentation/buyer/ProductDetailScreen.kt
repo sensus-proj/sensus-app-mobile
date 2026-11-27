@@ -55,15 +55,15 @@ fun ProductDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
-    val savedViewModel: SavedInterestsViewModel = hiltViewModel()
+    val favoritesViewModel: FavoritesViewModel = hiltViewModel()
     val friendsViewModel: FriendsViewModel = hiltViewModel()
     val state by viewModel.viewState.collectAsStateWithLifecycle()
-    val savedState by savedViewModel.viewState.collectAsStateWithLifecycle()
+    val favoritesState by favoritesViewModel.viewState.collectAsStateWithLifecycle()
     val friendsState by friendsViewModel.viewState.collectAsStateWithLifecycle()
     var showShareSheet by remember(offer.id) { mutableStateOf(false) }
 
     ProductDetailEffects(offer = offer, viewModel = viewModel, onRequireAuth = callbacks.onRequireAuth)
-    SavedInterestsEffectHandler(savedViewModel = savedViewModel, onRequireAuth = callbacks.onRequireAuth)
+    FavoritesEffectHandler(favoritesViewModel = favoritesViewModel, onRequireAuth = callbacks.onRequireAuth)
     ShareOfferEffectsHandler(
         friendsViewModel = friendsViewModel,
         onShared = { showShareSheet = false },
@@ -77,8 +77,8 @@ fun ProductDetailScreen(
             navigation = callbacks,
             onIntent = viewModel::dispatchIntent,
             onAddToCart = { current, quantity -> cartViewModel.dispatchIntent(CartViewIntent.AddOffer(current, quantity)) },
-            isSaved = offer.id in savedState.savedOfferIds,
-            onToggleSaved = { target -> savedViewModel.dispatchIntent(SavedInterestsViewIntent.ToggleOffer(target)) },
+            isSaved = offer.id in favoritesState.favoriteOfferIds,
+            onToggleSaved = { target -> favoritesViewModel.dispatchIntent(FavoritesViewIntent.ToggleFavorite(target)) },
             onShareOffer = {
                 if (friendsState.isGuest) {
                     callbacks.onRequireAuth()
@@ -265,8 +265,6 @@ private fun ProductDetailSocialSection(offer: ProductOffer, state: ProductDetail
         isBusy = state.isTogglingLike,
         onToggleLike = { actions.onIntent(ProductDetailViewIntent.ToggleLike(offer.id)) }
     )
-    Spacer(modifier = Modifier.height(8.dp))
-    ProductSaveInterestPill(isSaved = actions.isSaved, onClick = { actions.onToggleSaved(offer) })
     Spacer(modifier = Modifier.height(8.dp))
     OutlinedButton(
         onClick = { actions.onIntent(ProductDetailViewIntent.OpenReport) },

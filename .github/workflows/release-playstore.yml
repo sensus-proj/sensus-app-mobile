@@ -32,6 +32,8 @@ on:
 permissions:
   contents: read
   security-events: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: release-playstore-${{ github.ref }}
@@ -99,7 +101,7 @@ jobs:
 
       - name: Escaneo SAST de seguridad móvil (Semgrep)
         run: |
-          python -m pip install semgrep==1.130.0
+          python -m pip install semgrep==1.130.0 "setuptools<81"
           semgrep scan --error --strict --max-target-bytes=0 \
             --config p/default --config p/owasp-top-ten --config p/kotlin --config p/java .
 
@@ -187,6 +189,21 @@ jobs:
           echo "Validando compilación de Release..."
           ./gradlew compileReleaseKotlin --no-daemon
 
+      - name: Generar SBOM CycloneDX de Release
+        run: ./gradlew :app:cyclonedxDirectBom --no-daemon
+
+      - name: Subir SBOM CycloneDX
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-sbom-cyclonedx
+          path: app/build/reports/bom.json
+          retention-days: 90
+
+      - name: Atestar procedencia SLSA del SBOM
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: app/build/reports/bom.json
+
       - name: Decodificar credenciales de firma y Service Account en runner efímero
         if: steps.check-env.outputs.ready == 'true'
         env:
@@ -214,6 +231,12 @@ jobs:
           SENSUS_VERSION_CODE: ${{ steps.version-config.outputs.version_code }}
         run: |
           ./gradlew bundleRelease --no-daemon
+
+      - name: Atestar procedencia SLSA del AAB de Release
+        if: steps.check-env.outputs.ready == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: app/build/outputs/bundle/release/*.aab
 
       - name: Determinar pista, estado y notas BCP-47 para Play Console
         if: steps.check-env.outputs.ready == 'true'

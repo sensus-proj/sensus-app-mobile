@@ -149,11 +149,13 @@ internal class MainAppState {
     var selectedFriendForOffers by mutableStateOf<ConnectedFriend?>(null)
     var selectedOfferForEdit by mutableStateOf<ProductOffer?>(null)
     var activeApartadoOffer by mutableStateOf<ProductOffer?>(null)
+    var activeApartadoItems by mutableStateOf<List<com.example.sensus.domain.model.CartItem>>(emptyList())
     var activeClaimExpected by mutableStateOf(false)
     var showCartSheet by mutableStateOf(false)
     var activeRouteOffer by mutableStateOf<ProductOffer?>(null)
     var showNotifications by mutableStateOf(false)
     var showSavedInterests by mutableStateOf(false)
+    var showFavorites by mutableStateOf(false)
     var showMyClaims by mutableStateOf(false)
     var showInterestsPicker by mutableStateOf(false)
     var showSearchOffers by mutableStateOf(false)
@@ -257,6 +259,7 @@ private fun dismissPrimaryOverlay(state: MainAppState): Boolean = when {
     }
     state.activeApartadoOffer != null -> {
         state.activeApartadoOffer = null
+        state.activeApartadoItems = emptyList()
         true
     }
     state.selectedProductForDetail != null -> {
@@ -287,6 +290,10 @@ private fun dismissSocialOverlay(state: MainAppState): Boolean = when {
 private fun dismissUtilityOverlay(state: MainAppState): Boolean = when {
     state.showSavedInterests -> {
         state.showSavedInterests = false
+        true
+    }
+    state.showFavorites -> {
+        state.showFavorites = false
         true
     }
     state.showMyClaims -> {
@@ -566,7 +573,19 @@ internal fun MainAppDialogs(state: MainAppState, isGuest: Boolean, onLogout: () 
                     state.showGuestPrompt = true
                 } else {
                     state.activeClaimExpected = false
+                    state.activeApartadoItems = listOf(com.example.sensus.domain.model.CartItem(offer, 1))
                     state.activeApartadoOffer = offer
+                }
+            },
+            onClaimItems = { items ->
+                state.showCartSheet = false
+                val primary = items.firstOrNull()?.offer ?: return@CartBottomSheet
+                if (isGuest) {
+                    state.showGuestPrompt = true
+                } else {
+                    state.activeClaimExpected = false
+                    state.activeApartadoItems = items
+                    state.activeApartadoOffer = primary
                 }
             }
         )

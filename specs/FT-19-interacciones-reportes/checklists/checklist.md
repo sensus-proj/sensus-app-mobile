@@ -35,4 +35,4 @@
 
 - [x] `./gradlew.bat compileDebugKotlin compileDebugAndroidTestSources detekt ktlintCheck lint testDebugUnitTest koverVerifyDebug`
 - [x] `py scripts/check_sdd.py`, `check_layers.py`, `check_endpoints.py`, `check_secrets.py`, `check_coverage.py --min 80`
-- [ ] PR aprobado hacia `develop`/`main` y tag `v1.22.0-ft19` tras autorización del equipo
+- [ ] PR aprobado hacia `develop`/`main` y tag `v1.22.0-ft19` tras autorización del equipo (acción del usuario: abrir PR, revisar `CHECKLIST_PR.md` y crear tag; ver plan cierre móvil §5.Z-5)

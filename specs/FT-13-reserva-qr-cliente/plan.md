@@ -9,7 +9,7 @@
 
 7. Al confirmar la creación, ClaimOfferViewModel solicita a CartRepository retirar una unidad de la oferta confirmada antes de emitir el efecto de UI. La operación comparte el bloqueo de las demás escrituras de bolsa.
 
-El cliente no usa la consulta individual GET por claimId ni implementa cancelación. El POST continúa apartando una unidad por confirmación y los códigos siguen en memoria.
+El cliente usa `GET /api/v1/offers/claims/{claimId}` sobre los IDs almacenados por cuenta en `EncryptedClaimIndex` (máx. 50) para restaurar el QR y armar "Mis reservas" en paralelo acotado (máx. 4 en `Dispatchers.IO`), podando los 404. El listado remoto y la cancelación quedan fuera de alcance por decisión del responsable (2026-11-26; Spec 033). El POST continúa apartando una unidad por confirmación.
 Verificación pendiente: compileDebugKotlin, testDebugUnitTest, compileDebugAndroidTestSources, lint,
 detekt, ktlintCheck, koverVerify y scripts check_sdd/check_layers/check_endpoints/check_secrets/check_coverage --min 80.
 

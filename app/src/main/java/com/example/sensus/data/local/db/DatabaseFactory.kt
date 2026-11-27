@@ -71,7 +71,8 @@ object DatabaseFactory {
                 SensusDatabaseMigrations.MIGRATION_4_5,
                 SensusDatabaseMigrations.MIGRATION_5_6,
                 SensusDatabaseMigrations.MIGRATION_6_7,
-                SensusDatabaseMigrations.MIGRATION_7_8
+                SensusDatabaseMigrations.MIGRATION_7_8,
+                SensusDatabaseMigrations.MIGRATION_8_9
             )
             .build()
     }

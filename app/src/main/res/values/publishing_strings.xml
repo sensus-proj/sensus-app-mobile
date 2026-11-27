@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="community_tab">Comunidad</string>
+    <string name="community_wall_tab">Muro</string>
+    <string name="community_activity_tab">Actividad</string>
     <string name="community_friends_tab">Amigos y QR</string>
     <string name="community_title">Tu comunidad</string>
     <string name="community_new_post">Nueva publicación</string>
@@ -13,7 +15,9 @@
     <string name="community_create_post">Crear publicación</string>
     <string name="community_share_label">Comparte con tu comunidad</string>
     <string name="community_change_photo">Cambiar foto</string>
-    <string name="community_add_photo">Agregar foto</string>
+    <string name="community_add_photo">Elegir de galería</string>
+    <string name="community_take_photo">Tomar foto</string>
+    <string name="community_photo_moderated_hint">Todas las fotos pasan por moderación automática antes de publicarse.</string>
     <string name="community_remove_photo">Quitar foto</string>
     <string name="community_tag_merchant">Etiquetar un comercio cercano (opcional)</string>
     <string name="community_no_merchant">Sin comercio</string>

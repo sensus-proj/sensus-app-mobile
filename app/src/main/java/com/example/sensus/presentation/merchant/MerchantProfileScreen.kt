@@ -78,6 +78,7 @@ import com.example.sensus.domain.model.MerchantStore
 import com.example.sensus.domain.model.UserLocation
 import com.example.sensus.presentation.common.AppearanceSettings
 import com.example.sensus.presentation.common.ComposeUiModel
+import com.example.sensus.presentation.common.SecureScreenEffect
 import com.example.sensus.theme.SensusBackground
 import com.example.sensus.theme.SensusButtonShape
 import com.example.sensus.theme.SensusPurple
@@ -149,6 +150,7 @@ private enum class MerchantProfileSheet {
 
 @Composable
 fun MerchantProfileScreen(viewModel: MerchantProfileViewModel = hiltViewModel(), onSwitchToBuyer: () -> Unit, modifier: Modifier = Modifier) {
+    SecureScreenEffect()
     val profileState by viewModel.viewState.collectAsState()
     val store = profileState.store
     var activeSheet by remember { mutableStateOf(MerchantProfileSheet.NONE) }

@@ -1,9 +1,9 @@
 package com.example.sensus.data.remote.api
 
-import com.example.sensus.data.remote.dto.CommunityActivityItemDto
 import com.example.sensus.data.remote.dto.FriendItemDto
 import com.example.sensus.data.remote.dto.FriendSharedOffersThreadDto
 import com.example.sensus.data.remote.dto.FriendsOverviewDto
+import com.example.sensus.data.remote.dto.PagedCommunityActivityResponseDto
 import com.example.sensus.data.remote.dto.SendFriendRequestBody
 import com.example.sensus.data.remote.dto.SendFriendRequestResponseDto
 import com.example.sensus.data.remote.dto.ShareOfferRequestBody
@@ -39,5 +39,9 @@ interface FriendsApiService {
     suspend fun shareOfferWithFriends(@Path("offerId") offerId: String, @Body body: ShareOfferRequestBody): Response<ShareOfferResultDto>
 
     @GET("api/v1/community/friends-activity")
-    suspend fun getFriendsActivity(@Query("limit") limit: Int = 50): Response<List<CommunityActivityItemDto>>
+    suspend fun getFriendsActivity(
+        @Query("limit") limit: Int = 50,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = limit
+    ): Response<PagedCommunityActivityResponseDto>
 }

@@ -35,7 +35,11 @@ interface OffersApiService {
     suspend fun getNearbyOffers(@QueryMap parameters: Map<String, String>): Response<PagedOffersResponseDto>
 
     @GET("api/v1/merchants/my-offers")
-    suspend fun getMyMerchantOffers(@Query("status") status: String? = null): Response<List<OfferDto>>
+    suspend fun getMyMerchantOffers(
+        @Query("status") status: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 100
+    ): Response<PagedOffersResponseDto>
 
     @PUT("api/v1/offers/{id}")
     suspend fun updateOffer(@Path("id") id: String, @Body request: UpdateOfferRequestDto): Response<OfferDto>

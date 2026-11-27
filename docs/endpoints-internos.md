@@ -27,7 +27,7 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/auth/logout` | `LogoutUseCase` -> `AuthRepository` -> `AuthApiService` | Bearer | 30/min por usuario | OK (FT-10, 2026-11-11; Spec 004); FT-39: `?deviceId=<UUID de instalación>` desactiva el token push de este teléfono |
 | `POST /api/v1/auth/guest` | `StartGuestSessionUseCase` -> `AuthApiService` | Publico | 30/min por IP | OK (FT-10, 2026-11-11; AuthEndpoints.cs) |
 | `POST /api/v1/auth/reset-password` | `ResetPasswordUseCase` -> `AuthApiService` (concilia con `/recover/confirm`) | Token temporal | 5/hora por IP | OK (FT-10, 2026-11-11; backend expone /reset-password) |
-| `POST /api/v1/users/photo-signature` | `RetrofitProfileRepository` -> `ProfileApiService` | Bearer | 10/min por usuario | OK (FT-10, 2026-11-11; UserEndpoints.cs) |
+| `POST /api/v1/users/photo-signature` | `ProfileApiService` (retirado) | Bearer | — | Retirado cliente y backend (`410 Gone`; reemplazado por `POST /api/v1/media/upload`) |
 | `POST /api/v1/media/moderate` | `ImageModerationService` -> `MediaApiService` (previo a `/media/upload` en FT-15) | Bearer | 20/min por usuario | OK (FT-10, 2026-11-11; MediaEndpoints.cs) |
 | `GET /api/v1/comercios/me` | `MerchantApiService` (legacy espanol; retirado en cliente por `/api/v1/merchants/me`) | Bearer `MERCHANT` | 30/min por usuario | Retirado cliente (FT-10, 2026-11-11; backend transicional) |
 | `GET /api/v1/merchants/me` | `GetMyMerchantUseCase` -> `MerchantRepository` -> `MerchantApiService` | Bearer `MERCHANT` | 30/min por usuario | OK cliente (`FT-10` / `FT-29`, alineado a `Spec 006`) |
@@ -38,17 +38,15 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `GET /api/v1/offers/{id}` | `GetOfferDetailUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Cliente conectado a detalle MVI; contrato backend 032 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
 | `POST /api/v1/offers/{id}/view` | `RegisterOfferViewUseCase` -> `OffersRepository` -> `OffersApiService` | Publico o Bearer | 60/min por IP | Cliente conectado a detalle MVI; contrato backend 032 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
 | `POST /api/v1/offers/{id}/claim` | `CreateClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer (no invitado) | 20/min por usuario | Cliente conectado a confirmación de una unidad/QR real; backend 033 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
-| `GET /api/v1/offers/claims/{claimId}` | `RestoreClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | Consultar contrato del backend | Cliente FT-13; QR activo de un apartado cuyo ID confirmó la instalación |
-| `GET /api/v1/offers/claims` | `GetMyClaimsUseCase` / `RestoreClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | 30/min por usuario | Cliente FT-13 integrado (2026-11-22); respuesta: lista de `ClaimDetailDto` (+`offerTitle` opcional). Ruta pendiente de publicación backend |
-| `PATCH /api/v1/offers/claims/{id}/cancel` | `CancelClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | 10/min por usuario | Cliente FT-13 integrado (2026-11-22); 200 con `ClaimDetailDto` en `Cancelled`. Ruta pendiente de publicación backend |
+| `GET /api/v1/offers/claims/{claimId}` | `GetMyClaimsUseCase` / `RestoreClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer | Consultar contrato del backend | Cliente FT-13; consulta individual usada para restaurar QR y armar "Mis reservas" desde `EncryptedClaimIndex` |
 | `POST /api/v1/offers/claims/{code}/redeem` | `RedeemClaimUseCase` -> `ClaimsRepository` -> `ClaimsApiService` | Bearer `MERCHANT` | 30/min por usuario | Cliente conectado a canje manual MVI; backend 033 y ruta oficial verificados (2026-11-14; cliente y tests locales verificados; E2E real pendiente) |
 | `POST /api/v1/media/upload` | `MediaRepository` -> `MediaApiService` (`@Multipart <= 4.5 MB`, moderado) | Bearer | 20/dia por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 022) |
 | `POST /api/v1/offers` | `CreateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 20/hora por usuario | Implementado cliente / MockWebServer validado; contrato desplegado pendiente (FT-15, spec 034) |
 | `GET /api/v1/merchants/my-offers` | `GetMerchantInventoryUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 037`) |
 | `PUT /api/v1/offers/{id}` | `UpdateOfferUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 035`) |
 | `PUT /api/v1/offers/{id}/status` | `ChangeOfferStatusUseCase` -> `OffersRepository` -> `OffersApiService` | Bearer `MERCHANT` | 30/min por usuario | Implementado cliente / MockWebServer validado (`FT-16`, `Spec 036`) |
-| `POST /api/v1/users/favorites/{offerId}` | `ToggleFavoriteUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer (no invitado) | 120/hora por usuario | Pendiente (FT-17, spec 038; reconciliar con rate-matrix) |
-| `GET /api/v1/users/favorites` | `GetFavoritesUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer | 30/min por usuario | Propuesto / por confirmar backend (FT-17) |
+| `POST /api/v1/users/favorites/{offerId}` | `ToggleFavoriteUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer (no invitado) | 120/hora por usuario (`FavoritesPolicy`) | Implementado cliente (`FT-17`, `Spec 038`) + `MockWebServer` (2026-11-26) |
+| `GET /api/v1/users/favorites` | `GetFavoritesUseCase` -> `FavoritesRepository` -> `FavoritesApiService` | Bearer (no invitado) | `read-heavy` backend | Implementado cliente (`FT-17`) + `MockWebServer` (contrato fijo Decisión 7; 404 conserva Room local hasta Bloque F1 backend, 2026-11-26) |
 | `GET /api/v1/feed/nearby` | `GetNearbyFeedUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer o Publico | 60/min por usuario | Cliente implementado; ruta ausente en backend main 1c27253 (spec 026); GET sin credenciales en AWS respondió 503 (2026-11-21, FT-18) |
 | `POST /api/v1/feed/posts` | `CreateFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer (no invitado) | 10/hora por usuario | Cliente implementado; ruta ausente en backend main 1c27253 (spec 024); sin POST real de prueba (2026-11-21, FT-18) |
 | `DELETE /api/v1/feed/posts/{id}` | `DeleteFeedPostUseCase` -> `FeedRepository` -> `FeedApiService` | Bearer autor | 20/hora por usuario | Implementado cliente + MockWebServer (FT-19, 2026-11-21; backend Spec 024 pendiente) |
@@ -84,8 +82,8 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | `POST /api/v1/merchants/{merchantId}/reviews` | `CreateStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 20/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
 | `POST /api/v1/merchants/reviews/{reviewId}/like` | `ToggleStoreReviewLikeUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
 | `POST /api/v1/merchants/reviews/{reviewId}/replies` | `ReplyStoreReviewUseCase` -> `StoreReviewRepository` -> `StoreReviewsApiService` | Bearer (no invitado) | 30/hora por usuario | Implementado cliente + backend (`FT-26`, `Spec 056`, 2026-11-19) |
-| `POST /api/v1/offers/{id}/like` | `ToggleOfferLikeUseCase` -> `OffersRepository` -> `OfferDetailsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-31`, `Spec 057`, 2026-11-19) |
-| `GET /api/v1/community/friends-activity` | `FriendsActivityViewModel` -> `FriendsActivityRepository` -> `FriendsApiService` | Bearer (no invitado) | 30/min por usuario | Implementado cliente + backend (`FT-32`, `Spec 058`, 2026-11-19) |
+| `POST /api/v1/offers/{id}/like` | `ToggleOfferLikeUseCase` -> `OffersRepository` -> `OfferDetailsApiService` | Bearer (no invitado) | 120/hora por usuario | Implementado cliente + backend (`FT-40`, `Spec 057`, 2026-11-19) |
+| `GET /api/v1/community/friends-activity` | `FriendsActivityViewModel` -> `FriendsActivityRepository` -> `FriendsApiService` | Bearer (no invitado) | 30/min por usuario | Implementado cliente + backend (`FT-41`, `Spec 058`, 2026-11-19) |
 
 ## Contratos por feature
 
@@ -98,9 +96,10 @@ Los endpoints de negocio de FT-04..FT-08 y FT-10..FT-26 quedan declarados aqui a
 | FT-08 | `DELETE /api/users/account` | 204/404 exito; purga local y remota. |
 | FT-29 | `POST /api/v1/merchants/activate`, `GET /api/v1/merchants/me`, `PUT /api/v1/merchants/profile` | Coordenadas opcionales de mapa interactivo; JWT renovado y estado comercial persistidos. |
 | FT-26 | `GET /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/{merchantId}/reviews`, `POST /api/v1/merchants/reviews/{reviewId}/like`, `POST /api/v1/merchants/reviews/{reviewId}/replies` | Calificación 1..5, comentarios/respuestas moderados (`ProfanityFilter` + IA), likes en reseñas y promedio real en `MerchantProfileScreen`. |
-| FT-31 | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/like` | Alternancia de Me gusta sobre ofertas de producto y conteo público (`LikesCount`). |
-| FT-32 | `GET /api/v1/community/friends-activity` | Solo comentarios y likes de ofertas de amigos conectados y del usuario actual. |
-| FT-19 | `POST /api/v1/feed/posts/{id}/like`, `GET`/`POST /api/v1/feed/posts/{id}/comments`, `DELETE /api/v1/feed/posts/{id}`, `POST /api/v1/reports` | Likes optimistas con rollback, comentarios moderados (max 300), borrado de autor y reporte tipificado con deduplicación 24h y exclusión CSAM. |
+| FT-40 | `GET /api/v1/offers/{id}`, `POST /api/v1/offers/{id}/like` | Alternancia de Me gusta sobre ofertas de producto y conteo público (`LikesCount`). |
+| FT-41 | `GET /api/v1/community/friends-activity` | Solo comentarios y likes de ofertas de amigos conectados y del usuario actual. |
+| FT-19 | `POST /api/v1/feed/posts/{id}/like`, `GET`/`POST /api/v1/feed/posts/{id}/comments`, `DELETE /api/v1/feed/posts/{id}`, `POST /api/v1/reports` | Likes optimistas con rollback (`{ "liked": bool }`), comentarios moderados (max 300), borrado de autor y reporte tipificado con deduplicación 24h y exclusión CSAM. |
+| FT-13 | `POST /api/v1/offers/claims` | Reserva atómica de múltiples ofertas/cantidades de un mismo comercio generando un único código QR y descontando `N` unidades. |
 
 ## Plantilla para nuevas filas
 

@@ -23,4 +23,4 @@
 ## Gates automatizados
 
 - [x] `.\gradlew.bat ktlintCheck detekt compileDebugKotlin compileDebugAndroidTestKotlin testDebugUnitTest` verde (`344` pruebas, `0` fallos)
-- [ ] Prueba E2E en dos teléfonos reales tras despliegue de `sensus-back` y `sensus-landing`
+- [ ] Prueba E2E en dos teléfonos reales tras despliegue de `sensus-back` y `sensus-landing` (acción del usuario: probar flujo E2E en dispositivos físicos; ver plan cierre móvil §5.Z-3 y §5.Z-2)

@@ -42,7 +42,7 @@
 - [x] T18.13 Separar fallos de lectura/publicación en CommunityViewState/MVI; conservar borrador/foto y evitar que errores de carga aparezcan en el formulario.
 - [x] T18.14 Mostrar estado de servicio no disponible para NotFound y ocultar estado vacío al fallar carga; textos en recursos Android.
 - [x] T18.15 Agregar regresiones HTTP 404/autenticación, ViewModel y Compose; ejecutar compilación, tests, Kover, análisis y gates sin APK/AAB.
-- [ ] T18.16 Integración E2E con backend implementado/desplegado y contrato de respuesta aprobado (dependencia backend 024/026, no resuelta desde el cliente).
+- [ ] T18.16 Integración E2E con backend implementado/desplegado y contrato de respuesta aprobado (acción del usuario: validar E2E contra backend 024/026 desplegado en AWS; ver plan cierre móvil §5.Z-3).
 
 
 ### Evidencia de corrección local — 2026-11-14
@@ -60,3 +60,8 @@
 - En la revisión posterior, AWS respondió HTTP 404 a `GET /api/v1/feed/nearby`, mientras que ofertas cercanas y ajustes de usuario respondieron HTTP 401 a peticiones sin credenciales. T18.16 sigue pendiente de validar el feed autenticado y su contrato desplegado.
 - Se retiró la dependencia residual de datos de amigos de ejemplo en CommunityViewModel. Una falla de caché ya no invalida una página remota válida, y al leer offline se descartan filas con JSON corrupto sin perder las válidas. Se conserva el error de red si la caché no se puede leer.
 - Validación local: 453 pruebas unitarias sin fallos, Kover Debug 80.79 %, compilación de la app e instrumentadas, lint, Detekt, ktlint y cinco gates Python en verde.
+
+## Activación del Muro comunitario, cámara/galería moderada y etiqueta de comercio — 2026-11-27
+
+- [x] T18.17 `CommunityScreen`: activar pestañas **Muro** (`CommunityFeedContent`), **Actividad** (`FriendsActivityFeedContent`) y **Amigos y QR**, junto con `CreateFeedPostSheet` (cámara con `rememberSafeMerchantCameraLauncher`, galería, advertencia de moderación obligatoria y etiqueta opcional de comercio cercano `merchantId`) y `PostCommentsSheet`.
+- [x] T18.18 Alineación HTTP con Specs 024/026/039: `FeedApiService`/`FeedRepositoryImpl` (`radiusKm` en `/feed/nearby`, lectura de `PagedResult.items`, `SetFeedPostLikeRequest(liked)` explícito en `/like`, `textContext` en `/media/upload` y `202 -> Unprocessable` fail-closed) — verif: `FeedAvailabilityApiTest`, `PublishingApiTest`, `CommunityViewModelInteractionsTest`.

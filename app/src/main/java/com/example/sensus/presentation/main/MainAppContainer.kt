@@ -196,6 +196,7 @@ private fun RenderRouteOverlay(state: MainAppState, isGuest: Boolean) {
                 state.showGuestPrompt = true
             } else {
                 state.activeClaimExpected = false
+                state.activeApartadoItems = listOf(com.example.sensus.domain.model.CartItem(offer, 1))
                 state.activeApartadoOffer = offer
             }
         }
@@ -207,11 +208,16 @@ private fun RenderApartadoOfferOverlay(state: MainAppState) {
     val offer = state.activeApartadoOffer ?: return
     ClaimOfferScreen(
         offer = offer,
+        cartItems = state.activeApartadoItems,
         actions = ClaimsScreenActions(
             expectExisting = state.activeClaimExpected,
-            onNavigateBack = { state.activeApartadoOffer = null },
+            onNavigateBack = {
+                state.activeApartadoOffer = null
+                state.activeApartadoItems = emptyList()
+            },
             onNavigateToRoute = {
                 state.activeApartadoOffer = null
+                state.activeApartadoItems = emptyList()
                 state.activeRouteOffer = offer
             }
         )
@@ -226,7 +232,7 @@ private fun RenderProductDetailOverlay(state: MainAppState, isGuest: Boolean) {
         callbacks = ProductDetailCallbacks(
             onNavigateBack = { state.selectedProductForDetail = null },
             onApartarClick = { offer -> openPublishedClaim(state, isGuest, offer) },
-            onApartarDirect = { offer, _ -> openPublishedClaim(state, isGuest, offer) },
+            onApartarDirect = { offer, quantity -> openPublishedClaim(state, isGuest, offer, quantity = quantity) },
             onNavigateToRoute = { offer ->
                 state.selectedProductForDetail = null
                 state.activeRouteOffer = offer
@@ -357,6 +363,7 @@ private fun BuyerTabContent(state: MainAppState, isGuest: Boolean, onNavigateToT
                 onDeleteAccountClick = { state.showConfirmDeleteAccount = true },
                 onTermsClick = onNavigateToTerms,
                 onHistoryClick = { runWhenAuthenticated(state, isGuest) { state.showSavedInterests = true } },
+                onFavoritesClick = { runWhenAuthenticated(state, isGuest) { state.showFavorites = true } },
                 onMyClaimsClick = { runWhenAuthenticated(state, isGuest) { state.showMyClaims = true } },
                 onEditInterestsClick = { runWhenAuthenticated(state, isGuest) { state.showInterestsPicker = true } },
                 onHelpSupportClick = { state.showHelpCenter = true },
@@ -442,10 +449,11 @@ internal fun toggleMerchantMode(state: MainAppState, isGuest: Boolean, enableMer
     }
 }
 
-internal fun openPublishedClaim(state: MainAppState, isGuest: Boolean, offer: ProductOffer, expectExisting: Boolean = false) {
+internal fun openPublishedClaim(state: MainAppState, isGuest: Boolean, offer: ProductOffer, expectExisting: Boolean = false, quantity: Int = 1) {
     runWhenAuthenticated(state, isGuest) {
         state.selectedProductForDetail = null
         state.activeClaimExpected = expectExisting
+        state.activeApartadoItems = listOf(com.example.sensus.domain.model.CartItem(offer, quantity.coerceAtLeast(1)))
         state.activeApartadoOffer = offer
     }
 }

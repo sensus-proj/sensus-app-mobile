@@ -16,7 +16,7 @@ Validación principal ejecutada: 257 pruebas unitarias sin fallos/errores/omisio
 - [x] Revisión: capturar JSON/HTTP inválidos; comparar identidad de autenticación; expirar QR con reloj; limitar payload y probar fallos sin éxito falso.
 
 
-- [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación.
+- [ ] Ejecutar pruebas instrumentadas en dispositivo y E2E con cuenta real sin simulación (acción del usuario: validar `androidTest` y cámara/canje E2E en dispositivo físico; ver plan cierre móvil §5.Z-3).
 - [x] Retirada de una unidad de bolsa tras confirmar el apartado, cubierta y validada en FT-13.
 - Suite remota de seguridad/CI no ejecutada sin push; paquete SAST p/mobile externo devuelve 404. No se cierran estas condiciones.
 

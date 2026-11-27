@@ -9,9 +9,9 @@
 - [x] T39.4 Presentación: `SensusMessagingService`, canal y `PushNotificationPresenter`, `PushLaunchParser`/`PushOpenRequests`, `PushViewModel`, `MainPushHost`, interruptor de ubicación en `NotificationsScreen`, `MainActivity`, `SensusApp`, manifiesto — verif: `compileDebugKotlin` PASS
 - [x] T39.5 Pruebas unitarias nuevas y adaptadas (`PushPayloadTest`, `NotificationsLocationUseCaseTest`, `NotificationsDeviceSyncTest`, `LogoutUseCaseTest`, `NotificationsPushApiTest`, `NotificationsInstallationStoreTest`, `PushViewModelTest`, `NotificationsLocationToggleTest`, `MainPushNavigationTest`, `PushLaunchParserTest`) — verif: `./gradlew.bat testDebugUnitTest --no-daemon` (413 pruebas, 0 fallos)
 - [x] T39.6 Gates estáticos y cobertura: `compileDebugAndroidTestSources lint detekt ktlintCheck`, `koverVerify`, `py scripts/check_coverage.py --min 80` — PASS, Kover 80.46 %
-- [ ] T39.7 Teléfono físico: permiso con explicación previa y `PUT /users/device-token` 200 (verificar en logs del backend, no en el teléfono)
-- [ ] T39.8 Teléfono físico: tocar una notificación con la app en primer plano, en segundo plano y cerrada; cada una abre su destino
-- [ ] T39.9 Backend desplegado: crear una oferta cerca (llega «Nuevo {producto} cerca de ti»), apartar una oferta (llegan avisos al comprador y al comercio) y cerrar sesión (dejan de llegar)
-- [ ] T39.10 `CHECKLIST_PR.md` verde y PR de la slice
+- [ ] T39.7 Teléfono físico: permiso con explicación previa y `PUT /users/device-token` 200 (acción del usuario: probar en teléfono físico y revisar logs backend; ver plan cierre móvil §5.Z-3)
+- [ ] T39.8 Teléfono físico: tocar una notificación con la app en primer plano, en segundo plano y cerrada; cada una abre su destino (acción del usuario: probar en teléfono físico; ver plan cierre móvil §5.Z-3)
+- [ ] T39.9 Backend desplegado: crear una oferta cerca (llega «Nuevo {producto} cerca de ti»), apartar una oferta (llegan avisos al comprador y al comercio) y cerrar sesión (dejan de llegar) (acción del usuario: E2E en dispositivos con backend desplegado; ver plan cierre móvil §5.Z-3)
+- [ ] T39.10 `CHECKLIST_PR.md` verde y PR de la slice (acción del usuario: completar `CHECKLIST_PR.md`, abrir PR y tag; ver plan cierre móvil §5.Z-5)
 
-- [ ] Verificar que el aviso se conserve al cerrar sesión y que la ubicación quede desactivada.
+- [ ] Verificar que el aviso se conserve al cerrar sesión y que la ubicación quede desactivada (`NotificationsLocationToggleTest` PASS; falta (acción del usuario: verificar en dispositivo físico; ver plan cierre móvil §5.Z-3)).

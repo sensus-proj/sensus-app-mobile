@@ -4,7 +4,6 @@ import com.example.sensus.data.di.SensusContainer
 import com.example.sensus.data.repository.ClaimsRepositoryImpl
 import com.example.sensus.domain.repository.ClaimsRepository
 import com.example.sensus.domain.repository.SessionRepository
-import com.example.sensus.domain.usecase.CancelClaimUseCase
 import com.example.sensus.domain.usecase.CreateClaimUseCase
 import com.example.sensus.domain.usecase.GetMyClaimsUseCase
 import com.example.sensus.domain.usecase.RedeemClaimUseCase
@@ -34,7 +33,4 @@ object ClaimsModule {
 
     @Provides
     fun provideGetMyClaimsUseCase(repository: ClaimsRepository): GetMyClaimsUseCase = GetMyClaimsUseCase(repository)
-
-    @Provides
-    fun provideCancelClaimUseCase(repository: ClaimsRepository): CancelClaimUseCase = CancelClaimUseCase(repository)
 }

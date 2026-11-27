@@ -17,7 +17,6 @@ import com.example.sensus.data.remote.api.MediaApiService
 import com.example.sensus.data.remote.api.OffersApiService
 import com.example.sensus.data.remote.dto.OfferDto
 import com.example.sensus.data.remote.dto.UploadMediaResponse
-import com.example.sensus.data.repository.CloudinarySignedUploader
 import com.example.sensus.data.repository.FeedRepositoryImpl
 import com.example.sensus.data.repository.MediaRepositoryImpl
 import com.example.sensus.data.repository.OffersRepositoryImpl
@@ -148,9 +147,9 @@ class PublishingApiTest {
 
     @Test
     fun merchantInventoryPreservesReportedViewsAndOmitsUnknownMetrics() = runTest {
-        val rows = listOf(",\"viewCount\":12", ",\"viewCount\":0", "", ",\"viewCount\":null", ",\"viewCount\":-1")
+        val rows = listOf(",\"viewsCount\":12", ",\"viewCount\":0", "", ",\"viewCount\":null", ",\"viewCount\":-1")
             .mapIndexed { index, metric -> """{"id":"o$index","title":"Pan","originalPrice":10$metric}""" }
-        server.enqueue(MockResponse().setBody(rows.joinToString(prefix = "[", postfix = "]")))
+        server.enqueue(MockResponse().setBody("""{"items":${rows.joinToString(prefix = "[", postfix = "]")},"totalCount":5,"pageNumber":1,"pageSize":100}"""))
         val repository = OffersRepositoryImpl(mockk<OfferDao>(), client.offersApi)
 
         val inventory = repository.fetchMerchantOffers().getOrNull().orEmpty()
@@ -158,20 +157,29 @@ class PublishingApiTest {
     }
 
     @Test
-    fun merchantInventoryReadsOwnOffersAndDoesNotUseSharedCacheOnFailure() = runTest {
+    fun merchantInventoryReadsOwnOffersAcrossPagesAndDoesNotUseSharedCacheOnFailure() = runTest {
         val dao = mockk<OfferDao>()
         val repo = OffersRepositoryImpl(dao, client.offersApi)
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                """[{"id":"o1","title":"Pan","originalPrice":100.0,"discountedPrice":50.0,"stock":2,"status":"Paused"}]"""
-            )
-        )
+        val pageOneJson = """
+            {"items":[{"id":"o1","title":"Pan","originalPrice":100.0,"discountedPrice":50.0,"stock":2,"status":"Paused"}],
+            "totalCount":2,"pageNumber":1,"pageSize":100}
+        """.trimIndent()
+        val pageTwoJson = """
+            {"items":[{"id":"o2","title":"Café","originalPrice":80.0,"discountedPrice":60.0,"stock":4,"status":"Paused"}],
+            "totalCount":2,"pageNumber":2,"pageSize":100}
+        """.trimIndent()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pageOneJson))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pageTwoJson))
 
         val inventory = repo.fetchMerchantOffers(status = "Paused").getOrNull().orEmpty()
-        assertEquals(OfferLifecycleStatus.PAUSED, inventory.single().status)
+        assertEquals(listOf("o1", "o2"), inventory.map { it.id })
+        assertTrue(inventory.all { it.status == OfferLifecycleStatus.PAUSED })
         val request = server.takeRequest()
         assertEquals("/api/v1/merchants/my-offers", request.requestUrl?.encodedPath)
         assertEquals("Paused", request.requestUrl?.queryParameter("status"))
+        assertEquals("1", request.requestUrl?.queryParameter("page"))
+        val secondRequest = server.takeRequest()
+        assertEquals("2", secondRequest.requestUrl?.queryParameter("page"))
 
         server.enqueue(MockResponse().setResponseCode(403))
         val failure = repo.fetchMerchantOffers() as Result.Failure
@@ -334,7 +342,7 @@ class PublishingApiTest {
         val result = FeedRepositoryImpl(client.feedApi, dao).nearby(FeedQuery(20.0, -99.0, page = 2))
         assertEquals("post-1", (result as Result.Success).data.posts.single().id)
         val request = server.takeRequest()
-        assertTrue(request.path!!.contains("lat=20.0&lng=-99.0&radiusMeters=2000&page=2&pageSize=20"))
+        assertTrue(request.path!!.contains("lat=20.0&lng=-99.0&radiusKm=2.0&page=2&pageSize=20"))
         verify { dao.replacePage(any(), 2, match { it.single().id == "post-1" }) }
     }
 
@@ -389,8 +397,7 @@ class PublishingApiTest {
 
     @Test
     fun mediaUpload_doesNotBypassModerationViaSignedCloudinaryWhenBackendReturns500() = runTest {
-        val uploader = CloudinarySignedUploader(baseUrl = server.url("/").toString())
-        val repository = MediaRepositoryImpl(client.mediaUploadApi, null, client.profileApi, uploader)
+        val repository = MediaRepositoryImpl(client.mediaUploadApi, null)
 
         server.enqueue(MockResponse().setResponseCode(500).setBody("""{"detail":"Error interno"}"""))
 
@@ -404,8 +411,7 @@ class PublishingApiTest {
     fun mediaUpload_doesNotFallbackOn422Rejection() = runTest {
         val moderator = mockk<ImageModerationRepository>()
         coEvery { moderator.moderateImage(any(), any()) } returns ModerationResult.Approved
-        val uploader = CloudinarySignedUploader(baseUrl = server.url("/").toString())
-        val repository = MediaRepositoryImpl(client.mediaUploadApi, moderator, client.profileApi, uploader)
+        val repository = MediaRepositoryImpl(client.mediaUploadApi, moderator)
 
         server.enqueue(MockResponse().setResponseCode(422).setBody("""{"detail":"Imagen bloqueada"}"""))
         val rejected = repository.uploadAndModerate(byteArrayOf(1, 2, 3), "image/jpeg")
@@ -415,10 +421,31 @@ class PublishingApiTest {
     }
 
     @Test
+    fun mediaUpload_distinguishes400ValidationAnd202Quarantine_andForwardsTextContext() = runTest {
+        val repository = MediaRepositoryImpl(client.mediaUploadApi)
+
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"message":"Límite diario de 20 cargas"}"""))
+        val badRequest = repository.uploadAndModerate(byteArrayOf(1, 2), "image/jpeg", "Pan recién horneado")
+        assertTrue((badRequest as Result.Failure).error is AppError.Validation)
+        val recorded = server.takeRequest()
+        assertTrue(recorded.body.readUtf8().contains("Pan recién horneado"))
+
+        server.enqueue(
+            MockResponse().setResponseCode(202).setBody(
+                """{"mediaId":"m_q","status":"Quarantined","moderationDecision":"Quarantine","message":"En revisión"}"""
+            )
+        )
+        val quarantined = repository.uploadAndModerate(byteArrayOf(1, 2), "image/jpeg")
+        assertTrue((quarantined as Result.Failure).error is AppError.Unprocessable)
+    }
+
+    @Test
     fun compressor_stopsAtFirstValidSizeAndRejectsUncompressibleInput() {
         assertArrayEquals(ByteArray(2), compressToLimit(3, listOf(90, 50)) { if (it == 90) ByteArray(4) else ByteArray(2) })
         assertNull(compressToLimit(1, listOf(90, 50)) { ByteArray(2) })
         assertNull(compressToLimit(1, listOf(90)) { byteArrayOf() })
+        assertEquals(1, ImageUploadPolicy.calculateInSampleSize(1200, 900, 1600))
+        assertEquals(2, ImageUploadPolicy.calculateInSampleSize(4000, 3000, 1600))
     }
 
     @Test

@@ -2,7 +2,11 @@
 <resources>
     <string name="claims_back">Volver</string>
     <string name="claims_one_unit">Apartarás una unidad de esta oferta.</string>
+    <string name="claims_multi_units">Apartarás %1$d unidades en un solo código QR:</string>
+    <string name="claims_item_line">• %1$dx %2$s</string>
     <string name="claims_confirm">Confirmar apartado de una unidad</string>
+    <string name="claims_confirm_multi">Confirmar apartado (%1$d unidades en 1 QR)</string>
+    <string name="claims_reserved_units">Total apartado: %1$d unidades</string>
     <string name="claims_expiry">Vence: %1$s</string>
     <string name="claims_route">Cómo llegar</string>
     <string name="claims_qr_description">Código QR del apartado confirmado por el servidor</string>
@@ -32,9 +36,4 @@
     <string name="my_claims_status_expired">Vencida</string>
     <string name="my_claims_status_cancelled">Cancelada</string>
     <string name="my_claims_status_unknown">Estado no disponible</string>
-    <string name="my_claims_cancel_action">Cancelar reserva</string>
-    <string name="my_claims_cancel_title">¿Cancelar esta reserva?</string>
-    <string name="my_claims_cancel_message">La unidad vuelve a quedar disponible para otras personas y el código QR deja de ser válido.</string>
-    <string name="my_claims_cancel_confirm">Sí, cancelar</string>
-    <string name="my_claims_cancel_keep">Conservar</string>
 </resources>

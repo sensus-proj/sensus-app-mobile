@@ -25,4 +25,4 @@
 ## Documentación y cierre
 
 - [x] `Memoria.md` y `specs/README.md` actualizados con evidencia observada
-- [ ] Commit/PR en rama `Movil_Rodrigo` pendiente de autorización explícita del usuario
+- [ ] Commit/PR en rama `Movil_Rodrigo` pendiente de autorización explícita del usuario (acción del usuario: autorizar commit/PR; ver plan cierre móvil §5.Z-5)
